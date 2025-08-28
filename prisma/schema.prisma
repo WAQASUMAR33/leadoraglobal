@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql" // or "mysql", "sqlite", etc.
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Basic user information
+  firstname   String
+  lastname    String
+  username    String   @unique
+  
+  // Authentication fields
+  password    String
+  
+  // Role-based access
+  role        String   @default("user") // "user", "admin", "super_admin"
+  
+  // Status
+  status      String   @default("active") // "active", "inactive", "suspended"
+  
+  sessions Session[]
+
+  @@map("users")
+}
+
+
+// Optional: For session management
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+
+model Package {
+  id                        Int      @id @default(autoincrement())
+  package_name              String
+  package_amount            Decimal  @db.Decimal(10, 2)
+  package_direct_commission Decimal  @db.Decimal(10, 2)
+  package_indirect_commission Decimal @db.Decimal(10, 2)
+  d_crages                  Decimal  @db.Decimal(10, 2)
+  shopping_amount           Decimal  @db.Decimal(10, 2)
+  status                    String   @default("active")
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String
+  image       String
+  price       Decimal  @db.Decimal(10, 2)
+  discount    Decimal? @db.Decimal(5, 2) // Percentage discount (0-100)
+  sale_price  Decimal? @db.Decimal(10, 2) // Sale price after discount
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+model Rank {
+  id              Int    @id @default(autoincrement())
+  title           String
+  required_points Int
+  details         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+
+model CompanyBankAccounts {
+  id             Int     @id @default(autoincrement())
+  bank_title     String
+  bank_accountno String
+  account_title  String
+  iban_no        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Admin {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Admin information
+  username    String   @unique
+  email       String   @unique
+  fullName    String   @map("full_name")
+  
+  // Authentication fields
+  password    String
+  
+  // Role-based access
+  role        String   @default("admin") // "admin", "super_admin"
+  permissions Json     // JSON array of permissions
+  
+  // Status
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  // Last login tracking
+  lastLoginAt DateTime? @map("last_login_at")
+  
+  // Admin sessions
+  adminSessions AdminSession[]
+
+  @@map("admins")
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  adminId   String   @map("admin_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now())
+  
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  
+  @@map("admin_sessions")
+}
+
