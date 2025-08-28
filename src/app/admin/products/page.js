@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -255,9 +256,11 @@ export default function AdminProducts() {
           <div key={product.id} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
             <div className="aspect-w-16 aspect-h-9 bg-gray-200">
               {product.image ? (
-                <img
+                <Image
                   src={product.image}
                   alt={product.title}
+                  width={400}
+                  height={192}
                   className="w-full h-48 object-cover"
                 />
               ) : (
@@ -396,9 +399,11 @@ export default function AdminProducts() {
                   {/* Image Preview */}
                   {(imagePreview || formData.image) && (
                     <div className="relative">
-                      <img
+                      <Image
                         src={imagePreview || formData.image}
                         alt="Preview"
+                        width={400}
+                        height={128}
                         className="w-full h-32 object-cover rounded-lg border border-gray-300"
                       />
                       <button
@@ -521,9 +526,11 @@ export default function AdminProducts() {
                   {/* Image Preview */}
                   {(imagePreview || formData.image) && (
                     <div className="relative">
-                      <img
+                      <Image
                         src={imagePreview || formData.image}
                         alt="Preview"
+                        width={400}
+                        height={128}
                         className="w-full h-32 object-cover rounded-lg border border-gray-300"
                       />
                       <button
@@ -577,7 +584,7 @@ export default function AdminProducts() {
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Delete Product</h2>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete "{selectedProduct.title}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{selectedProduct.title}&quot;? This action cannot be undone.
             </p>
             <div className="flex space-x-3">
               <button

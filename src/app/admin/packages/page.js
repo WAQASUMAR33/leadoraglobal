@@ -513,7 +513,7 @@ export default function AdminPackages() {
             
             <div className="p-6">
               <p className="text-gray-600 mb-6">
-                Are you sure you want to delete "<span className="font-semibold">{selectedPackage.package_name}</span>"? This action cannot be undone.
+                Are you sure you want to delete &quot;<span className="font-semibold">{selectedPackage.package_name}</span>&quot;? This action cannot be undone.
               </p>
               <div className="flex space-x-4">
                 <button

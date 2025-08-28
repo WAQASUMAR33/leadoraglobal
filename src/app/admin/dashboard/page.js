@@ -62,7 +62,7 @@ export default function AdminDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Welcome back, {admin?.fullName || admin?.username || "Admin"}!</h1>
-            <p className="text-purple-100">Here's what's happening with your system today.</p>
+            <p className="text-purple-100">Here&apos;s what&apos;s happening with your system today.</p>
           </div>
           <div className="hidden md:block">
             <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
