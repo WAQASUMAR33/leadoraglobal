@@ -41,6 +41,29 @@ import { UserContext } from '../../../lib/userContext';
 
 export default function WithdrawPage() {
   const context = useContext(UserContext);
+  const [withdrawalData, setWithdrawalData] = useState({
+    amount: '',
+    paymentMethod: '',
+    accountDetails: '',
+    notes: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [error, setError] = useState(null);
+  const [withdrawalHistory, setWithdrawalHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && isAuthenticated && user) {
+      fetchWithdrawalHistory();
+    }
+  }, [mounted, isAuthenticated, user]);
   
   // Safety check for context
   if (!context) {
@@ -55,19 +78,6 @@ export default function WithdrawPage() {
   }
   
   const { user, isAuthenticated } = context;
-  const [withdrawalData, setWithdrawalData] = useState({
-    amount: '',
-    paymentMethod: '',
-    accountDetails: '',
-    notes: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
-  const [withdrawalHistory, setWithdrawalHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   // Payment method options
   const paymentMethods = [
@@ -84,16 +94,6 @@ export default function WithdrawPage() {
     rejected: { label: 'Rejected', color: 'error', icon: <Cancel /> },
     processing: { label: 'Processing', color: 'info', icon: <Pending /> }
   };
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && isAuthenticated && user) {
-      fetchWithdrawalHistory();
-    }
-  }, [mounted, isAuthenticated, user]);
 
   const fetchWithdrawalHistory = async () => {
     try {
@@ -299,7 +299,7 @@ export default function WithdrawPage() {
                       </Box>
                       <Divider />
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>Amount You'll Receive:</Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>Amount You&apos;ll Receive:</Typography>
                         <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                           {formatCurrency(parseFloat(withdrawalData.amount) * 0.9)}
                         </Typography>
@@ -587,7 +587,7 @@ export default function WithdrawPage() {
                   No Withdrawal History
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  You haven't made any withdrawal requests yet.
+                  You haven&apos;t made any withdrawal requests yet.
                 </Typography>
               </Box>
             )}
@@ -621,7 +621,7 @@ export default function WithdrawPage() {
               <strong>Processing Fee (10%):</strong> -{formatCurrency(parseFloat(withdrawalData.amount) * 0.1)}
             </Typography>
             <Typography variant="body2" gutterBottom sx={{ fontWeight: 'bold', color: 'success.main' }}>
-              <strong>Amount You'll Receive:</strong> {formatCurrency(parseFloat(withdrawalData.amount) * 0.9)}
+              <strong>Amount You&apos;ll Receive:</strong> {formatCurrency(parseFloat(withdrawalData.amount) * 0.9)}
             </Typography>
             <Divider sx={{ my: 1 }} />
             <Typography variant="body2">

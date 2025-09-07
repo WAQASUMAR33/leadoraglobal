@@ -3,7 +3,23 @@
 import { useUser } from "../../lib/userContext";
 
 export default function DebugAuth() {
-  const { user, loading, error, isAuthenticated } = useUser();
+  const userContext = useUser();
+  
+  // Safety check for context
+  if (!userContext) {
+    return (
+      <div className="min-h-screen bg-gray-900 p-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold text-white mb-8">Authentication Debug</h1>
+          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <p className="text-white">UserContext is not available</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  const { user, loading, error, isAuthenticated } = userContext;
 
   return (
     <div className="min-h-screen bg-gray-900 p-8">
@@ -50,7 +66,7 @@ export default function DebugAuth() {
               
               <div className="text-sm text-gray-400">
                 <p>Check the browser console for authentication logs.</p>
-                <p>Make sure you're logged in at /login first.</p>
+                <p>Make sure you&apos;re logged in at /login first.</p>
               </div>
             </div>
           </div>

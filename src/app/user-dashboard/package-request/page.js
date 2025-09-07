@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useUser } from "../../../lib/userContext";
 
-export default function PackageRequest() {
+function PackageRequestForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useUser();
@@ -410,5 +410,13 @@ export default function PackageRequest() {
          </div>
       </div>
     </div>
+  );
+}
+
+export default function PackageRequest() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PackageRequestForm />
+    </Suspense>
   );
 }

@@ -14,16 +14,6 @@ export default function Shop() {
   const [shoppingEligibility, setShoppingEligibility] = useState(null);
   const [eligibilityLoading, setEligibilityLoading] = useState(true);
 
-  // Safety check for context
-  if (!context) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <p className="text-gray-400 mt-4">Loading...</p>
-      </div>
-    );
-  }
-
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -43,6 +33,16 @@ export default function Shop() {
       }
     }
   }, [mounted]);
+
+  // Safety check for context
+  if (!context) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="text-gray-400 mt-4">Loading...</p>
+      </div>
+    );
+  }
 
   const fetchProducts = async () => {
     try {

@@ -172,7 +172,7 @@ export default function MyPackage() {
             </svg>
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">No Active Package</h3>
-          <p className="text-gray-400 mb-6">You don't have an active package subscription yet.</p>
+          <p className="text-gray-400 mb-6">You don&apos;t have an active package subscription yet.</p>
           <Link
             href="/user-dashboard/subscribe"
             className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
@@ -289,7 +289,7 @@ export default function MyPackage() {
                   {request.status === 'pending' && (
                     <div className="bg-yellow-900/20 border border-yellow-500/30 rounded p-3 mb-3">
                       <p className="text-yellow-300 text-sm">
-                        ⏳ Your package request is pending admin approval. You'll be notified once it's reviewed.
+                        ⏳ Your package request is pending admin approval. You&apos;ll be notified once it&apos;s reviewed.
                       </p>
                     </div>
                   )}
@@ -347,7 +347,7 @@ export default function MyPackage() {
                 </svg>
               </div>
               <h4 className="text-lg font-semibold text-white mb-2">No Package Requests Yet</h4>
-              <p className="text-gray-400 mb-6">You haven't submitted any package requests yet.</p>
+              <p className="text-gray-400 mb-6">You haven&apos;t submitted any package requests yet.</p>
               <Link
                 href="/user-dashboard/subscribe"
                 className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
@@ -621,7 +621,7 @@ export default function MyPackage() {
                 {request.status === 'pending' && (
                   <div className="bg-yellow-900/20 border border-yellow-500/30 rounded p-3 mb-3">
                     <p className="text-yellow-300 text-sm">
-                      ⏳ Your package request is pending admin approval. You'll be notified once it's reviewed.
+                      ⏳ Your package request is pending admin approval. You&apos;ll be notified once it&apos;s reviewed.
                     </p>
                   </div>
                 )}
@@ -679,7 +679,7 @@ export default function MyPackage() {
               </svg>
             </div>
             <h4 className="text-lg font-semibold text-white mb-2">No Package Requests Yet</h4>
-            <p className="text-gray-400 mb-6">You haven't submitted any package requests yet.</p>
+            <p className="text-gray-400 mb-6">You haven&apos;t submitted any package requests yet.</p>
             <Link
               href="/user-dashboard/subscribe"
               className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200"

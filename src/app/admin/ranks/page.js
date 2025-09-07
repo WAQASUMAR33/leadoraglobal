@@ -419,7 +419,7 @@ export default function AdminRanks() {
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Delete Rank</h2>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete "{selectedRank.title}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{selectedRank.title}&quot;? This action cannot be undone.
             </p>
             <div className="flex space-x-3">
               <button
