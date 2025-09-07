@@ -7,8 +7,7 @@ export async function GET(req) {
     const users = await prisma.user.findMany({
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
+        fullname: true,
         username: true,
         role: true,
         status: true,
@@ -27,10 +26,10 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const body = await req.json()
-    const { firstname, lastname, username, password, role, status } = body
+    const { fullname, username, password, role, status } = body
 
     // Validate required fields
-    if (!firstname || !lastname || !username || !password) {
+    if (!fullname || !username || !password) {
       return new Response(JSON.stringify({ message: 'Missing required fields' }), { status: 400 })
     }
 
@@ -48,8 +47,7 @@ export async function POST(req) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        firstname,
-        lastname,
+        fullname,
         username,
         password: hashedPassword,
         role: role || 'user',
@@ -57,8 +55,7 @@ export async function POST(req) {
       },
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
+        fullname: true,
         username: true,
         role: true,
         status: true,

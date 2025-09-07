@@ -3,88 +3,112 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql" // or "mysql", "sqlite", etc.
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Basic user information
-  firstname   String
-  lastname    String
-  username    String   @unique
-  
-  // Authentication fields
-  password    String
-  
-  // Role-based access
-  role        String   @default("user") // "user", "admin", "super_admin"
-  
-  // Status
-  status      String   @default("active") // "active", "inactive", "suspended"
-  
-  sessions Session[]
+  id                Int                @id @default(autoincrement())
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  fullname          String
+  username          String             @unique
+  email             String?            @unique
+  password          String
+  emailVerified     Boolean            @default(false) @map("email_verified")
+  emailVerificationToken String?       @map("email_verification_token")
+  status            String             @default("active")
+  balance           Decimal            @default(0.00) @db.Decimal(10, 2)
+  points            Int                @default(0)
+  packageId         Int?               @map("package_id")
+  rankId            Int?               @map("rank_id")
+  referredBy        String?            @map("referred_by")
+  referralCount     Int                @default(0) @map("referral_count")
+  totalEarnings     Decimal            @default(0.00) @map("total_earnings") @db.Decimal(10, 2)
+  currentPackageId  Int?               @map("current_package_id")
+  packageExpiryDate DateTime?          @map("package_expiry_date")
+  cartItems         CartItem[]
+  orders            Order[]
+  sessions          Session[]
+  kyc               KYC?
+  packageRequests   PackageRequest[]
+  withdrawalRequests WithdrawalRequest[]
+  currentPackage    Package?           @relation("UserCurrentPackage", fields: [currentPackageId], references: [id])
+  package           Package?           @relation("UserPackage", fields: [packageId], references: [id])
+  rank              Rank?              @relation("UserRank", fields: [rankId], references: [id])
 
+  @@index([currentPackageId], map: "users_current_package_id_fkey")
+  @@index([packageId], map: "users_package_id_fkey")
+  @@index([rankId], map: "users_rank_id_fkey")
   @@map("users")
 }
 
-
-// Optional: For session management
 model Session {
   id        String   @id @default(cuid())
-  userId    String   @map("user_id")
+  userId    Int      @map("user_id")
   token     String   @unique
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now())
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "sessions_user_id_fkey")
   @@map("sessions")
 }
 
-
 model Package {
-  id                        Int      @id @default(autoincrement())
-  package_name              String
-  package_amount            Decimal  @db.Decimal(10, 2)
-  package_direct_commission Decimal  @db.Decimal(10, 2)
-  package_indirect_commission Decimal @db.Decimal(10, 2)
-  d_crages                  Decimal  @db.Decimal(10, 2)
-  shopping_amount           Decimal  @db.Decimal(10, 2)
-  status                    String   @default("active")
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
-}
+  id                          Int                @id @default(autoincrement())
+  package_name                String
+  package_amount              Decimal            @db.Decimal(10, 2)
+  package_direct_commission   Decimal            @db.Decimal(10, 2)
+  package_indirect_commission Decimal            @db.Decimal(10, 2)
+  d_crages                    Decimal            @db.Decimal(10, 2)
+  shopping_amount             Decimal            @db.Decimal(10, 2)
+  package_points              Int                @default(0) @map("package_points")
+  status                      String             @default("active")
+  rankId                      Int?               @map("rank_id")
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+  rank                        Rank?              @relation(fields: [rankId], references: [id])
+  packageRequests            PackageRequest[]
+  currentUsers                User[]             @relation("UserCurrentPackage")
+  users                       User[]             @relation("UserPackage")
 
+  @@index([rankId], map: "packages_rank_id_fkey")
+  @@map("packages")
+}
 
 model Product {
-  id          Int      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   title       String
   image       String
-  price       Decimal  @db.Decimal(10, 2)
-  discount    Decimal? @db.Decimal(5, 2) // Percentage discount (0-100)
-  sale_price  Decimal? @db.Decimal(10, 2) // Sale price after discount
+  price       Decimal     @db.Decimal(10, 2)
+  discount    Decimal?    @db.Decimal(5, 2)
+  sale_price  Decimal?    @db.Decimal(10, 2)
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      String      @default("active")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+
+  @@map("products")
 }
 
-
 model Rank {
-  id              Int    @id @default(autoincrement())
+  id              Int       @id @default(autoincrement())
   title           String
   required_points Int
   details         String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  packages        Package[]
+  users           User[]    @relation("UserRank")
+
+  @@map("ranks")
 }
 
-
 model CompanyBankAccounts {
-  id             Int     @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   bank_title     String
   bank_accountno String
   account_title  String
@@ -94,29 +118,17 @@ model CompanyBankAccounts {
 }
 
 model Admin {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Admin information
-  username    String   @unique
-  email       String   @unique
-  fullName    String   @map("full_name")
-  
-  // Authentication fields
-  password    String
-  
-  // Role-based access
-  role        String   @default("admin") // "admin", "super_admin"
-  permissions Json     // JSON array of permissions
-  
-  // Status
-  isActive    Boolean  @default(true) @map("is_active")
-  
-  // Last login tracking
-  lastLoginAt DateTime? @map("last_login_at")
-  
-  // Admin sessions
+  id            String         @id @default(cuid())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  username      String         @unique
+  email         String         @unique
+  fullName      String         @map("full_name")
+  password      String
+  role          String         @default("admin")
+  permissions   String         @db.LongText
+  isActive      Boolean        @default(true) @map("is_active")
+  lastLoginAt   DateTime?      @map("last_login_at")
   adminSessions AdminSession[]
 
   @@map("admins")
@@ -128,9 +140,126 @@ model AdminSession {
   token     String   @unique
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now())
-  
-  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId], map: "admin_sessions_admin_id_fkey")
   @@map("admin_sessions")
 }
 
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          Int         @map("user_id")
+  orderNumber     String      @unique @map("order_number")
+  totalAmount     Decimal     @map("total_amount") @db.Decimal(10, 2)
+  status          String      @default("pending")
+  shippingAddress String?     @map("shipping_address") @db.LongText
+  paymentMethod   String?     @map("payment_method")
+  paymentStatus   String      @default("pending") @map("payment_status")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  orderItems      OrderItem[]
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "orders_user_id_fkey")
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   String   @map("order_id")
+  productId Int      @map("product_id")
+  quantity  Int
+  price     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId], map: "order_items_order_id_fkey")
+  @@index([productId], map: "order_items_product_id_fkey")
+  @@map("order_items")
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  productId Int      @map("product_id")
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId], map: "cart_items_product_id_fkey")
+  @@map("cart_items")
+}
+
+model KYC {
+  id                        Int       @id @default(autoincrement())
+  userId                    Int       @unique @map("user_id")
+  fullname                  String
+  father_name              String    @map("father_name")
+  email                    String
+  phoneNumber              String    @map("phone_number")
+  city                     String
+  country                  String
+  current_address          String    @map("current_address")
+  permanent_address        String    @map("permanent_address")
+  gender                   String
+  cnic_number              String    @unique @map("cnic_number")
+  cnic_expiry_date         DateTime  @map("cnic_expiry_date")
+  profile_image            String?   @map("profile_image")
+  id_card_front            String?   @map("id_card_front")
+  id_card_back             String?   @map("id_card_back")
+  beneficiary_name         String    @map("beneficiary_name")
+  beneficiary_phone_mobile String    @map("beneficiary_phone_mobile")
+  beneficiary_relation     String    @map("beneficiary_relation")
+  beneficiary_address      String    @map("beneficiary_address")
+  kyc_status              String    @default("pending") @map("kyc_status")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("kyc")
+}
+
+model PackageRequest {
+  id                  Int       @id @default(autoincrement())
+  userId              Int       @map("user_id")
+  packageId           Int       @map("package_id")
+  transactionId       String    @map("transaction_id")
+  transactionReceipt  String    @map("transaction_receipt") @db.LongText
+  notes               String?   @db.Text
+  status              String    @default("pending")
+  adminNotes          String?   @map("admin_notes") @db.Text
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package             Package   @relation(fields: [packageId], references: [id])
+
+  @@index([userId], map: "package_requests_user_id_fkey")
+  @@index([packageId], map: "package_requests_package_id_fkey")
+  @@map("package_requests")
+}
+
+model WithdrawalRequest {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  amount          Decimal   @db.Decimal(10, 2)
+  feeAmount       Decimal   @default(0.00) @map("fee_amount") @db.Decimal(10, 2)
+  netAmount       Decimal   @map("net_amount") @db.Decimal(10, 2)
+  paymentMethod   String    @map("payment_method")
+  accountDetails  String    @map("account_details") @db.Text
+  notes           String?   @db.Text
+  status          String    @default("pending")
+  withdrawalRef   String    @unique @map("withdrawal_ref")
+  adminNotes      String?   @map("admin_notes") @db.Text
+  processedAt     DateTime? @map("processed_at")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "withdrawal_requests_user_id_fkey")
+  @@index([status], map: "withdrawal_requests_status_fkey")
+  @@map("withdrawal_requests")
+}

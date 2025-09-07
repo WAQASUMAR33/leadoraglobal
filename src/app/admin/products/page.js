@@ -6,6 +6,7 @@ import Image from 'next/image';
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -14,6 +15,12 @@ export default function AdminProducts() {
   const [imageUploading, setImageUploading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [filters, setFilters] = useState({
+    search: '',
+    minPrice: '',
+    maxPrice: '',
+    hasDiscount: 'all'
+  });
   const [formData, setFormData] = useState({
     title: '',
     price: '',
@@ -27,17 +34,76 @@ export default function AdminProducts() {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [products, filters]);
+
+  const applyFilters = () => {
+    let filtered = [...products];
+    console.log('Applying filters to products:', products);
+    console.log('Current filters:', filters);
+
+    // Search filter
+    if (filters.search) {
+      filtered = filtered.filter(product => 
+        product.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        product.description?.toLowerCase().includes(filters.search.toLowerCase())
+      );
+      console.log('After search filter:', filtered);
+    }
+
+    // Price range filter
+    if (filters.minPrice) {
+      filtered = filtered.filter(product => parseFloat(product.price) >= parseFloat(filters.minPrice));
+      console.log('After min price filter:', filtered);
+    }
+    if (filters.maxPrice) {
+      filtered = filtered.filter(product => parseFloat(product.price) <= parseFloat(filters.maxPrice));
+      console.log('After max price filter:', filtered);
+    }
+
+    // Discount filter
+    if (filters.hasDiscount === 'yes') {
+      filtered = filtered.filter(product => product.discount && parseFloat(product.discount) > 0);
+      console.log('After discount filter (yes):', filtered);
+    } else if (filters.hasDiscount === 'no') {
+      filtered = filtered.filter(product => !product.discount || parseFloat(product.discount) === 0);
+      console.log('After discount filter (no):', filtered);
+    }
+
+    console.log('Final filtered products:', filtered);
+    setFilteredProducts(filtered);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      minPrice: '',
+      maxPrice: '',
+      hasDiscount: 'all'
+    });
+  };
+
   const fetchProducts = async () => {
     try {
+      const adminToken = localStorage.getItem('adminToken');
+      console.log('Admin token:', adminToken);
+      
       const response = await fetch('/api/product_management', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+          'Authorization': `Bearer ${adminToken}`
         }
       });
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched products data:', data);
+        console.log('Products array:', data.products);
         setProducts(data.products || []);
+      } else {
+        console.error('Response not ok:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -48,6 +114,23 @@ export default function AdminProducts() {
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
+    
+    // If there's a selected image but no image URL in formData, upload it first
+    if (selectedImage && !formData.image) {
+      setImageUploading(true);
+      try {
+        const base64Data = await convertImageToBase64(selectedImage);
+        const imageUrl = await uploadImageToAPI(base64Data);
+        setFormData(prev => ({ ...prev, image: imageUrl }));
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Failed to upload image. Please try again.');
+        setImageUploading(false);
+        return;
+      }
+      setImageUploading(false);
+    }
+
     try {
       const response = await fetch('/api/product_management', {
         method: 'POST',
@@ -64,14 +147,36 @@ export default function AdminProducts() {
         setSelectedImage(null);
         setImagePreview('');
         fetchProducts();
+        alert('Product added successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to add product: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error adding product:', error);
+      alert('Error adding product. Please try again.');
     }
   };
 
   const handleEditProduct = async (e) => {
     e.preventDefault();
+    
+    // If there's a selected image but no image URL in formData, upload it first
+    if (selectedImage && !formData.image) {
+      setImageUploading(true);
+      try {
+        const base64Data = await convertImageToBase64(selectedImage);
+        const imageUrl = await uploadImageToAPI(base64Data);
+        setFormData(prev => ({ ...prev, image: imageUrl }));
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Failed to upload image. Please try again.');
+        setImageUploading(false);
+        return;
+      }
+      setImageUploading(false);
+    }
+
     try {
       const response = await fetch(`/api/product_management/${selectedProduct.id}`, {
         method: 'PUT',
@@ -89,9 +194,14 @@ export default function AdminProducts() {
         setSelectedImage(null);
         setImagePreview('');
         fetchProducts();
+        alert('Product updated successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to update product: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating product:', error);
+      alert('Error updating product. Please try again.');
     }
   };
 
@@ -147,7 +257,7 @@ export default function AdminProducts() {
   // Upload image to external API
   const uploadImageToAPI = async (base64Data) => {
     try {
-      const response = await fetch('https://leadoraglobal.com/uploadImage.php', {
+      const response = await fetch('https://steelblue-cod-355377.hostingersite.com/uploadImage.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +277,12 @@ export default function AdminProducts() {
         throw new Error(result.error);
       }
 
-      return result.url || result.imageUrl; // Return the uploaded image URL
+      const imageUrl = result.url || result.imageUrl || result.image_url;
+      // If the response is just a filename, construct the full URL
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        return `https://steelblue-cod-355377.hostingersite.com/uploads/${imageUrl}`;
+      }
+      return imageUrl; // Return the uploaded image URL
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;
@@ -235,9 +350,20 @@ export default function AdminProducts() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Product Management</h1>
-          <p className="text-gray-600">Manage your product inventory</p>
+        <div className="flex items-center space-x-4">
+          <Link
+            href="https://steelblue-cod-355377.hostingersite.com/uploadImage.php"
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Back</span>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Product Management</h1>
+            <p className="text-gray-600">Manage your product inventory</p>
+          </div>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -250,9 +376,76 @@ export default function AdminProducts() {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+        <div className="flex flex-col lg:flex-row gap-4 items-end">
+          {/* Search */}
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Search Products</label>
+            <input
+              type="text"
+              placeholder="Search by title or description..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-gray-800"
+            />
+          </div>
+
+          {/* Price Range */}
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Price Range ($)</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Min"
+                value={filters.minPrice}
+                onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-gray-800"
+              />
+              <input
+                type="number"
+                placeholder="Max"
+                value={filters.maxPrice}
+                onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-gray-800"
+              />
+            </div>
+          </div>
+
+          {/* Discount Filter */}
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Discount</label>
+            <select
+              value={filters.hasDiscount}
+              onChange={(e) => setFilters({ ...filters, hasDiscount: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+            >
+              <option value="all">All Products</option>
+              <option value="yes">With Discount</option>
+              <option value="no">Without Discount</option>
+            </select>
+          </div>
+
+          {/* Clear Filters */}
+          <div>
+            <button
+              onClick={clearFilters}
+              className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-300 font-semibold"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+        {/* Results Count */}
+        <div className="mt-4 text-sm text-gray-600">
+          Showing {filteredProducts.length} of {products.length} products
+        </div>
+      </div>
+
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.map((product) => (
+        {filteredProducts.map((product) => (
           <div key={product.id} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
             <div className="aspect-w-16 aspect-h-9 bg-gray-200">
               {product.image ? (
@@ -272,7 +465,7 @@ export default function AdminProducts() {
               )}
             </div>
             <div className="p-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.title}</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">{product.title}</h3>
               <div className="mb-2">
                 {product.discount && product.sale_price ? (
                   <div className="flex items-center space-x-2">
@@ -308,12 +501,12 @@ export default function AdminProducts() {
         ))}
       </div>
 
-      {products.length === 0 && (
+      {filteredProducts.length === 0 && (
         <div className="text-center py-12">
           <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">No products found</h3>
           <p className="text-gray-500 mb-4">Get started by adding your first product</p>
           <button
             onClick={() => setShowAddModal(true)}
@@ -326,9 +519,9 @@ export default function AdminProducts() {
 
       {/* Add Product Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New Product</h2>
+        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-purple-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Add New Product</h2>
             <form onSubmit={handleAddProduct} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
@@ -337,7 +530,7 @@ export default function AdminProducts() {
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                 />
               </div>
               <div>
@@ -348,7 +541,7 @@ export default function AdminProducts() {
                   required
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -361,7 +554,7 @@ export default function AdminProducts() {
                     max="100"
                     value={formData.discount}
                     onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                     placeholder="0-100"
                   />
                 </div>
@@ -372,7 +565,7 @@ export default function AdminProducts() {
                     step="0.01"
                     value={formData.sale_price}
                     onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                     placeholder="Optional"
                   />
                 </div>
@@ -428,15 +621,23 @@ export default function AdminProducts() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                 />
               </div>
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition-colors"
+                  disabled={imageUploading}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  Add Product
+                  {imageUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Uploading...
+                    </>
+                  ) : (
+                    'Add Product'
+                  )}
                 </button>
                 <button
                   type="button"
@@ -453,9 +654,9 @@ export default function AdminProducts() {
 
       {/* Edit Product Modal */}
       {showEditModal && selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Edit Product</h2>
+        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-purple-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Edit Product</h2>
             <form onSubmit={handleEditProduct} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
@@ -464,7 +665,7 @@ export default function AdminProducts() {
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                 />
               </div>
               <div>
@@ -475,7 +676,7 @@ export default function AdminProducts() {
                   required
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -488,7 +689,7 @@ export default function AdminProducts() {
                     max="100"
                     value={formData.discount}
                     onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                     placeholder="0-100"
                   />
                 </div>
@@ -499,7 +700,7 @@ export default function AdminProducts() {
                     step="0.01"
                     value={formData.sale_price}
                     onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                     placeholder="Optional"
                   />
                 </div>
@@ -555,15 +756,23 @@ export default function AdminProducts() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                 />
               </div>
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
+                  disabled={imageUploading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  Update Product
+                  {imageUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Uploading...
+                    </>
+                  ) : (
+                    'Update Product'
+                  )}
                 </button>
                 <button
                   type="button"
@@ -580,9 +789,9 @@ export default function AdminProducts() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Delete Product</h2>
+        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-red-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Delete Product</h2>
             <p className="text-gray-600 mb-6">
               Are you sure you want to delete &quot;{selectedProduct.title}&quot;? This action cannot be undone.
             </p>

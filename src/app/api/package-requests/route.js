@@ -1,0 +1,183 @@
+import prisma from '../../../lib/prisma';
+
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    console.log('Received package request data:', body);
+    
+    const {
+      userId,
+      packageId,
+      transactionId,
+      transactionReceipt,
+      notes,
+      status
+    } = body;
+
+    if (!userId || !packageId || !transactionId || !transactionReceipt) {
+      console.log('Missing fields:', { userId, packageId, transactionId, transactionReceipt });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Missing required fields',
+          received: { userId, packageId, transactionId, transactionReceipt }
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Test database connection first
+    try {
+      await prisma.$connect();
+      console.log('Database connected successfully');
+      
+      // Check if PackageRequest model exists in Prisma client
+      if (!prisma.packageRequest) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: 'PackageRequest model not found in Prisma client. Please run: npx prisma generate',
+            error: 'Prisma client needs to be regenerated'
+          }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Test if PackageRequest table exists by trying to count records
+      const tableTest = await prisma.packageRequest.count();
+      console.log('PackageRequest table exists, current count:', tableTest);
+    } catch (dbError) {
+      console.error('Database connection error:', dbError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Database connection failed',
+          error: dbError.message
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create package request
+    const packageRequest = await prisma.packageRequest.create({
+      data: {
+        userId: parseInt(userId),
+        packageId: parseInt(packageId),
+        transactionId,
+        transactionReceipt,
+        notes: notes || '',
+        status: status || 'pending'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            fullname: true
+          }
+        },
+        package: {
+          select: {
+            id: true,
+            package_name: true,
+            package_amount: true
+          }
+        }
+      }
+    });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Package request created successfully',
+        packageRequest
+      }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } }
+    );
+
+      } catch (error) {
+      console.error('Error creating package request:', error);
+      
+      // Check if it's a table doesn't exist error
+      if (error.message.includes('Unknown table') || error.message.includes('doesn\'t exist')) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: 'PackageRequest table does not exist. Please run database migration first.',
+            error: error.message,
+            solution: 'Run: npx prisma db push'
+          }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Failed to create package request',
+          error: error.message
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+}
+
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const status = searchParams.get('status');
+
+    let whereClause = {};
+    
+    if (userId) {
+      whereClause.userId = parseInt(userId);
+    }
+    
+    if (status) {
+      whereClause.status = status;
+    }
+
+    const packageRequests = await prisma.packageRequest.findMany({
+      where: whereClause,
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            fullname: true
+          }
+        },
+        package: {
+          select: {
+            id: true,
+            package_name: true,
+            package_amount: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        packageRequests
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Error fetching package requests:', error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: 'Failed to fetch package requests',
+        error: error.message
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}

@@ -46,9 +46,17 @@ export function middleware(request) {
   const isDashboardRoute = pathname.startsWith('/dashboard');
   const isAdminRoute = pathname.startsWith('/admin');
 
-  // Get tokens from cookies
+  // Get tokens from cookies and headers
   const userToken = request.cookies.get('auth-token')?.value;
-  const adminToken = request.cookies.get('admin-token')?.value;
+  let adminToken = request.cookies.get('admin-token')?.value;
+  
+  // If no admin token in cookies, check Authorization header
+  if (!adminToken) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      adminToken = authHeader.substring(7);
+    }
+  }
 
   // Handle admin routes
   if (isAdminRoute) {

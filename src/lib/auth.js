@@ -1,3 +1,20 @@
+import jwt from 'jsonwebtoken';
+
+// Helper function to verify JWT token from cookies
+export const verifyToken = (token) => {
+  try {
+    if (!token) {
+      return null;
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
+    return decoded;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
+  }
+};
+
 // Enhanced authentication utility with better session management
 export const auth = {
   // Store comprehensive user data in localStorage

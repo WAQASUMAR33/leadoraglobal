@@ -11,7 +11,9 @@ export async function POST(req) {
       package_indirect_commission, 
       d_crages, 
       shopping_amount, 
-      status 
+      package_points,
+      status,
+      rankId
     } = body
 
     if (!package_name || package_amount == null) {
@@ -19,13 +21,23 @@ export async function POST(req) {
     }
 
     const data = {
-      title: package_name,
-      amount: parseFloat(package_amount),
-      package_desc: `Direct: ₨${package_direct_commission}, Indirect: ₨${package_indirect_commission}, D Crages: ₨${d_crages}, Shopping: ₨${shopping_amount}`,
-      status: status || 'active'
+      package_name,
+      package_amount: parseFloat(package_amount),
+      package_direct_commission: parseFloat(package_direct_commission),
+      package_indirect_commission: parseFloat(package_indirect_commission),
+      d_crages: parseFloat(d_crages),
+      shopping_amount: parseFloat(shopping_amount),
+      package_points: parseInt(package_points) || 0,
+      status: status || 'active',
+      rankId: rankId ? parseInt(rankId) : null
     }
 
-    const pkg = await prisma.package.create({ data })
+    const pkg = await prisma.package.create({ 
+      data,
+      include: {
+        rank: true
+      }
+    })
 
     return new Response(JSON.stringify({ message: 'Package created', package: pkg }), { status: 201 })
   } catch (err) {
@@ -36,32 +48,13 @@ export async function POST(req) {
 
 export async function GET() {
   try {
-    const packages = await prisma.package.findMany()
-    
-    // Transform the data to match frontend expectations
-    const transformedPackages = packages.map(pkg => {
-      // Parse the package_desc to extract individual values
-      const desc = pkg.package_desc || '';
-      const directMatch = desc.match(/Direct: ₨([\d.]+)/);
-      const indirectMatch = desc.match(/Indirect: ₨([\d.]+)/);
-      const cragesMatch = desc.match(/D Crages: ₨([\d.]+)/);
-      const shoppingMatch = desc.match(/Shopping: ₨([\d.]+)/);
-      
-      return {
-        id: pkg.id,
-        package_name: pkg.title,
-        package_amount: pkg.amount,
-        package_direct_commission: directMatch ? parseFloat(directMatch[1]) : 0,
-        package_indirect_commission: indirectMatch ? parseFloat(indirectMatch[1]) : 0,
-        d_crages: cragesMatch ? parseFloat(cragesMatch[1]) : 0,
-        shopping_amount: shoppingMatch ? parseFloat(shoppingMatch[1]) : 0,
-        status: pkg.status,
-        createdAt: pkg.createdAt,
-        updatedAt: pkg.updatedAt
+    const packages = await prisma.package.findMany({
+      include: {
+        rank: true
       }
     })
     
-    return new Response(JSON.stringify({ packages: transformedPackages }), { status: 200 })
+    return new Response(JSON.stringify({ packages }), { status: 200 })
   } catch (err) {
     console.error(err)
     return new Response(JSON.stringify({ message: 'Server error' }), { status: 500 })

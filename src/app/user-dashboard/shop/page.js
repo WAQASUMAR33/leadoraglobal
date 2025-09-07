@@ -1,0 +1,395 @@
+"use client";
+
+import { useState, useEffect, useContext } from "react";
+import Link from "next/link";
+import { UserContext } from '../../../lib/userContext';
+
+export default function Shop() {
+  const context = useContext(UserContext);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [mounted, setMounted] = useState(false);
+  const [shoppingEligibility, setShoppingEligibility] = useState(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(true);
+
+  // Safety check for context
+  if (!context) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="text-gray-400 mt-4">Loading...</p>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      fetchProducts();
+      fetchShoppingEligibility();
+      // Load cart from localStorage only after mounting
+      try {
+        const savedCart = localStorage.getItem('cart');
+        if (savedCart) {
+          setCart(JSON.parse(savedCart));
+        }
+      } catch (error) {
+        console.error('Error loading cart from localStorage:', error);
+      }
+    }
+  }, [mounted]);
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products');
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(data);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchShoppingEligibility = async () => {
+    try {
+      setEligibilityLoading(true);
+      const response = await fetch('/api/user/shopping-eligibility', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setShoppingEligibility(data);
+      } else {
+        console.error('Failed to fetch shopping eligibility');
+        setShoppingEligibility({
+          success: false,
+          eligible: false,
+          reason: 'error',
+          message: 'Unable to check shopping eligibility'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching shopping eligibility:', error);
+      setShoppingEligibility({
+        success: false,
+        eligible: false,
+        reason: 'error',
+        message: 'Unable to check shopping eligibility'
+      });
+    } finally {
+      setEligibilityLoading(false);
+    }
+  };
+
+  const addToCart = (product) => {
+    // Check shopping eligibility
+    if (!shoppingEligibility?.eligible) {
+      if (shoppingEligibility?.reason === 'no_active_package') {
+        alert('You need an active package to shop. Please subscribe to a package first.');
+        return;
+      } else if (shoppingEligibility?.reason === 'already_shopped') {
+        alert('You have already used your shopping benefit. You can only shop once per package.');
+        return;
+      } else {
+        alert('You are not eligible to shop at this time.');
+        return;
+      }
+    }
+
+    // Check if adding this product would exceed shopping limit
+    const currentCartTotal = cart.reduce((total, item) => {
+      const price = parseFloat(item.sale_price || item.price);
+      return total + (price * item.quantity);
+    }, 0);
+
+    const productPrice = parseFloat(product.sale_price || product.price);
+    const newTotal = currentCartTotal + productPrice;
+
+    if (newTotal > shoppingEligibility.package.shoppingAmount) {
+      alert(`Adding this product would exceed your shopping limit of PKR ${shoppingEligibility.package.shoppingAmount.toFixed(2)}. Current cart total: PKR ${currentCartTotal.toFixed(2)}`);
+      return;
+    }
+
+    try {
+      const existingItem = cart.find(item => item.id === product.id);
+      if (existingItem) {
+        const updatedCart = cart.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+        setCart(updatedCart);
+        if (mounted) {
+          localStorage.setItem('cart', JSON.stringify(updatedCart));
+        }
+      } else {
+        const updatedCart = [...cart, { ...product, quantity: 1 }];
+        setCart(updatedCart);
+        if (mounted) {
+          localStorage.setItem('cart', JSON.stringify(updatedCart));
+        }
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    }
+  };
+
+  const getCartCount = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const getCartTotal = () => {
+    return cart.reduce((total, item) => {
+      const price = parseFloat(item.sale_price || item.price);
+      return total + (price * item.quantity);
+    }, 0);
+  };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  // Prevent hydration mismatch by showing loading until mounted
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="text-gray-400 mt-4">Loading shop...</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="text-gray-400 mt-4">Loading products...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div key={mounted ? 'mounted' : 'loading'} className="space-y-6">
+      {/* Header */}
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Shop Products</h1>
+            <p className="text-gray-400 mt-2">Browse and purchase products from our catalog</p>
+            
+            {/* Shopping Eligibility Info */}
+            {eligibilityLoading ? (
+              <div className="mt-3 flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                <span className="text-sm text-gray-400">Checking shopping eligibility...</span>
+              </div>
+            ) : shoppingEligibility ? (
+              <div className="mt-3">
+                {shoppingEligibility.eligible ? (
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-green-400">Shopping Enabled</span>
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      Package: <span className="text-white font-medium">{shoppingEligibility.package.name}</span>
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      Shopping Limit: <span className="text-white font-medium">PKR {shoppingEligibility.package.shoppingAmount.toFixed(2)}</span>
+                    </div>
+                    {getCartTotal() > 0 && (
+                      <div className="text-sm text-gray-400">
+                        Cart Total: <span className="text-yellow-400 font-medium">PKR {getCartTotal().toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <span className="text-sm text-red-400">{shoppingEligibility.message}</span>
+                    {shoppingEligibility.reason === 'no_active_package' && (
+                      <Link
+                        href="/user-dashboard/subscribe"
+                        className="text-sm text-blue-400 hover:text-blue-300 underline"
+                      >
+                        Subscribe to Package
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+          <div className="flex space-x-3">
+            <Link
+              href="/user-dashboard/orders"
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+            >
+              My Orders
+            </Link>
+            <Link
+              href="/user-dashboard/cart"
+              className="relative px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            >
+              Cart
+              {mounted && getCartCount() > 0 && (
+                <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {getCartCount()}
+                </span>
+              )}
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* Products Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredProducts.map((product) => (
+          <div key={product.id} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-gray-600 transition-all duration-200">
+            {/* Product Image */}
+            <div className="relative h-48 bg-gray-700">
+              <img
+                src={product.image}
+                alt={product.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = '/placeholder-product.jpg';
+                }}
+              />
+              {product.discount && (
+                <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                  -{product.discount}%
+                </div>
+              )}
+            </div>
+
+            {/* Product Info */}
+            <div className="p-4">
+              <h3 className="text-white font-semibold mb-2 line-clamp-2">{product.title}</h3>
+              <p className="text-gray-400 text-sm mb-3 line-clamp-2">{product.description}</p>
+              
+              {/* Price */}
+              <div className="mb-4">
+                <div className="flex items-center space-x-2">
+                  {product.discount ? (
+                    <>
+                      <span className="text-lg font-bold text-white">
+                        PKR {parseFloat(product.sale_price).toFixed(2)}
+                      </span>
+                      <span className="text-sm text-gray-400 line-through">
+                        PKR {parseFloat(product.price).toFixed(2)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-lg font-bold text-white">
+                      PKR {parseFloat(product.price).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Button */}
+              {!shoppingEligibility?.eligible ? (
+                <button
+                  disabled
+                  className="w-full py-2 px-4 rounded-lg font-medium bg-gray-600 text-gray-400 cursor-not-allowed"
+                >
+                  {shoppingEligibility?.reason === 'no_active_package' ? 'Subscribe to Shop' : 
+                   shoppingEligibility?.reason === 'already_shopped' ? 'Already Shopped' : 
+                   'Not Available'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => addToCart(product)}
+                  className="w-full py-2 px-4 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
+                >
+                  Add to Cart
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {filteredProducts.length === 0 && (
+        <div className="bg-gray-800 rounded-xl p-12 border border-gray-700 text-center">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          <h3 className="text-xl font-semibold text-white mb-2">No products found</h3>
+          <p className="text-gray-400">Try adjusting your search or filter criteria</p>
+        </div>
+      )}
+
+      
+
+      {/* Shopping Benefits */}
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 className="text-xl font-bold text-white mb-6">Why Shop With Us?</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-4">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold">Quality Products</h3>
+              <p className="text-gray-400 text-sm">Premium quality products at competitive prices</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-4">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold">Fast Delivery</h3>
+              <p className="text-gray-400 text-sm">Quick and reliable shipping to your doorstep</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-4">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold">Secure Shopping</h3>
+              <p className="text-gray-400 text-sm">Safe and secure payment processing</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+

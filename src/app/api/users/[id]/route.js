@@ -13,8 +13,7 @@ export async function GET(req, { params }) {
       where: { id },
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
+        fullname: true,
         username: true,
         role: true,
         status: true,
@@ -42,7 +41,7 @@ export async function PUT(req, { params }) {
 
   try {
     const body = await req.json()
-    const { firstname, lastname, username, password, role, status } = body
+    const { fullname, username, password, role, status } = body
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -65,8 +64,7 @@ export async function PUT(req, { params }) {
 
     // Prepare update data
     const updateData = {}
-    if (firstname !== undefined) updateData.firstname = firstname
-    if (lastname !== undefined) updateData.lastname = lastname
+    if (fullname !== undefined) updateData.fullname = fullname
     if (username !== undefined) updateData.username = username
     if (role !== undefined) updateData.role = role
     if (status !== undefined) updateData.status = status
@@ -86,8 +84,7 @@ export async function PUT(req, { params }) {
       data: updateData,
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
+        fullname: true,
         username: true,
         role: true,
         status: true,

@@ -8,7 +8,12 @@ export async function GET(req, { params }) {
   }
 
   try {
-    const pkg = await prisma.package.findUnique({ where: { id: Number(id) } })
+    const pkg = await prisma.package.findUnique({ 
+      where: { id: Number(id) },
+      include: {
+        rank: true
+      }
+    })
     if (!pkg) {
       return new Response(JSON.stringify({ message: 'Package not found' }), { status: 404 })
     }
@@ -34,16 +39,21 @@ export async function PUT(req, { params }) {
       package_indirect_commission, 
       d_crages, 
       shopping_amount, 
-      status 
+      package_points,
+      status,
+      rankId
     } = body
 
     const data = {}
-    if (package_name !== undefined) data.title = package_name
-    if (package_amount !== undefined) data.amount = parseFloat(package_amount)
-    if (package_direct_commission !== undefined || package_indirect_commission !== undefined || d_crages !== undefined || shopping_amount !== undefined) {
-      data.package_desc = `Direct: ₨${package_direct_commission || 0}, Indirect: ₨${package_indirect_commission || 0}, D Crages: ₨${d_crages || 0}, Shopping: ₨${shopping_amount || 0}`
-    }
+    if (package_name !== undefined) data.package_name = package_name
+    if (package_amount !== undefined) data.package_amount = parseFloat(package_amount)
+    if (package_direct_commission !== undefined) data.package_direct_commission = parseFloat(package_direct_commission)
+    if (package_indirect_commission !== undefined) data.package_indirect_commission = parseFloat(package_indirect_commission)
+    if (d_crages !== undefined) data.d_crages = parseFloat(d_crages)
+    if (shopping_amount !== undefined) data.shopping_amount = parseFloat(shopping_amount)
+    if (package_points !== undefined) data.package_points = parseInt(package_points) || 0
     if (status !== undefined) data.status = status
+    if (rankId !== undefined) data.rankId = rankId ? parseInt(rankId) : null
 
     if (Object.keys(data).length === 0) {
       return new Response(JSON.stringify({ message: 'No fields to update' }), { status: 400 })
@@ -52,6 +62,9 @@ export async function PUT(req, { params }) {
     const updated = await prisma.package.update({
       where: { id: Number(id) },
       data,
+      include: {
+        rank: true
+      }
     })
 
     return new Response(JSON.stringify({ message: 'Package updated', package: updated }), { status: 200 })

@@ -6,14 +6,14 @@ import prisma from '../../../lib/prisma';
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { email, password } = body;
+    const { username, password } = body;
 
     // Validate input
-    if (!email || !password) {
+    if (!username || !password) {
       return new Response(
         JSON.stringify({ 
           success: false,
-          message: 'Email and password are required' 
+          message: 'Username and password are required' 
         }), 
         { 
           status: 400,
@@ -22,21 +22,22 @@ export async function POST(req) {
       );
     }
 
-    // Find user by email
-    const user = await prisma.user.findUnique({ 
-      where: { email: email.toLowerCase() },
+    // Find user by username
+    let user = await prisma.user.findUnique({ 
+      where: { username: username.toLowerCase() },
       select: {
         id: true,
-        email: true,
+        username: true,
         password: true,
-        fname: true,
-        lname: true,
-        isVerified: true,
-        phoneNumber: true,
-        city: true,
-        address: true,
-        idCardNo: true,
-        lastLoginAt: true
+        fullname: true,
+        referredBy: true,
+        referralCount: true,
+        totalEarnings: true,
+        packageId: true,
+        rankId: true,
+        balance: true,
+        status: true,
+        createdAt: true
       }
     });
 
@@ -44,7 +45,7 @@ export async function POST(req) {
       return new Response(
         JSON.stringify({ 
           success: false,
-          message: 'Invalid email or password' 
+          message: 'Invalid username or password' 
         }), 
         { 
           status: 401,
@@ -53,12 +54,12 @@ export async function POST(req) {
       );
     }
 
-    // Check if email is verified
-    if (!user.isVerified) {
+    // Check if user is active
+    if (user.status !== 'active') {
       return new Response(
         JSON.stringify({ 
           success: false,
-          message: 'Please verify your email address before logging in' 
+          message: 'Account is not active. Please contact support.' 
         }), 
         { 
           status: 403,
@@ -73,7 +74,7 @@ export async function POST(req) {
       return new Response(
         JSON.stringify({ 
           success: false,
-          message: 'Invalid email or password' 
+          message: 'Invalid username or password' 
         }), 
         { 
           status: 401,
@@ -87,20 +88,13 @@ export async function POST(req) {
     const token = jwt.sign(
       { 
         userId: user.id, 
-        email: user.email,
-        role: 'user'
+        username: user.username
       },
       jwtSecret,
       { expiresIn: '7d' }
     );
 
-    // Update last login time
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() }
-    });
-
-    // Create session record (optional)
+    // Create session record
     try {
       await prisma.session.create({
         data: {
@@ -117,16 +111,16 @@ export async function POST(req) {
     // Prepare user data for response (exclude sensitive information)
     const userData = {
       id: user.id,
-      email: user.email,
-      firstName: user.fname,
-      lastName: user.lname,
-      fullName: `${user.fname} ${user.lname}`,
-      phoneNumber: user.phoneNumber,
-      city: user.city,
-      address: user.address,
-      idCardNo: user.idCardNo,
-      isVerified: user.isVerified,
-      lastLoginAt: user.lastLoginAt
+      username: user.username,
+      fullname: user.fullname,
+      referredBy: user.referredBy,
+      referralCount: user.referralCount,
+      totalEarnings: user.totalEarnings,
+      packageId: user.packageId,
+      rankId: user.rankId,
+      balance: user.balance,
+      status: user.status,
+      createdAt: user.createdAt
     };
 
     // Set HTTP-only cookie with JWT token

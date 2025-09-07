@@ -28,9 +28,14 @@ export async function POST(req) {
   }
 }
 
-export async function GET() {
+export async function GET(req) {
   try {
+    console.log('Product management API called');
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+    
     const products = await prisma.product.findMany()
+    console.log('Found products in database:', products.length);
+    console.log('Products:', products);
     
     // Transform the data to match frontend expectations
     const transformedProducts = products.map(product => ({
@@ -45,9 +50,10 @@ export async function GET() {
       updatedAt: product.updatedAt
     }))
     
+    console.log('Transformed products:', transformedProducts);
     return new Response(JSON.stringify({ products: transformedProducts }), { status: 200 })
   } catch (err) {
-    console.error(err)
+    console.error('Error in product management API:', err)
     return new Response(JSON.stringify({ message: 'Server error' }), { status: 500 })
   }
 }
