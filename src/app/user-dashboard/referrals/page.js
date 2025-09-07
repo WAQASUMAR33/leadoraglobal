@@ -21,7 +21,7 @@ export default function Referrals() {
   });
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState(&apos;tree&apos;); // &apos;tree&apos; or &apos;list&apos;
+  const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'list'
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -35,8 +35,8 @@ export default function Referrals() {
       
       // Fetch both tree and list data
       const [treeResponse, listResponse] = await Promise.all([
-        fetch(&apos;/api/user/referral-tree&apos;, { credentials: &apos;include&apos; }),
-        fetch(&apos;/api/user/referrals&apos;, { credentials: &apos;include&apos; })
+        fetch('/api/user/referral-tree', { credentials: 'include' }),
+        fetch('/api/user/referrals', { credentials: 'include' })
       ]);
 
       if (treeResponse.ok) {
@@ -51,7 +51,7 @@ export default function Referrals() {
         setReferrals(listData.referrals);
       }
     } catch (error) {
-      console.error(&apos;Error fetching referral data:&apos;, error);
+      console.error('Error fetching referral data:', error);
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export default function Referrals() {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
-        console.error(&apos;Failed to copy: &apos;, err);
+        console.error('Failed to copy: ', err);
       }
     }
   };
@@ -73,14 +73,14 @@ export default function Referrals() {
     const referralLink = `${window.location.origin}/signup?ref=${user?.username}`;
     if (navigator.share) {
       navigator.share({
-        title: &apos;Join Ledora Global&apos;,
-        text: &apos;Join me on Ledora Global and start earning!&apos;,
+        title: 'Join Ledora Global',
+        text: 'Join me on Ledora Global and start earning!',
         url: referralLink,
       });
     } else {
       // Fallback to copying link
       navigator.clipboard.writeText(referralLink);
-      alert(&apos;Referral link copied to clipboard!&apos;);
+      alert('Referral link copied to clipboard!');
     }
   };
 
@@ -116,21 +116,21 @@ export default function Referrals() {
           <h2 className="text-xl font-bold text-white">Referral Network</h2>
           <div className="flex bg-gray-700 rounded-lg p-1">
             <button
-              onClick={() => setViewMode(&apos;tree&apos;)}
+              onClick={() => setViewMode('tree')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === &apos;tree&apos;
-                  ? &apos;bg-blue-600 text-white&apos;
-                  : &apos;text-gray-400 hover:text-white&apos;
+                viewMode === 'tree'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white'
               }`}
             >
               Tree View
             </button>
             <button
-              onClick={() => setViewMode(&apos;list&apos;)}
+              onClick={() => setViewMode('list')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === &apos;list&apos;
-                  ? &apos;bg-blue-600 text-white&apos;
-                  : &apos;text-gray-400 hover:text-white&apos;
+                viewMode === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white'
               }`}
             >
               List View
@@ -215,7 +215,7 @@ export default function Referrals() {
             <div className="flex">
               <input
                 type="text"
-                value={user?.username || &quot;Loading...&quot;}
+                value={user?.username || "Loading..."}
                 readOnly
                 className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-l-lg text-white font-mono text-lg"
               />
@@ -252,10 +252,10 @@ export default function Referrals() {
       {/* Referral Tree/List View */}
       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <h2 className="text-xl font-bold text-white mb-6">
-          {viewMode === &apos;tree&apos; ? &apos;Referral Tree&apos; : &apos;Direct Referrals&apos;}
+          {viewMode === 'tree' ? 'Referral Tree' : 'Direct Referrals'}
         </h2>
         
-        {viewMode === &apos;tree&apos; ? (
+        {viewMode === 'tree' ? (
           <ReferralTreeView user={referralTree} />
         ) : (
           <ReferralListView referrals={referrals} />
@@ -326,15 +326,15 @@ function TreeNode({ node, level }) {
       {/* Node */}
       <div className={`flex items-center p-4 mb-2 rounded-lg border ${
         level === 0 
-          ? &apos;bg-gradient-to-r from-blue-600 to-blue-700 border-blue-500&apos; 
-          : &apos;bg-gray-700 border-gray-600&apos;
+          ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-blue-500' 
+          : 'bg-gray-700 border-gray-600'
       }`}>
         {/* Level Indicator */}
         <div className="flex-shrink-0 mr-4">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
             level === 0 
-              ? &apos;bg-white text-blue-600&apos; 
-              : &apos;bg-blue-500 text-white&apos;
+              ? 'bg-white text-blue-600' 
+              : 'bg-blue-500 text-white'
           }`}>
             {level}
           </div>
@@ -345,7 +345,7 @@ function TreeNode({ node, level }) {
           <div className="flex items-center justify-between">
             <div>
               <h3 className={`text-sm font-medium truncate ${
-                level === 0 ? &apos;text-white&apos; : &apos;text-white&apos;
+                level === 0 ? 'text-white' : 'text-white'
               }`}>
                 {node.name}
               </h3>
@@ -353,9 +353,9 @@ function TreeNode({ node, level }) {
             </div>
             <div className="flex items-center space-x-4 text-xs">
               <span className={`px-2 py-1 rounded-full ${
-                node.status === &apos;active&apos; 
-                  ? &apos;bg-green-500 text-white&apos; 
-                  : &apos;bg-red-500 text-white&apos;
+                node.status === 'active' 
+                  ? 'bg-green-500 text-white' 
+                  : 'bg-red-500 text-white'
               }`}>
                 {node.status}
               </span>
@@ -420,9 +420,9 @@ function ReferralListView({ referrals }) {
               </td>
               <td className="py-3 px-4">
                 <span className={`px-2 py-1 text-xs rounded-full ${
-                  referral.status === &apos;active&apos;
-                    ? &apos;bg-green-500 text-white&apos;
-                    : &apos;bg-red-500 text-white&apos;
+                  referral.status === 'active'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-red-500 text-white'
                 }`}>
                   {referral.status}
                 </span>
