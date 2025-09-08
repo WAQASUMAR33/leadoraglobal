@@ -14,6 +14,7 @@ model User {
   fullname          String
   username          String             @unique
   email             String?            @unique
+  phoneNumber       String?            @map("phone_number")
   password          String
   emailVerified     Boolean            @default(false) @map("email_verified")
   emailVerificationToken String?       @map("email_verification_token")
@@ -33,6 +34,8 @@ model User {
   kyc               KYC?
   packageRequests   PackageRequest[]
   withdrawalRequests WithdrawalRequest[]
+  transfersFrom     Transfer[]         @relation("TransferFromUser")
+  transfersTo       Transfer[]         @relation("TransferToUser")
   currentPackage    Package?           @relation("UserCurrentPackage", fields: [currentPackageId], references: [id])
   package           Package?           @relation("UserPackage", fields: [packageId], references: [id])
   rank              Rank?              @relation("UserRank", fields: [rankId], references: [id])
@@ -130,6 +133,7 @@ model Admin {
   isActive      Boolean        @default(true) @map("is_active")
   lastLoginAt   DateTime?      @map("last_login_at")
   adminSessions AdminSession[]
+  transfers     Transfer[]
 
   @@map("admins")
 }
@@ -263,3 +267,27 @@ model WithdrawalRequest {
   @@index([status], map: "withdrawal_requests_status_fkey")
   @@map("withdrawal_requests")
 }
+
+model Transfer {
+  id                Int       @id @default(autoincrement())
+  fromUserId        Int?      @map("from_user_id")
+  toUserId          Int       @map("to_user_id")
+  amount            Decimal   @db.Decimal(10, 2)
+  transferType      String    @map("transfer_type") // "admin_to_user" or "user_to_user"
+  description       String?
+  adminId           String?   @map("admin_id")
+  status            String    @default("completed")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  fromUser          User?     @relation("TransferFromUser", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUser            User      @relation("TransferToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+  admin             Admin?    @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([fromUserId], map: "transfers_from_user_id_fkey")
+  @@index([toUserId], map: "transfers_to_user_id_fkey")
+  @@index([adminId], map: "transfers_admin_id_fkey")
+  @@index([transferType], map: "transfers_type_fkey")
+  @@map("transfers")
+}
+

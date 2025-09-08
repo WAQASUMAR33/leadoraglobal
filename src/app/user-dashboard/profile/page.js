@@ -13,7 +13,8 @@ export default function UserProfile() {
   const [formData, setFormData] = useState({
     fullname: '',
     username: '',
-    email: ''
+    email: '',
+    phoneNumber: ''
   });
 
   // Password change state
@@ -32,12 +33,14 @@ export default function UserProfile() {
       setFormData({
         fullname: currentUser.fullname || currentUser.firstname || '',
         username: currentUser.username || '',
-        email: currentUser.email || ''
+        email: currentUser.email || '',
+        phoneNumber: currentUser.phoneNumber || ''
       });
       console.log('Profile page - Form data set:', {
         fullname: currentUser.fullname || currentUser.firstname || '',
         username: currentUser.username || '',
-        email: currentUser.email || ''
+        email: currentUser.email || '',
+        phoneNumber: currentUser.phoneNumber || ''
       });
     }
     setLoading(false);
@@ -73,7 +76,8 @@ export default function UserProfile() {
           userId: user.id,
           fullName: formData.fullname,
           username: formData.username,
-          email: formData.email
+          email: formData.email,
+          phoneNumber: formData.phoneNumber
         }),
       });
 
@@ -249,6 +253,25 @@ export default function UserProfile() {
                     ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
                     : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                 }`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                disabled={!editing}
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  editing
+                    ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                    : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                }`}
+                placeholder="Enter your phone number"
               />
             </div>
           </div>

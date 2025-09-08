@@ -124,6 +124,11 @@ const menuItems = [
         label: "Transfer to Wallet",
         href: "/user-dashboard/earnings/transfer",
         description: "Transfer earnings to wallet"
+      },
+      {
+        label: "Transfer to Others",
+        href: "/user-dashboard/transfer-to-others",
+        description: "Send money to other users"
       }
     ]
   },

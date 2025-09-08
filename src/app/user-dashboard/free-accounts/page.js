@@ -24,45 +24,34 @@ import {
   Avatar,
   IconButton,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  Collapse,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  ListItemSecondaryAction
 } from '@mui/material';
 import {
   AccountBalance,
   Search,
   Download,
   Visibility,
-  Add,
-  Edit,
-  Delete,
   CheckCircle,
-  Pending
+  Pending,
+  ExpandMore,
+  ExpandLess
 } from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
 
 export default function FreeAccountsPage() {
   const context = useContext(UserContext);
-  const [freeAccounts, setFreeAccounts] = useState([]);
+  const [inactiveData, setInactiveData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [message, setMessage] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [mounted, setMounted] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState(null);
-
-  const [formData, setFormData] = useState({
-    accountName: '',
-    accountType: '',
-    accountNumber: '',
-    bankName: '',
-    branchCode: '',
-    mobileNumber: '',
-    email: '',
-    isActive: true
-  });
+  const [expandedLevels, setExpandedLevels] = useState({});
+  const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'list'
 
   useEffect(() => {
     setMounted(true);
@@ -70,7 +59,7 @@ export default function FreeAccountsPage() {
 
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user) {
-      fetchFreeAccounts();
+      fetchInactivePackageTree();
     }
   }, [mounted, context?.isAuthenticated, context?.user]);
   
@@ -88,14 +77,7 @@ export default function FreeAccountsPage() {
   
   const { user, isAuthenticated } = context;
 
-  const accountTypes = [
-    { value: 'bank_account', label: 'Bank Account' },
-    { value: 'easypaisa', label: 'EasyPaisa' },
-    { value: 'jazzcash', label: 'JazzCash' },
-    { value: 'paypal', label: 'PayPal' }
-  ];
-
-  const fetchFreeAccounts = async () => {
+  const fetchInactivePackageTree = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/user/free-accounts', {
@@ -104,132 +86,63 @@ export default function FreeAccountsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setFreeAccounts(data.accounts || []);
+        setInactiveData(data);
+        // Initialize expanded levels for tree view
+        setExpandedLevels({ 1: true }); // Expand level 1 by default
       } else {
-        setError('Failed to fetch free accounts');
+        setError('Failed to fetch inactive package tree');
       }
     } catch (error) {
-      console.error('Error fetching free accounts:', error);
-      setError('Error loading free accounts');
+      console.error('Error fetching inactive package tree:', error);
+      setError('Error loading inactive package tree');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+  const toggleLevel = (level) => {
+    setExpandedLevels(prev => ({
       ...prev,
-      [field]: value
+      [level]: !prev[level]
     }));
   };
 
-  const handleOpenDialog = (account = null) => {
-    if (account) {
-      setEditingAccount(account);
-      setFormData({
-        accountName: account.accountName || '',
-        accountType: account.accountType || '',
-        accountNumber: account.accountNumber || '',
-        bankName: account.bankName || '',
-        branchCode: account.branchCode || '',
-        mobileNumber: account.mobileNumber || '',
-        email: account.email || '',
-        isActive: account.isActive || true
-      });
-    } else {
-      setEditingAccount(null);
-      setFormData({
-        accountName: '',
-        accountType: '',
-        accountNumber: '',
-        bankName: '',
-        branchCode: '',
-        mobileNumber: '',
-        email: '',
-        isActive: true
-      });
-    }
-    setDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setEditingAccount(null);
-    setFormData({
-      accountName: '',
-      accountType: '',
-      accountNumber: '',
-      bankName: '',
-      branchCode: '',
-      mobileNumber: '',
-      email: '',
-      isActive: true
-    });
-  };
-
-  const handleSubmit = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setMessage(null);
-
-      const url = editingAccount 
-        ? `/api/user/free-accounts/${editingAccount.id}`
-        : '/api/user/free-accounts';
-      
-      const method = editingAccount ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage(editingAccount ? 'Account updated successfully!' : 'Account added successfully!');
-        handleCloseDialog();
-        fetchFreeAccounts();
-        setTimeout(() => setMessage(null), 5000);
-      } else {
-        setError(data.message || 'Failed to save account');
-      }
-    } catch (error) {
-      console.error('Error saving account:', error);
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active':
+        return 'success';
+      case 'inactive':
+        return 'error';
+      case 'pending':
+        return 'warning';
+      default:
+        return 'default';
     }
   };
 
-  const handleDelete = async (accountId) => {
-    if (!window.confirm('Are you sure you want to delete this account?')) {
-      return;
+  const getLevelColor = (level) => {
+    switch (level) {
+      case 1:
+        return 'primary';
+      case 2:
+        return 'secondary';
+      case 3:
+        return 'warning';
+      default:
+        return 'default';
     }
+  };
 
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/user/free-accounts/${accountId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        setMessage('Account deleted successfully!');
-        fetchFreeAccounts();
-        setTimeout(() => setMessage(null), 5000);
-      } else {
-        setError('Failed to delete account');
-      }
-    } catch (error) {
-      console.error('Error deleting account:', error);
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
+  const getPackageStatusColor = (status) => {
+    switch (status) {
+      case 'No Package':
+        return 'error';
+      case 'Expired':
+        return 'warning';
+      case 'Active':
+        return 'success';
+      default:
+        return 'default';
     }
   };
 
@@ -241,30 +154,26 @@ export default function FreeAccountsPage() {
     });
   };
 
-  const getAccountTypeIcon = (type) => {
-    switch (type) {
-      case 'bank_account':
-        return <AccountBalance />;
-      case 'easypaisa':
-      case 'jazzcash':
-        return <AccountBalance />;
-      case 'paypal':
-        return <AccountBalance />;
-      default:
-        return <AccountBalance />;
-    }
-  };
+  // Filter members based on search
+  const filteredMembers = inactiveData?.allMembers?.filter(member => 
+    member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
-  // Filter accounts based on search
-  const filteredAccounts = freeAccounts.filter(account => 
-    account.accountName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    account.accountNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    account.bankName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Group members by level for tree view
+  const membersByLevel = {};
+  filteredMembers.forEach(member => {
+    if (!membersByLevel[member.level]) {
+      membersByLevel[member.level] = [];
+    }
+    membersByLevel[member.level].push(member);
+  });
 
   // Calculate totals
-  const totalAccounts = filteredAccounts.length;
-  const activeAccounts = filteredAccounts.filter(a => a.isActive).length;
+  const totalMembers = filteredMembers.length;
+  const inactivePackageMembers = filteredMembers.filter(m => m.isPackageInactive).length;
+  const totalPotentialRevenue = filteredMembers.reduce((sum, member) => sum + member.packageAmount, 0);
 
   // Prevent hydration mismatch by showing loading until mounted
   if (!mounted) {
@@ -277,40 +186,24 @@ export default function FreeAccountsPage() {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-          Free Accounts
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => handleOpenDialog()}
-          sx={{
-            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%)',
-            }
-          }}
-        >
-          Add Account
-        </Button>
-      </Box>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+        MLM Tree - Inactive Package Members
+      </Typography>
 
-      {message && <Alert severity="success" sx={{ mb: 3 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          <Card>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ borderRadius: 0 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Total Accounts
+                    Total Members
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    {totalAccounts}
+                    {totalMembers}
                   </Typography>
                 </Box>
                 <AccountBalance sx={{ fontSize: 40, color: 'primary.main' }} />
@@ -318,16 +211,33 @@ export default function FreeAccountsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ borderRadius: 0 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Active Accounts
+                    Inactive Packages
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                    {inactivePackageMembers}
+                  </Typography>
+                </Box>
+                <Pending sx={{ fontSize: 40, color: 'warning.main' }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ borderRadius: 0 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Potential Revenue
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                    {activeAccounts}
+                    PKR {totalPotentialRevenue.toLocaleString()}
                   </Typography>
                 </Box>
                 <CheckCircle sx={{ fontSize: 40, color: 'success.main' }} />
@@ -335,16 +245,33 @@ export default function FreeAccountsPage() {
             </CardContent>
           </Card>
         </Grid>
+        <Grid item xs={12} md={3}>
+          <Card sx={{ borderRadius: 0 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Max Level
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+                    {inactiveData?.treeStats?.maxLevel || 0}
+                  </Typography>
+                </Box>
+                <AccountBalance sx={{ fontSize: 40, color: 'info.main' }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
       {/* Search and Actions */}
-      <Card sx={{ mb: 3 }}>
+      <Card sx={{ mb: 3, borderRadius: 0 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={8}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                placeholder="Search accounts by name, number, or bank..."
+                placeholder="Search members by name, email, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -356,29 +283,36 @@ export default function FreeAccountsPage() {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <Button
                 fullWidth
-                variant="outlined"
-                startIcon={<Download />}
-                onClick={() => {
-                  // TODO: Implement export functionality
-                  console.log('Export functionality to be implemented');
-                }}
+                variant={viewMode === 'tree' ? 'contained' : 'outlined'}
+                startIcon={<AccountBalance />}
+                onClick={() => setViewMode('tree')}
               >
-                Export List
+                Tree View
+              </Button>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Button
+                fullWidth
+                variant={viewMode === 'list' ? 'contained' : 'outlined'}
+                startIcon={<Download />}
+                onClick={() => setViewMode('list')}
+              >
+                List View
               </Button>
             </Grid>
           </Grid>
         </CardContent>
       </Card>
 
-      {/* Accounts Table */}
-      <Card>
+      {/* MLM Tree Display */}
+      <Card sx={{ borderRadius: 0 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <AccountBalance />
-            Free Accounts ({filteredAccounts.length})
+            MLM Tree - Inactive Package Members ({filteredMembers.length})
           </Typography>
           <Divider sx={{ mb: 3 }} />
 
@@ -386,191 +320,210 @@ export default function FreeAccountsPage() {
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
               <CircularProgress />
             </Box>
-          ) : filteredAccounts.length > 0 ? (
-            <TableContainer component={Paper} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Account</strong></TableCell>
-                    <TableCell><strong>Type</strong></TableCell>
-                    <TableCell><strong>Status</strong></TableCell>
-                    <TableCell><strong>Created</strong></TableCell>
-                    <TableCell><strong>Actions</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredAccounts.map((account) => (
-                    <TableRow key={account.id} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ bgcolor: 'primary.main' }}>
-                            {getAccountTypeIcon(account.accountType)}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                              {account.accountName}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {account.accountNumber || account.mobileNumber || account.email}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={accountTypes.find(t => t.value === account.accountType)?.label || account.accountType} 
-                          color="primary" 
-                          variant="outlined"
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={account.isActive ? 'Active' : 'Inactive'} 
-                          color={account.isActive ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(account.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <Tooltip title="View Details">
-                          <IconButton size="small" color="primary">
-                            <Visibility />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit">
-                          <IconButton size="small" color="primary" onClick={() => handleOpenDialog(account)}>
-                            <Edit />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton size="small" color="error" onClick={() => handleDelete(account.id)}>
-                            <Delete />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
+          ) : filteredMembers.length > 0 ? (
+            viewMode === 'tree' ? (
+              // Tree View
+              <Box>
+                {/* Root User */}
+                <Box sx={{ mb: 3, p: 2, bgcolor: 'primary.50', border: '2px solid', borderColor: 'primary.main' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+                      {inactiveData?.user?.name?.charAt(0).toUpperCase() || 'U'}
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        {inactiveData?.user?.name || 'Unknown'} (You)
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        @{inactiveData?.user?.username} • {inactiveData?.user?.email}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                        <Chip label={inactiveData?.user?.package || 'No Package'} color="primary" size="small" />
+                        <Chip label={inactiveData?.user?.rank || 'No Rank'} color="secondary" size="small" />
+                      </Box>
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                        PKR {(inactiveData?.user?.totalEarnings || 0).toLocaleString()}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Earnings
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Downline Levels */}
+                {Object.keys(membersByLevel).sort((a, b) => parseInt(a) - parseInt(b)).map(level => (
+                  <Box key={level} sx={{ ml: parseInt(level) * 2 }}>
+                    <Button
+                      onClick={() => toggleLevel(parseInt(level))}
+                      startIcon={expandedLevels[parseInt(level)] ? <ExpandLess /> : <ExpandMore />}
+                      sx={{ mb: 1, textTransform: 'none' }}
+                    >
+                      <Typography variant="h6">
+                        Level {level} ({membersByLevel[level].length} members)
+                      </Typography>
+                    </Button>
+                    
+                    <Collapse in={expandedLevels[parseInt(level)]}>
+                      <List>
+                        {membersByLevel[level].map((member) => (
+                          <ListItem key={member.id} sx={{ pl: 4 }}>
+                            <ListItemAvatar>
+                              <Avatar sx={{ bgcolor: getLevelColor(parseInt(level)) + '.main' }}>
+                                {member.name?.charAt(0).toUpperCase() || 'U'}
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                    {member.name || 'Unknown'}
+                                  </Typography>
+                                  <Chip 
+                                    label={member.packageStatus} 
+                                    color={getPackageStatusColor(member.packageStatus)}
+                                    size="small"
+                                  />
+                                  <Chip 
+                                    label={member.status || 'Active'} 
+                                    color={getStatusColor(member.status || 'active')}
+                                    size="small"
+                                  />
+                                </Box>
+                              }
+                              secondary={
+                                <Box>
+                                  <Typography variant="body2" color="text.secondary">
+                                    @{member.username} • {member.email}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Joined: {formatDate(member.createdAt)} • Package: {member.package}
+                                    {member.packageExpiryDate && (
+                                      <span> • Expired: {formatDate(member.packageExpiryDate)}</span>
+                                    )}
+                                  </Typography>
+                                </Box>
+                              }
+                            />
+                            <ListItemSecondaryAction>
+                              <Box sx={{ textAlign: 'right', mr: 2 }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                                  PKR {(member.totalEarnings || 0).toLocaleString()}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Potential: PKR {member.packageAmount.toLocaleString()}
+                                </Typography>
+                              </Box>
+                              <Tooltip title="Contact Member">
+                                <IconButton size="small" color="primary">
+                                  <Visibility />
+                                </IconButton>
+                              </Tooltip>
+                            </ListItemSecondaryAction>
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Collapse>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              // List View
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell><strong>Member</strong></TableCell>
+                      <TableCell><strong>Level</strong></TableCell>
+                      <TableCell><strong>Package Status</strong></TableCell>
+                      <TableCell><strong>Join Date</strong></TableCell>
+                      <TableCell><strong>Total Earnings</strong></TableCell>
+                      <TableCell><strong>Potential Revenue</strong></TableCell>
+                      <TableCell><strong>Actions</strong></TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {filteredMembers.map((member) => (
+                      <TableRow key={member.id} hover>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar sx={{ bgcolor: getLevelColor(member.level) + '.main' }}>
+                              {member.name?.charAt(0).toUpperCase() || 'U'}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                {member.name || 'Unknown'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                @{member.username} • {member.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={`Level ${member.level}`} 
+                            color={getLevelColor(member.level)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={member.packageStatus} 
+                            color={getPackageStatusColor(member.packageStatus)}
+                            size="small"
+                          />
+                          {member.packageExpiryDate && (
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              Expired: {formatDate(member.packageExpiryDate)}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(member.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                            PKR {(member.totalEarnings || 0).toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                            PKR {member.packageAmount.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="Contact Member">
+                            <IconButton size="small" color="primary">
+                              <Visibility />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <AccountBalance sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
-                No Free Accounts
+                No Inactive Package Members
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {searchTerm 
-                  ? 'No accounts match your search criteria.'
-                  : "You don't have any free accounts yet. Add your first account to get started!"
+                  ? 'No members match your search criteria.'
+                  : "Great! All your downline members have active packages."
                 }
               </Typography>
-              {!searchTerm && (
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => handleOpenDialog()}
-                >
-                  Add Your First Account
-                </Button>
-              )}
             </Box>
           )}
         </CardContent>
       </Card>
 
-      {/* Add/Edit Account Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingAccount ? 'Edit Free Account' : 'Add Free Account'}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Account Name"
-                value={formData.accountName}
-                onChange={(e) => handleInputChange('accountName', e.target.value)}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                select
-                label="Account Type"
-                value={formData.accountType}
-                onChange={(e) => handleInputChange('accountType', e.target.value)}
-                SelectProps={{
-                  native: true,
-                }}
-              >
-                <option value="">Select Type</option>
-                {accountTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Account Number"
-                value={formData.accountNumber}
-                onChange={(e) => handleInputChange('accountNumber', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Bank Name"
-                value={formData.bankName}
-                onChange={(e) => handleInputChange('bankName', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Branch Code"
-                value={formData.branchCode}
-                onChange={(e) => handleInputChange('branchCode', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Mobile Number"
-                value={formData.mobileNumber}
-                onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={loading}
-          >
-            {loading ? 'Saving...' : (editingAccount ? 'Update' : 'Add')}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

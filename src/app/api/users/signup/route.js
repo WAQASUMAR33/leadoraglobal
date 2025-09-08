@@ -1,6 +1,8 @@
 // app/api/users/signup/route.js
-import prisma from '../../../../lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+
+const prisma = new PrismaClient()
 
 export async function POST(req) {
   try {
@@ -9,14 +11,15 @@ export async function POST(req) {
       fullName, 
       username, 
       email,
+      phoneNumber,
       password, 
       referralCode 
     } = body
 
     // Validate required fields
-    if (!fullName || !username || !email || !password) {
+    if (!fullName || !username || !email || !phoneNumber || !password || !referralCode) {
       return new Response(JSON.stringify({ 
-        message: 'Missing required fields: fullName, username, email, and password are required' 
+        message: 'Missing required fields: fullName, username, email, phoneNumber, password, and referralCode are required' 
       }), { status: 400 })
     }
 
@@ -42,6 +45,33 @@ export async function POST(req) {
       }), { status: 400 })
     }
 
+    // Check if phone number already exists
+    const existingPhone = await prisma.user.findFirst({
+      where: { 
+        phoneNumber: phoneNumber 
+      }
+    })
+    
+    if (existingPhone) {
+      return new Response(JSON.stringify({ 
+        message: 'Phone number already exists. Please use a different phone number.' 
+      }), { status: 400 })
+    }
+
+    // Validate referral code exists and is active
+    const referrer = await prisma.user.findUnique({
+      where: { 
+        username: referralCode,
+        status: 'active'
+      }
+    })
+    
+    if (!referrer) {
+      return new Response(JSON.stringify({ 
+        message: 'Invalid referral code. Please check and try again.' 
+      }), { status: 400 })
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
@@ -53,6 +83,7 @@ export async function POST(req) {
       fullname: fullName,
       username,
       email,
+      phoneNumber,
       password: hashedPassword,
       emailVerified: false,
       emailVerificationToken,
@@ -68,6 +99,7 @@ export async function POST(req) {
         fullname: true,
         username: true,
         email: true,
+        phoneNumber: true,
         emailVerified: true,
         referredBy: true,
         referralCount: true,
@@ -109,6 +141,7 @@ export async function POST(req) {
         fullName: user.fullname,
         username: user.username,
         email: user.email,
+        phoneNumber: user.phoneNumber,
         emailVerified: user.emailVerified,
         referredBy: user.referredBy
       }
@@ -127,6 +160,11 @@ export async function POST(req) {
       if (err.meta?.target?.includes('email')) {
         return new Response(JSON.stringify({ 
           message: 'Email already exists. Please use a different email address.' 
+        }), { status: 400 })
+      }
+      if (err.meta?.target?.includes('phone_number')) {
+        return new Response(JSON.stringify({ 
+          message: 'Phone number already exists. Please use a different phone number.' 
         }), { status: 400 })
       }
       return new Response(JSON.stringify({ 

@@ -1,31 +1,19 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
-
-// Helper function to verify JWT token
-const verifyToken = (request) => {
-  try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null;
-    }
-    
-    const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
-    return decoded;
-  } catch (error) {
-    return null;
-  }
-};
+import prisma from '../../../../lib/prisma';
+import { verifyToken } from '../../../../lib/auth';
 
 // GET - Fetch KYC data for a user
 export async function GET(request) {
   try {
-    const decoded = verifyToken(request);
+    // Verify user authentication
+    const token = request.cookies.get('auth-token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token);
     if (!decoded) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const kyc = await prisma.kYC.findUnique({
@@ -53,9 +41,15 @@ export async function GET(request) {
 // POST - Create new KYC data
 export async function POST(request) {
   try {
-    const decoded = verifyToken(request);
+    // Verify user authentication
+    const token = request.cookies.get('auth-token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token);
     if (!decoded) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -170,9 +164,15 @@ export async function POST(request) {
 // PUT - Update existing KYC data
 export async function PUT(request) {
   try {
-    const decoded = verifyToken(request);
+    // Verify user authentication
+    const token = request.cookies.get('auth-token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token);
     if (!decoded) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const body = await request.json();

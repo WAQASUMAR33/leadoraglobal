@@ -84,6 +84,17 @@ export default function UserDashboardHome() {
       ),
       href: "/user-dashboard/withdraw",
       color: "from-yellow-600 to-yellow-700"
+    },
+    {
+      title: "Inactive Members",
+      description: "View members with inactive packages",
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      ),
+      href: "/user-dashboard/inactive-members",
+      color: "from-orange-600 to-orange-700"
     }
   ];
 
@@ -158,6 +169,7 @@ export default function UserDashboardHome() {
           </div>
         </div>
       </div>
+
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -241,6 +253,41 @@ export default function UserDashboardHome() {
           </div>
         </div>
       </div>
+
+      {/* Inactive Members Alert */}
+      {dashboardData?.inactiveMembersCount > 0 && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center mr-4">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-orange-800">
+                  {dashboardData.inactiveMembersCount} Members Need Package Activation
+                </h3>
+                <p className="text-orange-600">
+                  Some of your downline members have inactive packages. Help them reactivate to boost your earnings!
+                </p>
+                <p className="text-orange-500 text-sm mt-1">
+                  Potential Revenue: PKR {dashboardData.potentialRevenue?.toLocaleString() || '0'}
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/user-dashboard/inactive-members"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <span>View Details</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">

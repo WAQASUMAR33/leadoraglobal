@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function PUT(request) {
   try {
-    const { userId, fullName, username, email } = await request.json();
+    const { userId, fullName, username, email, phoneNumber } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -34,12 +34,27 @@ export async function PUT(request) {
       }
     }
 
+    // Check if phone number is being changed and if it's already taken by another user
+    if (phoneNumber && phoneNumber !== existingUser.phoneNumber) {
+      const phoneExists = await prisma.user.findFirst({
+        where: {
+          phoneNumber: phoneNumber,
+          id: { not: parseInt(userId) }
+        }
+      });
+
+      if (phoneExists) {
+        return NextResponse.json({ error: 'Phone number already exists' }, { status: 400 });
+      }
+    }
+
     // Update user profile
     const updatedUser = await prisma.user.update({
       where: { id: parseInt(userId) },
       data: {
         fullname: fullName || null,
         email: email || null,
+        phoneNumber: phoneNumber || null,
         updatedAt: new Date()
       },
       select: {
@@ -47,6 +62,7 @@ export async function PUT(request) {
         username: true,
         fullname: true,
         email: true,
+        phoneNumber: true,
         referredBy: true,
         referralCount: true,
         totalEarnings: true,

@@ -78,6 +78,46 @@ export default function KYCPage() {
     setMounted(true);
   }, []);
 
+  const fetchKYCData = useCallback(async () => {
+    try {
+      // Check if user is authenticated
+      if (!isAuthenticated || !user) return;
+
+      const response = await fetch('/api/user/kyc', {
+        credentials: 'include' // Include cookies for authentication
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.kyc) {
+          setExistingKYC(data.kyc);
+          setKycStatus(data.kyc.kyc_status);
+          setKycData({
+            fullname: data.kyc.fullname || "",
+            father_name: data.kyc.father_name || "",
+            email: data.kyc.email || "",
+            phoneNumber: data.kyc.phoneNumber || "",
+            date_of_birth: data.kyc.date_of_birth || "",
+            city: data.kyc.city || "",
+            country: data.kyc.country || "",
+            current_address: data.kyc.current_address || "",
+            permanent_address: data.kyc.permanent_address || "",
+            gender: data.kyc.gender || "",
+            cnic_number: data.kyc.cnic_number || "",
+            cnic_expiry_date: data.kyc.cnic_expiry_date || "",
+            profile_image: data.kyc.profile_image || "",
+            beneficiary_name: data.kyc.beneficiary_name || "",
+            beneficiary_phone_mobile: data.kyc.beneficiary_phone_mobile || "",
+            beneficiary_relation: data.kyc.beneficiary_relation || "",
+            beneficiary_address: data.kyc.beneficiary_address || "",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching KYC data:', error);
+    }
+  }, [isAuthenticated, user]);
+
   useEffect(() => {
     if (mounted && isAuthenticated && user) {
       fetchKYCData();
@@ -158,46 +198,6 @@ export default function KYCPage() {
       setLoadingCountries(false);
     }
   };
-
-  const fetchKYCData = useCallback(async () => {
-    try {
-      // Check if user is authenticated
-      if (!isAuthenticated || !user) return;
-
-      const response = await fetch('/api/user/kyc', {
-        credentials: 'include' // Include cookies for authentication
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.kyc) {
-          setExistingKYC(data.kyc);
-          setKycStatus(data.kyc.kyc_status);
-          setKycData({
-            fullname: data.kyc.fullname || "",
-            father_name: data.kyc.father_name || "",
-            email: data.kyc.email || "",
-            phoneNumber: data.kyc.phoneNumber || "",
-            date_of_birth: data.kyc.date_of_birth || "",
-            city: data.kyc.city || "",
-            country: data.kyc.country || "",
-            current_address: data.kyc.current_address || "",
-            permanent_address: data.kyc.permanent_address || "",
-            gender: data.kyc.gender || "",
-            cnic_number: data.kyc.cnic_number || "",
-            cnic_expiry_date: data.kyc.cnic_expiry_date || "",
-            profile_image: data.kyc.profile_image || "",
-            beneficiary_name: data.kyc.beneficiary_name || "",
-            beneficiary_phone_mobile: data.kyc.beneficiary_phone_mobile || "",
-            beneficiary_relation: data.kyc.beneficiary_relation || "",
-            beneficiary_address: data.kyc.beneficiary_address || "",
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching KYC data:', error);
-    }
-  }, [isAuthenticated, user]);
 
   const handleInputChange = (field, value) => {
     setKycData(prev => ({
@@ -339,36 +339,80 @@ export default function KYCPage() {
     }
   };
 
-  const uploadImageToAPI = async (base64Image) => {
+  const uploadImageToAPI = async (base64Data) => {
+    // Try external server first
     try {
+      console.log('Starting image upload to external server...');
+      
       const response = await fetch('https://steelblue-cod-355377.hostingersite.com/uploadImage.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          image: base64Image
+          image: base64Data
         })
       });
 
-      const result = await response.json();
-      
-      if (result.success) {
-        // Handle different response formats
-        let imageUrl = result.url || result.image_url || result.imageUrl;
-        
-        // If the response is just a filename, construct the full URL
-        if (imageUrl && !imageUrl.startsWith('http')) {
-          imageUrl = `https://steelblue-cod-355377.hostingersite.com/uploads/${imageUrl}`;
-        }
-        
-        return imageUrl;
-      } else {
-        throw new Error(result.message || 'Image upload failed');
+      console.log('External upload response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`External server error: ${response.status}`);
       }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw error;
+
+      const result = await response.json();
+      console.log('External upload result:', result);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      const imageUrl = result.url || result.imageUrl || result.image_url;
+      // If the response is just a filename, construct the full URL
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        const fullUrl = `https://steelblue-cod-355377.hostingersite.com/uploads/${imageUrl}`;
+        console.log('External server success:', fullUrl);
+        return fullUrl;
+      }
+      console.log('External server success:', imageUrl);
+      return imageUrl;
+    } catch (externalError) {
+      console.warn('External server failed, trying local upload:', externalError.message);
+      
+      // Fallback to local upload
+      try {
+        console.log('Starting local image upload...');
+        
+        const localResponse = await fetch('/api/upload-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            image: base64Data
+          })
+        });
+
+        console.log('Local upload response status:', localResponse.status);
+
+        if (!localResponse.ok) {
+          const errorText = await localResponse.text();
+          throw new Error(`Local upload failed: ${localResponse.status} - ${errorText}`);
+        }
+
+        const localResult = await localResponse.json();
+        console.log('Local upload result:', localResult);
+        
+        if (localResult.error) {
+          throw new Error(localResult.error);
+        }
+
+        console.log('Local upload success:', localResult.url);
+        return localResult.url;
+      } catch (localError) {
+        console.error('Both external and local upload failed:', localError.message);
+        throw new Error(`Image upload failed: External server unavailable and local upload failed - ${localError.message}`);
+      }
     }
   };
 

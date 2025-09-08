@@ -23,6 +23,7 @@ import {
   Group,
   Lock,
   Email,
+  Phone,
   Visibility,
   VisibilityOff,
   ArrowForward,
@@ -37,6 +38,7 @@ function SignupForm() {
     fullName: "",
     username: "",
     email: "",
+    phoneNumber: "",
     referralCode: "",
     password: "",
     confirmPassword: "",
@@ -51,6 +53,12 @@ function SignupForm() {
 
   // Validation state
   const [errors, setErrors] = useState({});
+  const [referralValidation, setReferralValidation] = useState({
+    isValidating: false,
+    isValid: false,
+    referrerName: '',
+    message: ''
+  });
 
   // Auto-focus full name field on mount
   useEffect(() => {
@@ -88,6 +96,64 @@ function SignupForm() {
     if (errors[field]) {
       setErrors({ ...errors, [field]: "" });
     }
+
+    // Validate referral code in real-time
+    if (field === 'referralCode' && value.length >= 3) {
+      validateReferralCode(value);
+    } else if (field === 'referralCode' && value.length < 3) {
+      setReferralValidation({
+        isValidating: false,
+        isValid: false,
+        referrerName: '',
+        message: ''
+      });
+    }
+  };
+
+  const validateReferralCode = async (referralCode) => {
+    if (!referralCode || referralCode.length < 3) return;
+
+    setReferralValidation(prev => ({ ...prev, isValidating: true }));
+
+    try {
+      const response = await fetch('/api/validate-referral', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ referralCode }),
+      });
+
+      const data = await response.json();
+
+      if (data.valid) {
+        setReferralValidation({
+          isValidating: false,
+          isValid: true,
+          referrerName: data.referrer.fullname,
+          message: data.message
+        });
+        // Clear any referral code errors
+        setErrors(prev => ({ ...prev, referralCode: "" }));
+      } else {
+        setReferralValidation({
+          isValidating: false,
+          isValid: false,
+          referrerName: '',
+          message: data.message
+        });
+        // Set referral code error
+        setErrors(prev => ({ ...prev, referralCode: data.message }));
+      }
+    } catch (error) {
+      console.error('Error validating referral code:', error);
+      setReferralValidation({
+        isValidating: false,
+        isValid: false,
+        referrerName: '',
+        message: 'Error validating referral code'
+      });
+    }
   };
 
   // Validation functions
@@ -109,6 +175,11 @@ function SignupForm() {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address";
         return "";
       
+      case "phoneNumber":
+        if (!value) return "Phone number is required";
+        if (!/^[\+]?[0-9\s\-\(\)]{10,15}$/.test(value)) return "Please enter a valid phone number";
+        return "";
+      
       case "password":
         if (!value) return "Password is required";
         if (value.length < 6) return "Password must be at least 6 characters";
@@ -120,8 +191,9 @@ function SignupForm() {
         return "";
       
       case "referralCode":
-        // Referral code is optional, but if provided, validate format
-        if (value && value.length < 3) return "Referral code must be at least 3 characters";
+        if (!value) return "Referral code is required";
+        if (value.length < 3) return "Referral code must be at least 3 characters";
+        if (!/^[a-zA-Z0-9_]+$/.test(value)) return "Referral code can only contain letters, numbers, and underscores";
         return "";
       
       default:
@@ -150,6 +222,12 @@ function SignupForm() {
       return;
     }
 
+    // Check if referral code is valid
+    if (!referralValidation.isValid) {
+      setError("Please enter a valid referral code.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -160,6 +238,7 @@ function SignupForm() {
           fullName: form.fullName,
           username: form.username,
           email: form.email,
+          phoneNumber: form.phoneNumber,
           referralCode: form.referralCode,
           password: form.password,
         }),
@@ -177,6 +256,7 @@ function SignupForm() {
           fullName: "",
           username: "",
           email: "",
+          phoneNumber: "",
           referralCode: "",
           password: "",
           confirmPassword: "",
@@ -379,7 +459,7 @@ function SignupForm() {
                     />
                   </Box>
 
-                  {/* Row 2: Email and Referral Code */}
+                  {/* Row 2: Email and Phone Number */}
                   <Box sx={{ 
                     display: 'flex', 
                     gap: 2, 
@@ -412,14 +492,16 @@ function SignupForm() {
                       }}
                     />
                     <TextField
-                      id="referralCode"
-                      name="referralCode"
-                      label="Referral Code (Optional)"
-                      value={form.referralCode}
-                      onChange={updateField("referralCode")}
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      label="Phone Number"
+                      type="tel"
+                      value={form.phoneNumber}
+                      onChange={updateField("phoneNumber")}
+                      required
                       fullWidth
-                      error={!!errors.referralCode}
-                      helperText={errors.referralCode || "Enter a referral code to earn bonus rewards"}
+                      error={!!errors.phoneNumber}
+                      helperText={errors.phoneNumber || "Enter your mobile phone number"}
                       sx={{ 
                         flex: 1,
                         '& .MuiOutlinedInput-root': {
@@ -429,14 +511,89 @@ function SignupForm() {
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
-                            <Group />
+                            <Phone />
                           </InputAdornment>
                         ),
                       }}
                     />
                   </Box>
 
-                  {/* Row 3: Password and Confirm Password */}
+                  {/* Row 3: Referral Code */}
+                  <Box sx={{ width: '100%' }}>
+                    <TextField
+                      id="referralCode"
+                      name="referralCode"
+                      label="Referral Code"
+                      value={form.referralCode}
+                      onChange={updateField("referralCode")}
+                      required
+                      fullWidth
+                      error={!!errors.referralCode}
+                      helperText={
+                        referralValidation.isValidating 
+                          ? "Validating referral code..." 
+                          : referralValidation.isValid 
+                            ? `✓ Valid! You will be referred by ${referralValidation.referrerName}`
+                            : errors.referralCode || "Enter a valid referral code to continue"
+                      }
+                      sx={{ 
+                        '& .MuiOutlinedInput-root': {
+                          height: '56px'
+                        },
+                        '& .MuiFormHelperText-root': {
+                          color: referralValidation.isValid ? 'success.main' : errors.referralCode ? 'error.main' : 'text.secondary'
+                        }
+                      }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Group />
+                          </InputAdornment>
+                        ),
+                        endAdornment: referralValidation.isValidating && (
+                          <InputAdornment position="end">
+                            <Box sx={{ 
+                              width: 20, 
+                              height: 20, 
+                              border: '2px solid #ccc',
+                              borderTop: '2px solid #1976d2',
+                              borderRadius: '50%',
+                              animation: 'spin 1s linear infinite',
+                              '@keyframes spin': {
+                                '0%': { transform: 'rotate(0deg)' },
+                                '100%': { transform: 'rotate(360deg)' }
+                              }
+                            }} />
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                    {referralValidation.isValid && (
+                      <Box sx={{ 
+                        mt: 1, 
+                        p: 2, 
+                        bgcolor: 'success.50', 
+                        border: '1px solid', 
+                        borderColor: 'success.200',
+                        borderRadius: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1
+                      }}>
+                        <Box sx={{ 
+                          width: 8, 
+                          height: 8, 
+                          bgcolor: 'success.main', 
+                          borderRadius: '50%' 
+                        }} />
+                        <Typography variant="body2" color="success.dark">
+                          You will be referred by <strong>{referralValidation.referrerName}</strong>
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Row 4: Password and Confirm Password */}
                   <Box sx={{ 
                     display: 'flex', 
                     gap: 2, 

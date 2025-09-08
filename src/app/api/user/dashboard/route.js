@@ -165,6 +165,35 @@ export async function GET(request) {
       user.packageExpiryDate && 
       new Date(user.packageExpiryDate) > new Date();
 
+    // Get inactive package members count and potential revenue
+    const inactiveMembers = await prisma.user.findMany({
+      where: {
+        referredBy: user.username,
+        OR: [
+          { currentPackageId: null },
+          { 
+            AND: [
+              { packageExpiryDate: { not: null } },
+              { packageExpiryDate: { lt: new Date() } }
+            ]
+          }
+        ]
+      },
+      select: {
+        id: true,
+        currentPackage: {
+          select: {
+            package_amount: true
+          }
+        }
+      }
+    });
+
+    const inactiveMembersCount = inactiveMembers.length;
+    const potentialRevenue = inactiveMembers.reduce((sum, member) => {
+      return sum + parseFloat(member.currentPackage?.package_amount || 0);
+    }, 0);
+
     const dashboardData = {
       user: {
         id: user.id,
@@ -187,7 +216,9 @@ export async function GET(request) {
         totalEarnings: parseFloat(user.totalEarnings || 0),
         referralCount: user.referralCount || 0,
         ordersCount: ordersCount
-      }
+      },
+      inactiveMembersCount,
+      potentialRevenue
     };
 
     return NextResponse.json({

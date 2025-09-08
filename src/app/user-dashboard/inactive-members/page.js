@@ -22,25 +22,38 @@ import {
   ListItem,
   ListItemText,
   ListItemAvatar,
-  ListItemSecondaryAction
+  ListItemSecondaryAction,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper
 } from '@mui/material';
 import {
   People,
   Search,
-  Download,
-  Visibility,
+  Warning,
   TrendingUp,
-  PersonAdd,
+  AccountTree,
+  Group,
   ExpandMore,
   ExpandLess,
-  AccountTree,
-  Group
+  Person,
+  Email,
+  Phone,
+  AttachMoney,
+  Star,
+  CalendarToday,
+  BusinessCenter,
+  NotificationsActive
 } from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
 
-export default function DownlistPage() {
+export default function InactiveMembersPage() {
   const context = useContext(UserContext);
-  const [downlineData, setDownlineData] = useState(null);
+  const [inactiveData, setInactiveData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,7 +67,7 @@ export default function DownlistPage() {
 
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user) {
-      fetchDownlineMembers();
+      fetchInactiveMembers();
     }
   }, [mounted, context?.isAuthenticated, context?.user]);
   
@@ -72,27 +85,34 @@ export default function DownlistPage() {
   
   const { user, isAuthenticated } = context;
 
-  const fetchDownlineMembers = async () => {
+  const fetchInactiveMembers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/user/downline', {
+      const response = await fetch('/api/user/inactive-members', {
         credentials: 'include'
       });
 
       if (response.ok) {
         const data = await response.json();
-        setDownlineData(data);
+        setInactiveData(data);
         // Initialize expanded levels for tree view
         setExpandedLevels({ 1: true }); // Expand level 1 by default
       } else {
-        setError('Failed to fetch downline members');
+        setError('Failed to fetch inactive members');
       }
     } catch (error) {
-      console.error('Error fetching downline members:', error);
-      setError('Error loading downline members');
+      console.error('Error fetching inactive members:', error);
+      setError('Error loading inactive members');
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleLevel = (level) => {
+    setExpandedLevels(prev => ({
+      ...prev,
+      [level]: !prev[level]
+    }));
   };
 
   const formatDate = (dateString) => {
@@ -129,16 +149,21 @@ export default function DownlistPage() {
     }
   };
 
-  // Toggle level expansion
-  const toggleLevel = (level) => {
-    setExpandedLevels(prev => ({
-      ...prev,
-      [level]: !prev[level]
-    }));
+  const getPackageStatusColor = (status) => {
+    switch (status) {
+      case 'No Package':
+        return 'error';
+      case 'Expired':
+        return 'warning';
+      case 'Active':
+        return 'success';
+      default:
+        return 'default';
+    }
   };
 
   // Filter members based on search
-  const filteredMembers = downlineData?.members?.filter(member => 
+  const filteredMembers = inactiveData?.members?.filter(member => 
     member.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -154,9 +179,10 @@ export default function DownlistPage() {
   });
 
   // Calculate totals
-  const totalMembers = filteredMembers.length;
-  const activeMembers = filteredMembers.filter(m => m.status === 'active').length;
-  const totalEarnings = filteredMembers.reduce((sum, member) => sum + (member.totalEarnings || 0), 0);
+  const totalInactiveMembers = filteredMembers.length;
+  const noPackageMembers = filteredMembers.filter(m => m.packageStatus === 'No Package').length;
+  const expiredMembers = filteredMembers.filter(m => m.packageStatus === 'Expired').length;
+  const totalPotentialRevenue = filteredMembers.reduce((sum, member) => sum + member.packageAmount, 0);
 
   // Prevent hydration mismatch by showing loading until mounted
   if (!mounted) {
@@ -170,60 +196,77 @@ export default function DownlistPage() {
   return (
     <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
       <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
-        Downline List
+        Inactive Package Members
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Total Members
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    {totalMembers}
-                  </Typography>
-                </Box>
-                <People sx={{ fontSize: 40, color: 'primary.main' }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Active Members
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                    {activeMembers}
-                  </Typography>
-                </Box>
-                <TrendingUp sx={{ fontSize: 40, color: 'success.main' }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Total Earnings
+                    Total Inactive
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
-                    PKR {totalEarnings.toLocaleString()}
+                    {totalInactiveMembers}
                   </Typography>
                 </Box>
-                <TrendingUp sx={{ fontSize: 40, color: 'warning.main' }} />
+                <Warning sx={{ fontSize: 40, color: 'warning.main' }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    No Package
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'error.main' }}>
+                    {noPackageMembers}
+                  </Typography>
+                </Box>
+                <People sx={{ fontSize: 40, color: 'error.main' }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Expired Packages
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                    {expiredMembers}
+                  </Typography>
+                </Box>
+                <NotificationsActive sx={{ fontSize: 40, color: 'warning.main' }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Potential Revenue
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                    PKR {totalPotentialRevenue.toLocaleString()}
+                  </Typography>
+                </Box>
+                <AttachMoney sx={{ fontSize: 40, color: 'success.main' }} />
               </Box>
             </CardContent>
           </Card>
@@ -237,7 +280,7 @@ export default function DownlistPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                placeholder="Search members by name, email, or phone..."
+                placeholder="Search inactive members by name, email, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -277,8 +320,8 @@ export default function DownlistPage() {
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <People />
-            Downline Members ({filteredMembers.length})
+            <Warning />
+            Inactive Package Members ({filteredMembers.length})
           </Typography>
           <Divider sx={{ mb: 3 }} />
 
@@ -290,41 +333,6 @@ export default function DownlistPage() {
             viewMode === 'tree' ? (
               // Tree View
               <Box>
-                {/* Root User */}
-                <Card sx={{ mb: 2, bgcolor: 'primary.50', border: '2px solid', borderColor: 'primary.main' }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
-                        {downlineData?.user?.fullname?.charAt(0).toUpperCase() || 'U'}
-                      </Avatar>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                          {downlineData?.user?.fullname || 'You'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          @{downlineData?.user?.username} • {downlineData?.user?.email}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                          <Chip label="Root" color="primary" size="small" />
-                          <Chip 
-                            label={downlineData?.user?.status || 'Active'} 
-                            color={getStatusColor(downlineData?.user?.status || 'active')}
-                            size="small"
-                          />
-                        </Box>
-                      </Box>
-                      <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                          PKR {(downlineData?.user?.totalEarnings || 0).toLocaleString()}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {downlineData?.user?.referralCount || 0} referrals
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-
                 {/* Downline Levels */}
                 {Object.keys(membersByLevel).sort((a, b) => parseInt(a) - parseInt(b)).map(level => (
                   <Box key={level} sx={{ ml: parseInt(level) * 2 }}>
@@ -334,7 +342,7 @@ export default function DownlistPage() {
                       sx={{ mb: 1, textTransform: 'none' }}
                     >
                       <Typography variant="h6">
-                        Level {level} ({membersByLevel[level].length} members)
+                        Level {level} ({membersByLevel[level].length} inactive members)
                       </Typography>
                     </Button>
                     
@@ -354,6 +362,11 @@ export default function DownlistPage() {
                                     {member.fullname || 'Unknown'}
                                   </Typography>
                                   <Chip 
+                                    label={member.packageStatus} 
+                                    color={getPackageStatusColor(member.packageStatus)}
+                                    size="small"
+                                  />
+                                  <Chip 
                                     label={member.status || 'Active'} 
                                     color={getStatusColor(member.status || 'active')}
                                     size="small"
@@ -367,6 +380,9 @@ export default function DownlistPage() {
                                   </Typography>
                                   <Typography variant="body2" color="text.secondary">
                                     Joined: {formatDate(member.createdAt)} • Package: {member.package}
+                                    {member.packageExpiryDate && (
+                                      <span> • Expired: {formatDate(member.packageExpiryDate)}</span>
+                                    )}
                                   </Typography>
                                 </Box>
                               }
@@ -377,12 +393,12 @@ export default function DownlistPage() {
                                   PKR {(member.totalEarnings || 0).toLocaleString()}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                  {member.points || 0} points
+                                  Potential: PKR {member.packageAmount.toLocaleString()}
                                 </Typography>
                               </Box>
-                              <Tooltip title="View Details">
+                              <Tooltip title="Contact Member">
                                 <IconButton size="small" color="primary">
-                                  <Visibility />
+                                  <Phone />
                                 </IconButton>
                               </Tooltip>
                             </ListItemSecondaryAction>
@@ -395,86 +411,94 @@ export default function DownlistPage() {
               </Box>
             ) : (
               // List View
-              <List>
-                {filteredMembers.map((member) => (
-                  <ListItem key={member.id} divider>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: getLevelColor(member.level) + '.main' }}>
-                        {member.fullname?.charAt(0).toUpperCase() || 'U'}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                            {member.fullname || 'Unknown'}
-                          </Typography>
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell><strong>Member</strong></TableCell>
+                      <TableCell><strong>Level</strong></TableCell>
+                      <TableCell><strong>Package Status</strong></TableCell>
+                      <TableCell><strong>Join Date</strong></TableCell>
+                      <TableCell><strong>Total Earnings</strong></TableCell>
+                      <TableCell><strong>Potential Revenue</strong></TableCell>
+                      <TableCell><strong>Actions</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredMembers.map((member) => (
+                      <TableRow key={member.id} hover>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar sx={{ bgcolor: getLevelColor(member.level) + '.main' }}>
+                              {member.fullname?.charAt(0).toUpperCase() || 'U'}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                {member.fullname || 'Unknown'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                @{member.username} • {member.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
                           <Chip 
                             label={`Level ${member.level}`} 
                             color={getLevelColor(member.level)}
                             size="small"
                           />
+                        </TableCell>
+                        <TableCell>
                           <Chip 
-                            label={member.status || 'Active'} 
-                            color={getStatusColor(member.status || 'active')}
+                            label={member.packageStatus} 
+                            color={getPackageStatusColor(member.packageStatus)}
                             size="small"
                           />
-                        </Box>
-                      }
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            @{member.username} • {member.email}
+                          {member.packageExpiryDate && (
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              Expired: {formatDate(member.packageExpiryDate)}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(member.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                            PKR {(member.totalEarnings || 0).toLocaleString()}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Joined: {formatDate(member.createdAt)} • Package: {member.package}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                            PKR {member.packageAmount.toLocaleString()}
                           </Typography>
-                        </Box>
-                      }
-                    />
-                    <ListItemSecondaryAction>
-                      <Box sx={{ textAlign: 'right', mr: 2 }}>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                          PKR {(member.totalEarnings || 0).toLocaleString()}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {member.points || 0} points
-                        </Typography>
-                      </Box>
-                      <Tooltip title="View Details">
-                        <IconButton size="small" color="primary">
-                          <Visibility />
-                        </IconButton>
-                      </Tooltip>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="Contact Member">
+                            <IconButton size="small" color="primary">
+                              <Phone />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             )
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+              <Warning sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
-                No Downline Members
+                No Inactive Package Members
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {searchTerm 
-                  ? 'No members match your search criteria.'
-                  : "You don't have any downline members yet. Start inviting people to build your network!"
+                  ? 'No inactive members match your search criteria.'
+                  : "Great! All your downline members have active packages."
                 }
               </Typography>
-              {!searchTerm && (
-                <Button
-                  variant="contained"
-                  startIcon={<PersonAdd />}
-                  onClick={() => {
-                    // TODO: Implement invite functionality
-                    console.log('Invite functionality to be implemented');
-                  }}
-                >
-                  Invite New Members
-                </Button>
-              )}
             </Box>
           )}
         </CardContent>

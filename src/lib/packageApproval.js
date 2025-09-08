@@ -136,8 +136,8 @@ export async function updateUserRank(userId) {
 }
 
 // Distribute commissions in referral tree
-export async function distributeCommissions(referralTree, packageData) {
-  const { package_direct_commission, package_indirect_commission, package_points } = packageData;
+export async function distributeCommissions(referralTree, packageData, calculatedPoints) {
+  const { package_direct_commission, package_indirect_commission } = packageData;
   const processedRanks = new Set();
   const updates = [];
 
@@ -154,7 +154,7 @@ export async function distributeCommissions(referralTree, packageData) {
     }
 
     let commissionAmount = 0;
-    let pointsToAdd = package_points || 0; // ALL members get points (MLM style)
+    let pointsToAdd = calculatedPoints || 0; // ALL members get points (MLM style)
 
     // Commission logic
     if (isImmediateReferrer) {
@@ -255,6 +255,21 @@ export async function executeUpdates(updates) {
   return results;
 }
 
+// Calculate points based on package amount
+export function calculatePointsFromPackageAmount(packageAmount) {
+  const amount = parseFloat(packageAmount);
+  
+  // Specific point assignments as requested
+  if (amount === 100000) {
+    return 2000;
+  } else if (amount === 4000000) {
+    return 8000;
+  }
+  
+  // Default calculation: 2% of package amount
+  return Math.floor(amount * 0.02);
+}
+
 // Main package approval function
 export async function approvePackageRequest(packageRequestId) {
   try {
@@ -301,7 +316,11 @@ export async function approvePackageRequest(packageRequestId) {
     }
 
     const { user, package: packageData } = packageRequest;
-    console.log(`📦 Approving package: ${packageData.package_name} for user: ${user.username}`);
+    console.log(`📦 Approving package: ${packageData.package_name} (₨${packageData.package_amount}) for user: ${user.username}`);
+
+    // Calculate points based on package amount
+    const pointsToAssign = calculatePointsFromPackageAmount(packageData.package_amount);
+    console.log(`🎯 Package amount: ₨${packageData.package_amount} → Points to assign: ${pointsToAssign}`);
 
     // Step 1: Update user's package and points
     await prisma.user.update({
@@ -309,11 +328,15 @@ export async function approvePackageRequest(packageRequestId) {
       data: {
         currentPackageId: packageData.id,
         packageExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-        points: (user.points || 0) + (packageData.package_points || 0)
+        points: (user.points || 0) + pointsToAssign
       }
     });
 
-    console.log(`✅ Updated user ${user.username} with package and ${packageData.package_points || 0} points`);
+    console.log(`✅ Updated user ${user.username} with package and ${pointsToAssign} points (total: ${(user.points || 0) + pointsToAssign})`);
+
+    // Update user's rank based on new points
+    const newRank = await updateUserRank(user.id);
+    console.log(`🏆 User ${user.username} rank updated to: ${newRank}`);
 
     // Step 2: Handle referral commissions if user has a referrer
     if (user.referredBy) {
@@ -361,7 +384,7 @@ export async function approvePackageRequest(packageRequestId) {
         console.log(`🌳 Full tree for points distribution: ${fullTree.length} members`);
         
         // Distribute indirect commissions and points to ALL in tree
-        const updates = await distributeCommissions(fullTree, packageData);
+        const updates = await distributeCommissions(fullTree, packageData, pointsToAssign);
         
         // Execute all updates
         const results = await executeUpdates(updates);
@@ -370,15 +393,14 @@ export async function approvePackageRequest(packageRequestId) {
       } else {
         // Even if no additional referrers, give points to immediate referrer
         if (immediateReferrer) {
-          const pointsToAdd = packageData.package_points || 0;
           await prisma.user.update({
             where: { id: immediateReferrer.id },
             data: {
-              points: (immediateReferrer.points || 0) + pointsToAdd
+              points: (immediateReferrer.points || 0) + pointsToAssign
             }
           });
           await updateUserRank(immediateReferrer.id);
-          console.log(`💰 Points to immediate referrer ${immediateReferrer.username}: +${pointsToAdd} points`);
+          console.log(`💰 Points to immediate referrer ${immediateReferrer.username}: +${pointsToAssign} points`);
         }
       }
     } else {
@@ -400,7 +422,10 @@ export async function approvePackageRequest(packageRequestId) {
       success: true,
       message: 'Package approved successfully',
       user: user.username,
-      package: packageData.package_name
+      package: packageData.package_name,
+      packageAmount: packageData.package_amount,
+      pointsAssigned: pointsToAssign,
+      newRank: newRank
     };
 
   } catch (error) {
