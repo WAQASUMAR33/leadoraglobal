@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useContext, useCallback } from "react";
+import Image from "next/image";
 import {
   Box,
   Card,
@@ -774,14 +775,17 @@ export default function KYCPage() {
                     </Typography>
                     {kycData.id_card_front ? (
                       <Box sx={{ mb: 2 }}>
-                        <img 
+                        <Image 
                           src={kycData.id_card_front} 
                           alt="ID Card Front" 
+                          width={300}
+                          height={200}
                           style={{ 
                             maxWidth: '100%', 
                             maxHeight: '200px', 
                             borderRadius: '8px',
-                            border: '1px solid #e5e7eb'
+                            border: '1px solid #e5e7eb',
+                            objectFit: 'contain'
                           }} 
                         />
                       </Box>
@@ -820,14 +824,17 @@ export default function KYCPage() {
                     </Typography>
                     {kycData.id_card_back ? (
                       <Box sx={{ mb: 2 }}>
-                        <img 
+                        <Image 
                           src={kycData.id_card_back} 
                           alt="ID Card Back" 
+                          width={300}
+                          height={200}
                           style={{ 
                             maxWidth: '100%', 
                             maxHeight: '200px', 
                             borderRadius: '8px',
-                            border: '1px solid #e5e7eb'
+                            border: '1px solid #e5e7eb',
+                            objectFit: 'contain'
                           }} 
                         />
                       </Box>
