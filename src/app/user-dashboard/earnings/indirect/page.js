@@ -29,7 +29,7 @@ import {
   AttachMoney,
   People
 } from '@mui/icons-material';
-import { UserContext } from '../../../lib/userContext';
+import { UserContext } from '../../../../lib/userContext';
 
 export default function IndirectEarningsPage() {
   const context = useContext(UserContext);

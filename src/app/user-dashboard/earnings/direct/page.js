@@ -28,7 +28,7 @@ import {
   Download,
   AttachMoney
 } from '@mui/icons-material';
-import { UserContext } from '../../../lib/userContext';
+import { UserContext } from '../../../../lib/userContext';
 
 export default function DirectEarningsPage() {
   const context = useContext(UserContext);

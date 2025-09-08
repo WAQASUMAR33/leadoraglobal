@@ -27,7 +27,7 @@ import {
   CheckCircle,
   Warning
 } from '@mui/icons-material';
-import { UserContext } from '../../../lib/userContext';
+import { UserContext } from '../../../../lib/userContext';
 
 export default function TransferToWalletPage() {
   const context = useContext(UserContext);
