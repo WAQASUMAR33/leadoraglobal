@@ -96,7 +96,7 @@ input, button, select, textarea {
   background: #9ca3af;
 }
 
-/* Sidebar scrollbar styling */
+/* Sidebar scrollbar styling - Dark theme for user dashboard */
 .sidebar-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -113,6 +113,25 @@ input, button, select, textarea {
 
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
+}
+
+/* Light theme scrollbar for admin dashboard */
+.light-sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.light-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+
+.light-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.light-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 /* Focus styles for better accessibility */

@@ -183,9 +183,9 @@ export default function AdminLayout({ children }) {
     <div className="min-h-screen bg-gray-50">
       <div className="flex h-screen">
         {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} sm:relative sm:translate-x-0`}>
+        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} sm:relative sm:translate-x-0`}>
           {/* Sidebar Header */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center">
               <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg mr-3">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,7 +205,7 @@ export default function AdminLayout({ children }) {
           </div>
 
           {/* Admin Profile */}
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
@@ -224,7 +224,7 @@ export default function AdminLayout({ children }) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto light-sidebar-scrollbar min-h-0">
             {adminMenuItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -250,8 +250,8 @@ export default function AdminLayout({ children }) {
             })}
           </nav>
 
-          {/* Logout Button */}
-          <div className="p-4 border-t border-gray-200">
+          {/* Logout Button - Sticky Bottom */}
+          <div className="p-4 border-t border-gray-200 flex-shrink-0 bg-white">
             <button
               onClick={handleLogout}
               className="w-full flex items-center px-3 py-3 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-200"

@@ -30,7 +30,7 @@ import {
   Warning,
   Info
 } from '@mui/icons-material';
-import { UserContext } from '../../../../lib/userContext';
+import { UserContext } from '../../../lib/userContext';
 
 export default function UpgradePackagePage() {
   const context = useContext(UserContext);
