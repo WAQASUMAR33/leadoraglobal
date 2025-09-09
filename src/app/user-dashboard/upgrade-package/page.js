@@ -72,21 +72,41 @@ export default function UpgradePackagePage() {
     try {
       setLoading(true);
       const [currentResponse, availableResponse] = await Promise.all([
-        fetch('/api/user/package', { credentials: 'include' }),
+        fetch(`/api/user/package?userId=${user.id}`, { credentials: 'include' }),
         fetch('/api/packages', { credentials: 'include' })
       ]);
 
+      let currentPackageData = null;
       if (currentResponse.ok) {
         const currentData = await currentResponse.json();
-        setCurrentPackage(currentData.package);
+        if (currentData.success && currentData.packageDetails) {
+          currentPackageData = {
+            id: currentData.packageDetails.id,
+            name: currentData.packageDetails.package_name,
+            price: parseFloat(currentData.packageDetails.package_amount),
+            description: `Direct Commission: PKR ${currentData.packageDetails.package_direct_commission}, Indirect Commission: PKR ${currentData.packageDetails.package_indirect_commission}`,
+            status: currentData.userPackage?.status || 'active',
+            isActive: currentData.userPackage?.status === 'active'
+          };
+        }
       }
+      setCurrentPackage(currentPackageData);
 
       if (availableResponse.ok) {
         const availableData = await availableResponse.json();
-        // Filter packages that are higher tier than current package
-        const filteredPackages = availableData.packages.filter(pkg => 
-          !currentPackage || pkg.price > currentPackage.price
-        );
+        // Filter packages that are higher tier than current package (only if current package is active)
+        let filteredPackages = [];
+        
+        if (currentPackageData && currentPackageData.isActive) {
+          // Only show packages with higher amounts than current active package
+          filteredPackages = availableData.packages.filter(pkg => 
+            parseFloat(pkg.package_amount) > currentPackageData.price
+          );
+        } else {
+          // If no active package, show no upgrade options
+          filteredPackages = [];
+        }
+        
         setAvailablePackages(filteredPackages);
       }
     } catch (error) {
@@ -201,7 +221,10 @@ export default function UpgradePackagePage() {
                         {formatCurrency(currentPackage.price)} • {currentPackage.description}
                       </Typography>
                     </Box>
-                    <Chip label="Active" color="success" />
+                    <Chip 
+                      label={currentPackage.isActive ? "Active" : currentPackage.status} 
+                      color={currentPackage.isActive ? "success" : "warning"} 
+                    />
                   </Box>
                 </CardContent>
               </Card>
@@ -227,31 +250,67 @@ export default function UpgradePackagePage() {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                               {getPackageIcon(pkg)}
                               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                {pkg.name}
+                                {pkg.package_name}
                               </Typography>
                             </Box>
                             
                             <Typography variant="h4" sx={{ fontWeight: 'bold', color: `${getPackageColor(pkg)}.main`, mb: 1 }}>
-                              {formatCurrency(pkg.price)}
+                              {formatCurrency(pkg.package_amount)}
                             </Typography>
                             
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                              {pkg.description}
+                              Direct Commission: PKR {pkg.package_direct_commission} • Indirect Commission: PKR {pkg.package_indirect_commission}
                             </Typography>
 
                             {/* Package Features */}
                             <List dense>
-                              {pkg.features?.map((feature, index) => (
-                                <ListItem key={index} sx={{ px: 0, py: 0.5 }}>
+                              <ListItem sx={{ px: 0, py: 0.5 }}>
+                                <ListItemIcon sx={{ minWidth: 32 }}>
+                                  <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                  primary={`Direct Commission: PKR ${pkg.package_direct_commission}`}
+                                  primaryTypographyProps={{ variant: 'body2' }}
+                                />
+                              </ListItem>
+                              <ListItem sx={{ px: 0, py: 0.5 }}>
+                                <ListItemIcon sx={{ minWidth: 32 }}>
+                                  <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                  primary={`Indirect Commission: PKR ${pkg.package_indirect_commission}`}
+                                  primaryTypographyProps={{ variant: 'body2' }}
+                                />
+                              </ListItem>
+                              <ListItem sx={{ px: 0, py: 0.5 }}>
+                                <ListItemIcon sx={{ minWidth: 32 }}>
+                                  <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                  primary={`Shopping Amount: PKR ${pkg.shopping_amount}`}
+                                  primaryTypographyProps={{ variant: 'body2' }}
+                                />
+                              </ListItem>
+                              <ListItem sx={{ px: 0, py: 0.5 }}>
+                                <ListItemIcon sx={{ minWidth: 32 }}>
+                                  <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                  primary={`Package Points: ${pkg.package_points}`}
+                                  primaryTypographyProps={{ variant: 'body2' }}
+                                />
+                              </ListItem>
+                              {pkg.rank && (
+                                <ListItem sx={{ px: 0, py: 0.5 }}>
                                   <ListItemIcon sx={{ minWidth: 32 }}>
                                     <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
                                   </ListItemIcon>
                                   <ListItemText 
-                                    primary={feature}
+                                    primary={`Rank: ${pkg.rank.title}`}
                                     primaryTypographyProps={{ variant: 'body2' }}
                                   />
                                 </ListItem>
-                              ))}
+                              )}
                             </List>
                           </CardContent>
                           
@@ -268,7 +327,7 @@ export default function UpgradePackagePage() {
                                 }
                               }}
                             >
-                              Upgrade to {pkg.name}
+                              Upgrade to {pkg.package_name}
                             </Button>
                           </Box>
                         </Card>
@@ -282,11 +341,22 @@ export default function UpgradePackagePage() {
                       No Upgrades Available
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {currentPackage 
-                        ? "You're already on the highest tier package!"
+                      {currentPackage && currentPackage.isActive
+                        ? "You're already on the highest tier package available for upgrade!"
+                        : currentPackage && !currentPackage.isActive
+                        ? "Your current package is not active. Please activate your package first to see upgrade options."
                         : "Please subscribe to a package first to see upgrade options."
                       }
                     </Typography>
+                    {currentPackage && !currentPackage.isActive && (
+                      <Alert severity="warning" sx={{ mt: 2, maxWidth: 400, mx: 'auto' }}>
+                        <Typography variant="body2">
+                          <strong>Package Status:</strong> {currentPackage.status}
+                          <br />
+                          You need an active package to upgrade to higher tiers.
+                        </Typography>
+                      </Alert>
+                    )}
                   </Box>
                 )}
               </CardContent>
@@ -310,19 +380,28 @@ export default function UpgradePackagePage() {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1" gutterBottom>
-            Are you sure you want to upgrade to the {selectedPackage?.name} package?
+            Are you sure you want to upgrade to the {selectedPackage?.package_name} package?
           </Typography>
           
           {selectedPackage && (
             <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
               <Typography variant="body2" gutterBottom>
-                <strong>Package:</strong> {selectedPackage.name}
+                <strong>Package:</strong> {selectedPackage.package_name}
               </Typography>
               <Typography variant="body2" gutterBottom>
-                <strong>Price:</strong> {formatCurrency(selectedPackage.price)}
+                <strong>Price:</strong> {formatCurrency(selectedPackage.package_amount)}
               </Typography>
               <Typography variant="body2" gutterBottom>
-                <strong>Description:</strong> {selectedPackage.description}
+                <strong>Direct Commission:</strong> PKR {selectedPackage.package_direct_commission}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Indirect Commission:</strong> PKR {selectedPackage.package_indirect_commission}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Shopping Amount:</strong> PKR {selectedPackage.shopping_amount}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Package Points:</strong> {selectedPackage.package_points}
               </Typography>
             </Box>
           )}
