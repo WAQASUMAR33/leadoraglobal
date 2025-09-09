@@ -293,7 +293,7 @@ export default function DownlistPage() {
                 {/* Root User */}
                 <Card sx={{ mb: 2, bgcolor: 'primary.50', border: '2px solid', borderColor: 'primary.main' }}>
                   <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
                         {downlineData?.user?.fullname?.charAt(0).toUpperCase() || 'U'}
                       </Avatar>
@@ -344,14 +344,14 @@ export default function DownlistPage() {
                           <ListItem key={member.id} sx={{ pl: 4 }}>
                             <ListItemAvatar>
                               <Avatar sx={{ bgcolor: getLevelColor(parseInt(level)) + '.main' }}>
-                                {member.fullname?.charAt(0).toUpperCase() || 'U'}
-                              </Avatar>
+                            {member.fullname?.charAt(0).toUpperCase() || 'U'}
+                          </Avatar>
                             </ListItemAvatar>
                             <ListItemText
                               primary={
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                                    {member.fullname || 'Unknown'}
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                              {member.fullname || 'Unknown'}
                                   </Typography>
                                   <Chip 
                                     label={member.status || 'Active'} 
@@ -375,11 +375,11 @@ export default function DownlistPage() {
                               <Box sx={{ textAlign: 'right', mr: 2 }}>
                                 <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                                   PKR {(member.totalEarnings || 0).toLocaleString()}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
                                   {member.points || 0} points
-                                </Typography>
-                              </Box>
+                            </Typography>
+                          </Box>
                               <Tooltip title="View Details">
                                 <IconButton size="small" color="primary">
                                   <Visibility />
@@ -392,7 +392,7 @@ export default function DownlistPage() {
                     </Collapse>
                   </Box>
                 ))}
-              </Box>
+                        </Box>
             ) : (
               // List View
               <List>
@@ -409,16 +409,16 @@ export default function DownlistPage() {
                           <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                             {member.fullname || 'Unknown'}
                           </Typography>
-                          <Chip 
+                        <Chip 
                             label={`Level ${member.level}`} 
                             color={getLevelColor(member.level)}
-                            size="small"
-                          />
-                          <Chip 
-                            label={member.status || 'Active'} 
-                            color={getStatusColor(member.status || 'active')}
-                            size="small"
-                          />
+                          size="small"
+                        />
+                        <Chip 
+                          label={member.status || 'Active'} 
+                          color={getStatusColor(member.status || 'active')}
+                          size="small"
+                        />
                         </Box>
                       }
                       secondary={
@@ -441,14 +441,14 @@ export default function DownlistPage() {
                           {member.points || 0} points
                         </Typography>
                       </Box>
-                      <Tooltip title="View Details">
-                        <IconButton size="small" color="primary">
-                          <Visibility />
-                        </IconButton>
-                      </Tooltip>
+                        <Tooltip title="View Details">
+                          <IconButton size="small" color="primary">
+                            <Visibility />
+                          </IconButton>
+                        </Tooltip>
                     </ListItemSecondaryAction>
                   </ListItem>
-                ))}
+                  ))}
               </List>
             )
           ) : (

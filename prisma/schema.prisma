@@ -36,6 +36,7 @@ model User {
   withdrawalRequests WithdrawalRequest[]
   transfersFrom     Transfer[]         @relation("TransferFromUser")
   transfersTo       Transfer[]         @relation("TransferToUser")
+  earnings          Earnings[]
   currentPackage    Package?           @relation("UserCurrentPackage", fields: [currentPackageId], references: [id])
   package           Package?           @relation("UserPackage", fields: [packageId], references: [id])
   rank              Rank?              @relation("UserRank", fields: [rankId], references: [id])
@@ -240,6 +241,7 @@ model PackageRequest {
   updatedAt           DateTime  @updatedAt
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   package             Package   @relation(fields: [packageId], references: [id])
+  earnings            Earnings[]
 
   @@index([userId], map: "package_requests_user_id_fkey")
   @@index([packageId], map: "package_requests_package_id_fkey")
@@ -289,5 +291,21 @@ model Transfer {
   @@index([adminId], map: "transfers_admin_id_fkey")
   @@index([transferType], map: "transfers_type_fkey")
   @@map("transfers")
+}
+
+model Earnings {
+  id                Int       @id @default(autoincrement())
+  userId            Int       @map("user_id")
+  amount            Decimal   @db.Decimal(10, 2)
+  type              String    // 'direct_commission', 'indirect_commission', 'bonus', etc.
+  description       String?   @db.Text
+  packageRequestId  Int?      @map("package_request_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageRequest    PackageRequest? @relation(fields: [packageRequestId], references: [id])
+
+  @@index([userId], map: "earnings_user_id_fkey")
+  @@index([packageRequestId], map: "earnings_package_request_id_fkey")
+  @@map("earnings")
 }
 

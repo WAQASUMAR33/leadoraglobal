@@ -368,14 +368,14 @@ export default function KYCPage() {
       }
 
       const imageUrl = result.url || result.imageUrl || result.image_url;
-      // If the response is just a filename, construct the full URL
-      if (imageUrl && !imageUrl.startsWith('http')) {
+        // If the response is just a filename, construct the full URL
+        if (imageUrl && !imageUrl.startsWith('http')) {
         const fullUrl = `https://steelblue-cod-355377.hostingersite.com/uploads/${imageUrl}`;
         console.log('External server success:', fullUrl);
         return fullUrl;
-      }
+        }
       console.log('External server success:', imageUrl);
-      return imageUrl;
+        return imageUrl;
     } catch (externalError) {
       console.warn('External server failed, trying local upload:', externalError.message);
       

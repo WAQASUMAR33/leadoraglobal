@@ -188,7 +188,7 @@ export default function FreeAccountsPage() {
     <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
       <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
         MLM Tree - Inactive Package Members
-      </Typography>
+        </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
@@ -431,50 +431,50 @@ export default function FreeAccountsPage() {
               </Box>
             ) : (
               // List View
-              <TableContainer component={Paper} variant="outlined">
-                <Table>
-                  <TableHead>
-                    <TableRow>
+            <TableContainer component={Paper} variant="outlined">
+              <Table>
+                <TableHead>
+                  <TableRow>
                       <TableCell><strong>Member</strong></TableCell>
                       <TableCell><strong>Level</strong></TableCell>
                       <TableCell><strong>Package Status</strong></TableCell>
                       <TableCell><strong>Join Date</strong></TableCell>
                       <TableCell><strong>Total Earnings</strong></TableCell>
                       <TableCell><strong>Potential Revenue</strong></TableCell>
-                      <TableCell><strong>Actions</strong></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
+                    <TableCell><strong>Actions</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                     {filteredMembers.map((member) => (
                       <TableRow key={member.id} hover>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Avatar sx={{ bgcolor: getLevelColor(member.level) + '.main' }}>
                               {member.name?.charAt(0).toUpperCase() || 'U'}
-                            </Avatar>
-                            <Box>
-                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                                 {member.name || 'Unknown'}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
                                 @{member.username} • {member.email}
-                              </Typography>
-                            </Box>
+                            </Typography>
                           </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Chip 
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
                             label={`Level ${member.level}`} 
                             color={getLevelColor(member.level)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Chip 
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
                             label={member.packageStatus} 
                             color={getPackageStatusColor(member.packageStatus)}
-                            size="small"
-                          />
+                          size="small"
+                        />
                           {member.packageExpiryDate && (
                             <Typography variant="caption" display="block" color="text.secondary">
                               Expired: {formatDate(member.packageExpiryDate)}
@@ -488,24 +488,24 @@ export default function FreeAccountsPage() {
                           <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                             PKR {(member.totalEarnings || 0).toLocaleString()}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
+                      </TableCell>
+                      <TableCell>
                           <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
                             PKR {member.packageAmount.toLocaleString()}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
+                      </TableCell>
+                      <TableCell>
                           <Tooltip title="Contact Member">
-                            <IconButton size="small" color="primary">
-                              <Visibility />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                          <IconButton size="small" color="primary">
+                            <Visibility />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
             )
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>

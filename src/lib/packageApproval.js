@@ -1,4 +1,5 @@
 import prisma from './prisma';
+import { calculateMLMCommissions, updateUserPackageAndRank } from './commissionSystem';
 
 // Rank point thresholds
 const RANK_THRESHOLDS = {
@@ -270,7 +271,7 @@ export function calculatePointsFromPackageAmount(packageAmount) {
   return Math.floor(amount * 0.02);
 }
 
-// Main package approval function
+// Main package approval function using new MLM commission system
 export async function approvePackageRequest(packageRequestId) {
   try {
     console.log(`🚀 Starting package approval for request ${packageRequestId}`);
@@ -318,94 +319,13 @@ export async function approvePackageRequest(packageRequestId) {
     const { user, package: packageData } = packageRequest;
     console.log(`📦 Approving package: ${packageData.package_name} (₨${packageData.package_amount}) for user: ${user.username}`);
 
-    // Calculate points based on package amount
-    const pointsToAssign = calculatePointsFromPackageAmount(packageData.package_amount);
-    console.log(`🎯 Package amount: ₨${packageData.package_amount} → Points to assign: ${pointsToAssign}`);
+    // Step 1: Update user's package and rank
+    await updateUserPackageAndRank(packageRequestId);
+    console.log(`✅ Updated user ${user.username} with package and rank`);
 
-    // Step 1: Update user's package and points
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        currentPackageId: packageData.id,
-        packageExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-        points: (user.points || 0) + pointsToAssign
-      }
-    });
-
-    console.log(`✅ Updated user ${user.username} with package and ${pointsToAssign} points (total: ${(user.points || 0) + pointsToAssign})`);
-
-    // Update user's rank based on new points
-    const newRank = await updateUserRank(user.id);
-    console.log(`🏆 User ${user.username} rank updated to: ${newRank}`);
-
-    // Step 2: Handle referral commissions if user has a referrer
-    if (user.referredBy) {
-      console.log(`🔗 User ${user.username} was referred by: ${user.referredBy}`);
-
-      // Get the immediate referrer first
-      const immediateReferrer = await prisma.user.findUnique({
-        where: { username: user.referredBy },
-        select: {
-          id: true,
-          username: true,
-          fullname: true,
-          points: true,
-          balance: true,
-          rank: {
-            select: {
-              title: true
-            }
-          }
-        }
-      });
-
-      if (immediateReferrer) {
-        // Give direct commission to immediate referrer (NO points here - points go to ALL in tree)
-        const directCommission = parseFloat(packageData.package_direct_commission) || 0;
-        
-        await prisma.user.update({
-          where: { id: immediateReferrer.id },
-          data: {
-            balance: parseFloat(immediateReferrer.balance) + directCommission
-            // Note: Points will be added later in the tree distribution
-          }
-        });
-
-        console.log(`💰 Direct commission to ${immediateReferrer.username}: +₨${directCommission} (points will be added in tree distribution)`);
-      }
-
-      // Get referral tree for indirect commissions and points distribution
-      const referralTree = await getReferralTree(user.id);
-      console.log(`🌳 Found ${referralTree.length} referrers in tree for indirect commissions and points`);
-
-      if (referralTree.length > 0) {
-        // Add immediate referrer to the tree for points distribution (MLM style)
-        const fullTree = [immediateReferrer, ...referralTree];
-        console.log(`🌳 Full tree for points distribution: ${fullTree.length} members`);
-        
-        // Distribute indirect commissions and points to ALL in tree
-        const updates = await distributeCommissions(fullTree, packageData, pointsToAssign);
-        
-        // Execute all updates
-        const results = await executeUpdates(updates);
-        
-        console.log(`💰 Commission and points distribution completed for ${results.length} referrers`);
-      } else {
-        // Even if no additional referrers, give points to immediate referrer
-        if (immediateReferrer) {
-          await prisma.user.update({
-            where: { id: immediateReferrer.id },
-            data: {
-              points: (immediateReferrer.points || 0) + pointsToAssign
-            }
-          });
-          await updateUserRank(immediateReferrer.id);
-          console.log(`💰 Points to immediate referrer ${immediateReferrer.username}: +${pointsToAssign} points`);
-        }
-      }
-    } else {
-      console.log('ℹ️ User has no referrer, skipping commission distribution');
-    }
+    // Step 2: Calculate and distribute MLM commissions
+    await calculateMLMCommissions(packageRequestId);
+    console.log(`💰 MLM commissions distributed successfully`);
 
     // Step 3: Update package request status
     await prisma.packageRequest.update({
@@ -420,12 +340,11 @@ export async function approvePackageRequest(packageRequestId) {
 
     return {
       success: true,
-      message: 'Package approved successfully',
+      message: 'Package approved successfully with MLM commission distribution',
       user: user.username,
       package: packageData.package_name,
       packageAmount: packageData.package_amount,
-      pointsAssigned: pointsToAssign,
-      newRank: newRank
+      packagePoints: packageData.package_points
     };
 
   } catch (error) {
