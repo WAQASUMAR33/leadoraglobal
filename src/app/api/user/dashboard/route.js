@@ -49,8 +49,8 @@ export async function GET(request) {
         rank: {
           select: {
             id: true,
-            rank_name: true,
-            rank_level: true
+            title: true,
+            required_points: true
           }
         }
       }

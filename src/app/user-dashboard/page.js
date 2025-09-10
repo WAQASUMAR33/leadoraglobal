@@ -40,63 +40,6 @@ export default function UserDashboardHome() {
     fetchDashboardData();
   }, [isAuthenticated, user]);
 
-  const quickActions = [
-    {
-      title: "Subscribe Package",
-      description: "Choose and subscribe to a new package",
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-      ),
-      href: "/user-dashboard/subscribe",
-      color: "from-blue-600 to-blue-700"
-    },
-    {
-      title: "Shop Products",
-      description: "Browse and purchase products",
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-        </svg>
-      ),
-      href: "/user-dashboard/shop",
-      color: "from-green-600 to-green-700"
-    },
-    {
-      title: "Invite Friends",
-      description: "Share your referral code",
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      ),
-      href: "/user-dashboard/referrals",
-      color: "from-purple-600 to-purple-700"
-    },
-    {
-      title: "Withdraw Earnings",
-      description: "Withdraw your earnings",
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-        </svg>
-      ),
-      href: "/user-dashboard/withdraw",
-      color: "from-yellow-600 to-yellow-700"
-    },
-    {
-      title: "Inactive Members",
-      description: "View members with inactive packages",
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-        </svg>
-      ),
-      href: "/user-dashboard/inactive-members",
-      color: "from-orange-600 to-orange-700"
-    }
-  ];
 
   // Loading state
   if (loading) {
@@ -270,7 +213,7 @@ export default function UserDashboardHome() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-400">Rank</p>
-              <p className="text-lg font-bold text-white">{stats.rank?.rank_name || 'No Rank'}</p>
+              <p className="text-lg font-bold text-white">{stats.rank?.title || 'No Rank'}</p>
             </div>
           </div>
         </div>
@@ -328,33 +271,6 @@ export default function UserDashboardHome() {
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-6">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action) => (
-            <Link
-              key={action.title}
-              href={action.href}
-              className="group block p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-all duration-200 border border-gray-600 hover:border-gray-500"
-            >
-              <div className="flex items-center">
-                <div className={`w-12 h-12 bg-gradient-to-r ${action.color} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
-                  {action.icon}
-                </div>
-                <div className="ml-4">
-                  <h3 className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors duration-200">
-                    {action.title}
-                  </h3>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {action.description}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
 
       {/* Recent Activity */}
       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
