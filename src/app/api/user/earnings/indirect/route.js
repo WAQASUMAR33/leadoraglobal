@@ -4,27 +4,18 @@ import { verifyToken } from '../../../../../lib/auth';
 
 export async function GET(request) {
   try {
-    console.log('🔍 Indirect Earnings API called');
-    
     // Verify user authentication
     const token = request.cookies.get('auth-token')?.value;
-    console.log('🔑 Token found:', !!token);
-    
     if (!token) {
-      console.log('❌ No token found');
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
-    console.log('🔓 Token decoded:', !!decoded, decoded ? `User ID: ${decoded.userId}` : 'Invalid');
-    
     if (!decoded) {
-      console.log('❌ Invalid token');
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const userId = decoded.userId;
-    console.log('👤 User ID:', userId);
 
     // Get user's indirect commission earnings
     const indirectEarnings = await prisma.earnings.findMany({
@@ -37,10 +28,10 @@ export async function GET(request) {
         packageRequest: {
           include: {
             user: {
-              select: {
-                id: true,
-                fullname: true,
-                username: true
+          select: {
+            id: true,
+            fullname: true,
+            username: true
               }
             },
             package: {
@@ -68,7 +59,6 @@ export async function GET(request) {
       packageAmount: earning.packageRequest?.package?.package_amount || 0
     }));
 
-    console.log('✅ Returning indirect earnings:', formattedEarnings.length, 'records');
     return NextResponse.json({
       success: true,
       earnings: formattedEarnings,

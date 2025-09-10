@@ -45,36 +45,29 @@ export default function IndirectEarningsPage() {
     setMounted(true);
   }, []);
 
-  const fetchIndirectEarnings = async () => {
-    try {
-      console.log('🔄 Fetching indirect earnings...');
-      setLoading(true);
-      const response = await fetch('/api/user/earnings/indirect', {
-        credentials: 'include'
-      });
-
-      console.log('📡 Response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📊 API Response:', data);
-        setIndirectEarnings(data.earnings || []);
-        console.log('✅ Set earnings:', data.earnings?.length || 0, 'records');
-      } else {
-        const errorData = await response.json();
-        console.log('❌ API Error:', errorData);
-        setError('Failed to fetch indirect earnings');
-      }
-    } catch (error) {
-      console.error('💥 Error fetching indirect earnings:', error);
-      setError('Error loading indirect earnings');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user) {
+      const fetchIndirectEarnings = async () => {
+        try {
+          setLoading(true);
+          const response = await fetch('/api/user/earnings/indirect', {
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setIndirectEarnings(data.earnings || []);
+          } else {
+            setError('Failed to fetch indirect earnings');
+          }
+        } catch (error) {
+          console.error('Error fetching indirect earnings:', error);
+          setError('Error loading indirect earnings');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
       fetchIndirectEarnings();
     }
   }, [mounted, context?.isAuthenticated, context?.user]);
