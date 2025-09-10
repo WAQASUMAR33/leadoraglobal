@@ -39,6 +39,8 @@ export default function IndirectEarningsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [mounted, setMounted] = useState(false);
 
+  const { user, isAuthenticated } = context || {};
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -60,8 +62,6 @@ export default function IndirectEarningsPage() {
       </Box>
     );
   }
-  
-  const { user, isAuthenticated } = context;
 
   const fetchIndirectEarnings = async () => {
     try {

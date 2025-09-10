@@ -38,6 +38,8 @@ export default function DirectEarningsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [mounted, setMounted] = useState(false);
 
+  const { user, isAuthenticated } = context || {};
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -59,8 +61,6 @@ export default function DirectEarningsPage() {
       </Box>
     );
   }
-  
-  const { user, isAuthenticated } = context;
 
   const fetchDirectEarnings = async () => {
     try {
