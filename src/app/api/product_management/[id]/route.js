@@ -1,5 +1,5 @@
 // app/api/products/[id]/route.js
-import prisma from '../../../../lib/prisma' // adjust path as needed
+import prisma from '../../../../lib/prisma'; // adjust path as needed
 
 export async function GET(req, { params }) {
   const { id } = params

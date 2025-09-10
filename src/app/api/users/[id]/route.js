@@ -1,5 +1,5 @@
 // app/api/users/[id]/route.js
-import prisma from '../../../../lib/prisma'
+import prisma from '../../../../lib/prisma';
 import bcrypt from 'bcryptjs'
 
 export async function GET(req, { params }) {

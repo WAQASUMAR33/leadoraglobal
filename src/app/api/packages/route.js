@@ -1,5 +1,5 @@
 // app/api/packages/route.js
-import prisma from '../../../lib/prisma' // adjust if your path differs
+import prisma from '../../../lib/prisma'; // adjust if your path differs
 
 export async function POST(req) {
   try {

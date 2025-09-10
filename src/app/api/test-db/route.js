@@ -1,5 +1,5 @@
 // Test database connection and products
-import prisma from '../../../lib/prisma'
+import prisma from '../../../lib/prisma';
 
 export async function GET() {
   try {

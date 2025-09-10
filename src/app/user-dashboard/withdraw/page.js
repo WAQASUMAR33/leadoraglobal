@@ -42,20 +42,6 @@ import { UserContext } from '../../../lib/userContext';
 export default function WithdrawPage() {
   const context = useContext(UserContext);
   
-  // Safety check for context
-  if (!context) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading...
-        </Typography>
-      </Box>
-    );
-  }
-  
-  const { user, isAuthenticated } = context;
-  
   const [withdrawalData, setWithdrawalData] = useState({
     amount: '',
     paymentMethod: '',
@@ -70,15 +56,49 @@ export default function WithdrawPage() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const { user, isAuthenticated } = context || {};
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (mounted && isAuthenticated && user) {
+    if (mounted && context?.isAuthenticated && context?.user) {
+      const fetchWithdrawalHistory = async () => {
+        try {
+          setHistoryLoading(true);
+          const response = await fetch('/api/user/withdrawals', {
+            credentials: 'include'
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setWithdrawalHistory(data.withdrawals || []);
+          } else {
+            console.error('Failed to fetch withdrawal history');
+          }
+        } catch (error) {
+          console.error('Error fetching withdrawal history:', error);
+        } finally {
+          setHistoryLoading(false);
+        }
+      };
+      
       fetchWithdrawalHistory();
     }
-  }, [mounted, isAuthenticated, user]);
+  }, [mounted, context?.isAuthenticated, context?.user]);
+  
+  // Safety check for context
+  if (!context) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Loading...
+        </Typography>
+      </Box>
+    );
+  }
 
   // Payment method options
   const paymentMethods = [
@@ -96,25 +116,6 @@ export default function WithdrawPage() {
     processing: { label: 'Processing', color: 'info', icon: <Pending /> }
   };
 
-  const fetchWithdrawalHistory = async () => {
-    try {
-      setHistoryLoading(true);
-      const response = await fetch('/api/user/withdrawals', {
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setWithdrawalHistory(data.withdrawals || []);
-      } else {
-        console.error('Failed to fetch withdrawal history');
-      }
-    } catch (error) {
-      console.error('Error fetching withdrawal history:', error);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
 
   const handleInputChange = (field, value) => {
     setWithdrawalData(prev => ({

@@ -1,5 +1,5 @@
 // app/api/ranks/route.js
-import prisma from '../../../lib/prisma' // adjust path if needed
+import prisma from '../../../lib/prisma'; // adjust path if needed
 
 export async function POST(req) {
   try {
