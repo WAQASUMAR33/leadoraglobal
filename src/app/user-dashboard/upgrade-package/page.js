@@ -165,14 +165,16 @@ export default function UpgradePackagePage() {
   };
 
   const getPackageIcon = (pkg) => {
-    if (pkg.name.toLowerCase().includes('premium')) return <Star />;
-    if (pkg.name.toLowerCase().includes('pro')) return <TrendingUp />;
+    const packageName = pkg.name || pkg.package_name || '';
+    if (packageName.toLowerCase().includes('premium')) return <Star />;
+    if (packageName.toLowerCase().includes('pro')) return <TrendingUp />;
     return <Upgrade />;
   };
 
   const getPackageColor = (pkg) => {
-    if (pkg.name.toLowerCase().includes('premium')) return 'warning';
-    if (pkg.name.toLowerCase().includes('pro')) return 'success';
+    const packageName = pkg.name || pkg.package_name || '';
+    if (packageName.toLowerCase().includes('premium')) return 'warning';
+    if (packageName.toLowerCase().includes('pro')) return 'success';
     return 'primary';
   };
 

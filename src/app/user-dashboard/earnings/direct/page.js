@@ -64,19 +64,26 @@ export default function DirectEarningsPage() {
 
   const fetchDirectEarnings = async () => {
     try {
+      console.log('🔄 Fetching direct earnings...');
       setLoading(true);
       const response = await fetch('/api/user/earnings/direct', {
         credentials: 'include'
       });
 
+      console.log('📡 Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 API Response:', data);
         setDirectEarnings(data.earnings || []);
+        console.log('✅ Set earnings:', data.earnings?.length || 0, 'records');
       } else {
+        const errorData = await response.json();
+        console.log('❌ API Error:', errorData);
         setError('Failed to fetch direct earnings');
       }
     } catch (error) {
-      console.error('Error fetching direct earnings:', error);
+      console.error('💥 Error fetching direct earnings:', error);
       setError('Error loading direct earnings');
     } finally {
       setLoading(false);
@@ -255,7 +262,19 @@ export default function DirectEarningsPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        {earning.description || 'Direct earning'}
+                        <div>
+                          <div>{earning.description || 'Direct commission'}</div>
+                          {earning.fromUser && (
+                            <div className="text-sm text-gray-500">
+                              From: {earning.fromUser}
+                            </div>
+                          )}
+                          {earning.packageName && (
+                            <div className="text-sm text-gray-500">
+                              Package: {earning.packageName}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>

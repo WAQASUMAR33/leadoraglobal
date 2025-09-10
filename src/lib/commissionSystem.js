@@ -33,16 +33,21 @@ export async function calculateMLMCommissions(packageRequestId) {
     const packagePoints = packageData.package_points || 0;
 
     console.log(`Processing MLM commissions for user ${user.username}, package: ${packageData.package_name}`);
+    console.log(`Direct Commission: ${directCommission}, Indirect Commission: ${indirectCommission}`);
 
     // 1. Give points to ALL members in the tree (upward)
     await distributePointsToTree(user.username, packagePoints);
 
     // 2. Give direct commission to direct referrer only
     if (user.referredBy) {
+      console.log(`Giving direct commission to direct referrer: ${user.referredBy}`);
       await giveDirectCommission(user.referredBy, directCommission, packageRequestId);
+    } else {
+      console.log(`No direct referrer found for ${user.username}`);
     }
 
-    // 3. Give indirect commissions to ranks in the tree (excluding Consultant)
+    // 3. Give indirect commissions to ranks in the tree (excluding direct referrer)
+    console.log(`Starting indirect commission distribution (excluding direct referrer)`);
     await distributeIndirectCommissions(user.username, indirectCommission, packageRequestId);
 
     console.log('MLM commissions calculated successfully');
@@ -128,6 +133,10 @@ async function giveDirectCommission(referredByUsername, directCommission, packag
 
 /**
  * Distribute indirect commissions to ranks in the tree
+ * New Logic:
+ * 1. Direct referrer gets only direct commission (no indirect)
+ * 2. Indirect commission goes to next person of same rank in tree
+ * 3. If no same rank exists, goes to next higher rank with combined commission
  */
 async function distributeIndirectCommissions(username, indirectCommission, packageRequestId) {
   // Get all ranks from database
@@ -139,9 +148,10 @@ async function distributeIndirectCommissions(username, indirectCommission, packa
   const rankHierarchy = ranks.map(rank => rank.title);
   console.log('Rank hierarchy from database:', rankHierarchy);
 
-  // Get the tree structure
-  const treeMembers = await getTreeMembers(username);
-  console.log(`Found ${treeMembers.length} members in tree`);
+  // Get the tree structure (excluding the direct referrer)
+  const treeMembers = await getTreeMembersExcludingDirectReferrer(username);
+  console.log(`Found ${treeMembers.length} members in tree (excluding direct referrer)`);
+  console.log(`Direct referrer is EXCLUDED from indirect commission distribution`);
 
   // Group members by rank
   const membersByRank = {};
@@ -153,10 +163,16 @@ async function distributeIndirectCommissions(username, indirectCommission, packa
     membersByRank[rankTitle].push(member);
   });
 
-  // Process indirect commissions according to the rules
+  // Log eligible members for indirect commission
+  console.log('Members eligible for indirect commission:');
+  Object.entries(membersByRank).forEach(([rank, members]) => {
+    console.log(`  ${rank}: ${members.map(m => m.username).join(', ')}`);
+  });
+
+  // Process indirect commissions according to new rules
   const processedRanks = new Set();
   
-  // Start from the highest rank and work down (excluding Consultant and Ambassador ranks)
+  // Start from the highest rank and work down
   for (let i = rankHierarchy.length - 1; i >= 0; i--) {
     const currentRank = rankHierarchy[i];
     
@@ -180,16 +196,17 @@ async function distributeIndirectCommissions(username, indirectCommission, packa
       processedRanks.add(currentRank);
       console.log(`Gave ${indirectCommission} indirect commission to first ${currentRank}: ${firstMember.username}`);
     } else {
-      // No member of this rank, give double commission to upper rank
+      // No member of this rank, give combined commission to upper rank
       const upperRank = findUpperRank(currentRank, rankHierarchy);
       if (upperRank && !processedRanks.has(upperRank)) {
         const upperRankMembers = membersByRank[upperRank] || [];
         if (upperRankMembers.length > 0) {
           const firstUpperMember = upperRankMembers[0];
-          const doubleCommission = indirectCommission * 2;
-          await giveIndirectCommission(firstUpperMember, doubleCommission, packageRequestId, `${upperRank} (double - includes ${currentRank})`);
+          // Combined commission: current rank's indirect + upper rank's own indirect
+          const combinedCommission = indirectCommission * 2;
+          await giveIndirectCommission(firstUpperMember, combinedCommission, packageRequestId, `${upperRank} (combined - includes ${currentRank})`);
           processedRanks.add(upperRank);
-          console.log(`Gave ${doubleCommission} double indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
+          console.log(`Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
         }
       }
     }
@@ -214,6 +231,54 @@ async function getTreeMembers(username) {
 
     if (!user || processedUsers.has(user.id)) {
       break;
+    }
+
+    members.push(user);
+    processedUsers.add(user.id);
+    currentUsername = user.referredBy;
+  }
+
+  return members;
+}
+
+/**
+ * Get all members in the tree (upward) excluding the direct referrer
+ * This ensures direct referrer only gets direct commission, not indirect
+ */
+async function getTreeMembersExcludingDirectReferrer(username) {
+  // First, get the new user to find their direct referrer
+  const newUser = await prisma.user.findUnique({
+    where: { username: username }
+  });
+
+  if (!newUser || !newUser.referredBy) {
+    return []; // No direct referrer, so no tree members to process
+  }
+
+  const directReferrerUsername = newUser.referredBy;
+  const members = [];
+  let currentUsername = directReferrerUsername; // Start from direct referrer
+  const processedUsers = new Set();
+
+  // Skip the direct referrer and go up the tree from their referrer
+  currentUsername = directReferrerUsername;
+
+  while (currentUsername) {
+    const user = await prisma.user.findUnique({
+      where: { username: currentUsername },
+      include: {
+        rank: true
+      }
+    });
+
+    if (!user || processedUsers.has(user.id)) {
+      break;
+    }
+
+    // Skip the direct referrer - they only get direct commission
+    if (currentUsername === directReferrerUsername) {
+      currentUsername = user.referredBy;
+      continue;
     }
 
     members.push(user);

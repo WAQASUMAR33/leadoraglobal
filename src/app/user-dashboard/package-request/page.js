@@ -11,6 +11,7 @@ function PackageRequestForm() {
   const { user, isAuthenticated } = useUser();
   
   const [packageData, setPackageData] = useState(null);
+  const [bankAccounts, setBankAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,6 +27,7 @@ function PackageRequestForm() {
   useEffect(() => {
     if (packageId) {
       fetchPackageDetails();
+      fetchBankAccounts();
     }
   }, [packageId]);
 
@@ -47,6 +49,22 @@ function PackageRequestForm() {
       alert('Error fetching package details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBankAccounts = async () => {
+    try {
+      const response = await fetch('/api/bank-accounts');
+      if (response.ok) {
+        const data = await response.json();
+        setBankAccounts(data.bankAccounts || []);
+      } else {
+        console.error('Failed to fetch bank accounts:', response.status);
+        setBankAccounts([]);
+      }
+    } catch (error) {
+      console.error('Error fetching bank accounts:', error);
+      setBankAccounts([]);
     }
   };
 
@@ -263,7 +281,7 @@ function PackageRequestForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Package Information */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <h2 className="text-xl font-bold text-white mb-4">Selected Package</h2>
@@ -288,6 +306,50 @@ function PackageRequestForm() {
               <div className="flex justify-between">
                 <span className="text-gray-400">Rank:</span>
                 <span className="text-white font-medium">{packageData.rank.title}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bank Accounts */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h2 className="text-xl font-bold text-white mb-4">Payment Bank Accounts</h2>
+          <div className="space-y-4 max-h-80 overflow-y-auto">
+            {bankAccounts.length > 0 ? (
+              bankAccounts.map((account, index) => (
+                <div key={account.id} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-lg font-semibold text-white">{account.bank_title}</h3>
+                      <span className="bg-blue-600 text-blue-100 text-xs px-2 py-1 rounded-full">
+                        Account #{index + 1}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 text-sm">Account Title:</span>
+                        <span className="text-white text-sm font-medium">{account.account_title}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 text-sm">Account Number:</span>
+                        <span className="text-white text-sm font-mono">{account.bank_accountno}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 text-sm">IBAN:</span>
+                        <span className="text-white text-sm font-mono">{account.iban_no}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-gray-400 mb-2">
+                  <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <p className="text-gray-400">No bank accounts available</p>
               </div>
             )}
           </div>
@@ -385,27 +447,27 @@ function PackageRequestForm() {
 
       {/* Instructions */}
       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-4">Instructions</h2>
+        <h2 className="text-xl font-bold text-white mb-4">Payment Instructions</h2>
                  <div className="space-y-3 text-gray-300">
            <div className="flex items-start">
              <span className="text-blue-400 mr-2">1.</span>
-             <p>Make sure you have completed the payment for the selected package.</p>
+             <p>Choose one of the bank accounts listed above to make your payment.</p>
            </div>
            <div className="flex items-start">
              <span className="text-blue-400 mr-2">2.</span>
-             <p>Get your transaction ID from your payment confirmation.</p>
+             <p>Transfer the exact package amount to the selected bank account.</p>
            </div>
            <div className="flex items-start">
              <span className="text-blue-400 mr-2">3.</span>
-             <p>Take a clear photo or scan of your payment receipt (JPG/PNG only).</p>
+             <p>Get your transaction ID from your payment confirmation.</p>
            </div>
            <div className="flex items-start">
              <span className="text-blue-400 mr-2">4.</span>
-             <p>Upload the receipt image - it will be automatically processed.</p>
+             <p>Take a clear photo or scan of your payment receipt (JPG/PNG only).</p>
            </div>
            <div className="flex items-start">
              <span className="text-blue-400 mr-2">5.</span>
-             <p>Submit your request and wait for admin approval.</p>
+             <p>Upload the receipt image and submit your request for admin approval.</p>
            </div>
          </div>
       </div>

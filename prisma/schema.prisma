@@ -34,6 +34,7 @@ model User {
   kyc               KYC?
   packageRequests   PackageRequest[]
   withdrawalRequests WithdrawalRequest[]
+  paymentMethods    PaymentMethod[]
   transfersFrom     Transfer[]         @relation("TransferFromUser")
   transfersTo       Transfer[]         @relation("TransferToUser")
   earnings          Earnings[]
@@ -307,5 +308,27 @@ model Earnings {
   @@index([userId], map: "earnings_user_id_fkey")
   @@index([packageRequestId], map: "earnings_package_request_id_fkey")
   @@map("earnings")
+}
+
+model PaymentMethod {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  type          String    // 'bank_transfer', 'easypaisa', 'jazzcash', 'paypal'
+  accountName   String    @map("account_name")
+  accountNumber String?   @map("account_number")
+  bankName      String?   @map("bank_name")
+  ibanNumber    String?   @map("iban_number")
+  branchCode    String?   @map("branch_code")
+  mobileNumber  String?   @map("mobile_number")
+  email         String?
+  isDefault     Boolean   @default(false) @map("is_default")
+  status        String    @default("active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "payment_methods_user_id_fkey")
+  @@index([type], map: "payment_methods_type_fkey")
+  @@map("payment_methods")
 }
 

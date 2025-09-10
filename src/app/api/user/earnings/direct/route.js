@@ -4,55 +4,71 @@ import { verifyToken } from '../../../../../lib/auth';
 
 export async function GET(request) {
   try {
+    console.log('🔍 Direct Earnings API called');
+    
     // Verify user authentication
     const token = request.cookies.get('auth-token')?.value;
+    console.log('🔑 Token found:', !!token);
+    
     if (!token) {
+      console.log('❌ No token found');
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
+    console.log('🔓 Token decoded:', !!decoded, decoded ? `User ID: ${decoded.userId}` : 'Invalid');
+    
     if (!decoded) {
+      console.log('❌ Invalid token');
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const userId = decoded.userId;
+    console.log('👤 User ID:', userId);
 
-    // Get user's direct earnings from transfers where they are the recipient
-    const directEarnings = await prisma.transfer.findMany({
+    // Get user's direct commission earnings
+    const directEarnings = await prisma.earnings.findMany({
       where: {
-        toUserId: userId,
-        transferType: 'admin_to_user'
+        userId: userId,
+        type: 'direct_commission'
       },
       orderBy: { createdAt: 'desc' },
       include: {
-        fromUser: {
-          select: {
-            id: true,
-            fullname: true,
-            username: true
-          }
-        },
-        admin: {
-          select: {
-            id: true,
-            fullName: true,
-            username: true
+        packageRequest: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullname: true,
+                username: true
+              }
+            },
+            package: {
+              select: {
+                id: true,
+                package_name: true,
+                package_amount: true
+              }
+            }
           }
         }
       }
     });
 
     // Format the earnings data
-    const formattedEarnings = directEarnings.map(transfer => ({
-      id: transfer.id,
-      amount: parseFloat(transfer.amount),
-      type: 'Direct Transfer',
-      description: transfer.description || `Direct transfer from admin`,
-      status: transfer.status,
-      createdAt: transfer.createdAt,
-      fromAdmin: transfer.admin?.fullName || 'System Admin'
+    const formattedEarnings = directEarnings.map(earning => ({
+      id: earning.id,
+      amount: parseFloat(earning.amount),
+      type: 'Direct Commission',
+      description: earning.description || `Direct commission from package approval`,
+      status: 'Completed',
+      createdAt: earning.createdAt,
+      fromUser: earning.packageRequest?.user?.fullname || 'Unknown User',
+      packageName: earning.packageRequest?.package?.package_name || 'Unknown Package',
+      packageAmount: earning.packageRequest?.package?.package_amount || 0
     }));
 
+    console.log('✅ Returning earnings:', formattedEarnings.length, 'records');
     return NextResponse.json({
       success: true,
       earnings: formattedEarnings,

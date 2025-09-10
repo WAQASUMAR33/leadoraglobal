@@ -65,19 +65,26 @@ export default function IndirectEarningsPage() {
 
   const fetchIndirectEarnings = async () => {
     try {
+      console.log('🔄 Fetching indirect earnings...');
       setLoading(true);
       const response = await fetch('/api/user/earnings/indirect', {
         credentials: 'include'
       });
 
+      console.log('📡 Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 API Response:', data);
         setIndirectEarnings(data.earnings || []);
+        console.log('✅ Set earnings:', data.earnings?.length || 0, 'records');
       } else {
+        const errorData = await response.json();
+        console.log('❌ API Error:', errorData);
         setError('Failed to fetch indirect earnings');
       }
     } catch (error) {
-      console.error('Error fetching indirect earnings:', error);
+      console.error('💥 Error fetching indirect earnings:', error);
       setError('Error loading indirect earnings');
     } finally {
       setLoading(false);
@@ -258,10 +265,17 @@ export default function IndirectEarningsPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        {earning.referralName || 'N/A'}
+                        {earning.fromUser || 'N/A'}
                       </TableCell>
                       <TableCell>
-                        {earning.description || 'Indirect earning from referral'}
+                        <div>
+                          <div>{earning.description || 'Indirect commission'}</div>
+                          {earning.packageName && (
+                            <div className="text-sm text-gray-500">
+                              Package: {earning.packageName}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>

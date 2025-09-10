@@ -3,7 +3,8 @@ import { approvePackageRequest } from '../../../../lib/packageApproval';
 
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
+    const packageRequestId = parseInt(id);
     const body = await request.json();
     const { status, adminNotes } = body;
 
@@ -20,11 +21,11 @@ export async function PUT(request, { params }) {
     // If approved, use the comprehensive approval system
     if (status === 'approved') {
       try {
-        const approvalResult = await approvePackageRequest(id);
+        const approvalResult = await approvePackageRequest(packageRequestId);
         
         // Get updated package request
         const updatedRequest = await prisma.packageRequest.findUnique({
-          where: { id: parseInt(id) },
+          where: { id: packageRequestId },
           include: {
             user: {
               select: {
@@ -67,7 +68,7 @@ export async function PUT(request, { params }) {
 
     // For other statuses (rejected, pending), use simple update
     const updatedRequest = await prisma.packageRequest.update({
-      where: { id: parseInt(id) },
+      where: { id: packageRequestId },
       data: {
         status,
         adminNotes: adminNotes || '',
@@ -115,10 +116,11 @@ export async function PUT(request, { params }) {
 
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
+    const packageRequestId = parseInt(id);
 
     const packageRequest = await prisma.packageRequest.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: packageRequestId },
       include: {
         user: {
           select: {

@@ -41,6 +41,21 @@ import { UserContext } from '../../../lib/userContext';
 
 export default function WithdrawPage() {
   const context = useContext(UserContext);
+  
+  // Safety check for context
+  if (!context) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Loading...
+        </Typography>
+      </Box>
+    );
+  }
+  
+  const { user, isAuthenticated } = context;
+  
   const [withdrawalData, setWithdrawalData] = useState({
     amount: '',
     paymentMethod: '',
@@ -64,20 +79,6 @@ export default function WithdrawPage() {
       fetchWithdrawalHistory();
     }
   }, [mounted, isAuthenticated, user]);
-  
-  // Safety check for context
-  if (!context) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading...
-        </Typography>
-      </Box>
-    );
-  }
-  
-  const { user, isAuthenticated } = context;
 
   // Payment method options
   const paymentMethods = [

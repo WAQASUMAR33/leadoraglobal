@@ -274,11 +274,12 @@ export function calculatePointsFromPackageAmount(packageAmount) {
 // Main package approval function using new MLM commission system
 export async function approvePackageRequest(packageRequestId) {
   try {
-    console.log(`🚀 Starting package approval for request ${packageRequestId}`);
+    const requestId = parseInt(packageRequestId);
+    console.log(`🚀 Starting package approval for request ${requestId}`);
 
     // Get package request with all related data
     const packageRequest = await prisma.packageRequest.findUnique({
-      where: { id: parseInt(packageRequestId) },
+      where: { id: requestId },
       include: {
         user: {
           select: {
@@ -320,16 +321,16 @@ export async function approvePackageRequest(packageRequestId) {
     console.log(`📦 Approving package: ${packageData.package_name} (₨${packageData.package_amount}) for user: ${user.username}`);
 
     // Step 1: Update user's package and rank
-    await updateUserPackageAndRank(packageRequestId);
+    await updateUserPackageAndRank(requestId);
     console.log(`✅ Updated user ${user.username} with package and rank`);
 
     // Step 2: Calculate and distribute MLM commissions
-    await calculateMLMCommissions(packageRequestId);
+    await calculateMLMCommissions(requestId);
     console.log(`💰 MLM commissions distributed successfully`);
 
     // Step 3: Update package request status
     await prisma.packageRequest.update({
-      where: { id: parseInt(packageRequestId) },
+      where: { id: requestId },
       data: {
         status: 'approved',
         updatedAt: new Date()
