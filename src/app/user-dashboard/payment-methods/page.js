@@ -8,6 +8,9 @@ export default function PaymentMethodsPage() {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [filteredPaymentMethods, setFilteredPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addLoading, setAddLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -97,6 +100,7 @@ export default function PaymentMethodsPage() {
 
   const handleAddPaymentMethod = async (e) => {
     e.preventDefault();
+    setAddLoading(true);
     try {
       const response = await fetch('/api/user/payment-methods', {
         method: 'POST',
@@ -124,11 +128,14 @@ export default function PaymentMethodsPage() {
       }
     } catch (error) {
       console.error('Error adding payment method:', error);
+    } finally {
+      setAddLoading(false);
     }
   };
 
   const handleEditPaymentMethod = async (e) => {
     e.preventDefault();
+    setEditLoading(true);
     try {
       const response = await fetch(`/api/user/payment-methods/${selectedPaymentMethod.id}`, {
         method: 'PUT',
@@ -157,10 +164,13 @@ export default function PaymentMethodsPage() {
       }
     } catch (error) {
       console.error('Error updating payment method:', error);
+    } finally {
+      setEditLoading(false);
     }
   };
 
   const handleDeletePaymentMethod = async () => {
+    setDeleteLoading(true);
     try {
       const response = await fetch(`/api/user/payment-methods/${selectedPaymentMethod.id}`, {
         method: 'DELETE',
@@ -174,6 +184,8 @@ export default function PaymentMethodsPage() {
       }
     } catch (error) {
       console.error('Error deleting payment method:', error);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -459,9 +471,10 @@ export default function PaymentMethodsPage() {
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition-colors"
+                  disabled={addLoading}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
                 >
-                  Add Payment Method
+                  {addLoading ? 'Adding...' : 'Add Payment Method'}
                 </button>
                 <button
                   type="button"
@@ -526,9 +539,10 @@ export default function PaymentMethodsPage() {
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
+                  disabled={editLoading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
                 >
-                  Update Payment Method
+                  {editLoading ? 'Updating...' : 'Update Payment Method'}
                 </button>
                 <button
                   type="button"
@@ -554,9 +568,10 @@ export default function PaymentMethodsPage() {
             <div className="flex space-x-3">
               <button
                 onClick={handleDeletePaymentMethod}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition-colors"
+                disabled={deleteLoading}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
               >
-                Delete
+                {deleteLoading ? 'Deleting...' : 'Delete'}
               </button>
               <button
                 onClick={() => setShowDeleteModal(false)}

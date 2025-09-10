@@ -7,6 +7,9 @@ export default function AdminBankAccounts() {
   const [bankAccounts, setBankAccounts] = useState([]);
   const [filteredBankAccounts, setFilteredBankAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addLoading, setAddLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -90,6 +93,7 @@ export default function AdminBankAccounts() {
 
   const handleAddBankAccount = async (e) => {
     e.preventDefault();
+    setAddLoading(true);
     try {
       const response = await fetch('/api/admin/bank_management', {
         method: 'POST',
@@ -107,11 +111,14 @@ export default function AdminBankAccounts() {
       }
     } catch (error) {
       console.error('Error adding bank account:', error);
+    } finally {
+      setAddLoading(false);
     }
   };
 
   const handleEditBankAccount = async (e) => {
     e.preventDefault();
+    setEditLoading(true);
     try {
       const response = await fetch(`/api/admin/bank_management/${selectedBankAccount.id}`, {
         method: 'PUT',
@@ -130,10 +137,13 @@ export default function AdminBankAccounts() {
       }
     } catch (error) {
       console.error('Error updating bank account:', error);
+    } finally {
+      setEditLoading(false);
     }
   };
 
   const handleDeleteBankAccount = async () => {
+    setDeleteLoading(true);
     try {
       const response = await fetch(`/api/admin/bank_management/${selectedBankAccount.id}`, {
         method: 'DELETE',
@@ -149,6 +159,8 @@ export default function AdminBankAccounts() {
       }
     } catch (error) {
       console.error('Error deleting bank account:', error);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -375,9 +387,10 @@ export default function AdminBankAccounts() {
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition-colors"
+                  disabled={addLoading}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
                 >
-                  Add Bank Account
+                  {addLoading ? 'Adding...' : 'Add Bank Account'}
                 </button>
                 <button
                   type="button"
@@ -441,9 +454,10 @@ export default function AdminBankAccounts() {
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
+                  disabled={editLoading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
                 >
-                  Update Bank Account
+                  {editLoading ? 'Updating...' : 'Update Bank Account'}
                 </button>
                 <button
                   type="button"
@@ -469,9 +483,10 @@ export default function AdminBankAccounts() {
             <div className="flex space-x-3">
               <button
                 onClick={handleDeleteBankAccount}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition-colors"
+                disabled={deleteLoading}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
               >
-                Delete
+                {deleteLoading ? 'Deleting...' : 'Delete'}
               </button>
               <button
                 onClick={() => setShowDeleteModal(false)}

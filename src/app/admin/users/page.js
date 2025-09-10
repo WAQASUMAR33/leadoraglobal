@@ -59,6 +59,10 @@ export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addLoading, setAddLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -88,7 +92,7 @@ export default function UserManagement() {
 
   useEffect(() => {
     applyFilters();
-  }, [users, filters, applyFilters]);
+  }, [users, filters]);
 
   const applyFilters = useCallback(() => {
     let filtered = [...users];
@@ -96,9 +100,9 @@ export default function UserManagement() {
     // Search filter
     if (filters.search) {
       filtered = filtered.filter(user => 
-        user.firstname.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user.lastname.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user.username.toLowerCase().includes(filters.search.toLowerCase())
+        (user.firstname || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+        (user.lastname || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+        (user.username || '').toLowerCase().includes(filters.search.toLowerCase())
       );
     }
 
@@ -125,13 +129,23 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/users');
-      const data = await response.json();
-      if (data.users) {
-        setUsers(data.users);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.users) {
+          setUsers(data.users);
+        } else {
+          console.error('No users data received');
+          setUsers([]);
+        }
+      } else {
+        console.error('Failed to fetch users:', response.status);
+        setUsers([]);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -139,6 +153,7 @@ export default function UserManagement() {
 
   const handleAddUser = async (e) => {
     e.preventDefault();
+    setAddLoading(true);
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
@@ -167,11 +182,14 @@ export default function UserManagement() {
     } catch (error) {
       console.error('Error creating user:', error);
       alert('Error creating user');
+    } finally {
+      setAddLoading(false);
     }
   };
 
   const handleEditUser = async (e) => {
     e.preventDefault();
+    setEditLoading(true);
     try {
       const response = await fetch(`/api/users/${editingUser.id}`, {
         method: 'PUT',
@@ -201,6 +219,8 @@ export default function UserManagement() {
     } catch (error) {
       console.error('Error updating user:', error);
       alert('Error updating user');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -209,6 +229,8 @@ export default function UserManagement() {
       return;
     }
 
+    setDeleteLoading(true);
+    setDeletingUserId(userId);
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
@@ -224,18 +246,21 @@ export default function UserManagement() {
     } catch (error) {
       console.error('Error deleting user:', error);
       alert('Error deleting user');
+    } finally {
+      setDeleteLoading(false);
+      setDeletingUserId(null);
     }
   };
 
   const openEditModal = (user) => {
     setEditingUser(user);
     setFormData({
-      firstname: user.firstname,
-      lastname: user.lastname,
-      username: user.username,
+      firstname: user.firstname || '',
+      lastname: user.lastname || '',
+      username: user.username || '',
       password: '',
-      role: user.role,
-      status: user.status
+      role: user.role || 'user',
+      status: user.status || 'active'
     });
     setShowEditModal(true);
   };
@@ -445,7 +470,7 @@ export default function UserManagement() {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-800">
-                          {user.firstname} {user.lastname}
+                          {user.firstname || 'Unknown'} {user.lastname || ''}
                         </div>
                         <div className="text-sm text-gray-500">
                           ID: {user.id}
@@ -454,7 +479,7 @@ export default function UserManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-800">{user.username}</div>
+                    <div className="text-sm text-gray-800">{user.username || 'Unknown'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
@@ -467,7 +492,7 @@ export default function UserManagement() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
+                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
@@ -491,12 +516,17 @@ export default function UserManagement() {
                       </button>
                       <button
                         onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                        disabled={deleteLoading && deletingUserId === user.id}
+                        className="text-red-600 hover:text-red-900 disabled:text-red-400 disabled:cursor-not-allowed p-1 rounded hover:bg-red-50"
                         title="Delete User"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        {deleteLoading && deletingUserId === user.id ? (
+                          <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
                       </button>
                     </div>
                   </td>
@@ -597,9 +627,10 @@ export default function UserManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  disabled={addLoading}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed"
                 >
-                  Add User
+                  {addLoading ? 'Adding...' : 'Add User'}
                 </button>
               </div>
             </form>
@@ -697,9 +728,10 @@ export default function UserManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  disabled={editLoading}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed"
                 >
-                  Update User
+                  {editLoading ? 'Updating...' : 'Update User'}
                 </button>
               </div>
             </form>
@@ -714,9 +746,9 @@ export default function UserManagement() {
             <div className="flex justify-between items-center p-6 border-b border-gray-200">
               <div>
                 <h3 className="text-2xl font-bold text-gray-800">
-                  {selectedUser.firstname} {selectedUser.lastname}
+                  {selectedUser.firstname || 'Unknown'} {selectedUser.lastname || ''}
                 </h3>
-                <p className="text-gray-600">@{selectedUser.username} • ID: {selectedUser.id}</p>
+                <p className="text-gray-600">@{selectedUser.username || 'unknown'} • ID: {selectedUser.id}</p>
               </div>
               <button
                 onClick={() => setShowProfileModal(false)}
@@ -768,11 +800,11 @@ export default function UserManagement() {
                         <div className="flex items-center">
                           <Person className="w-4 h-4 text-gray-500 mr-2" />
                           <span className="text-sm text-gray-600">Name:</span>
-                          <span className="ml-2 font-medium">{selectedUser.firstname} {selectedUser.lastname}</span>
+                          <span className="ml-2 font-medium">{selectedUser.firstname || 'Unknown'} {selectedUser.lastname || ''}</span>
                         </div>
                         <div className="flex items-center">
                           <span className="text-sm text-gray-600">Username:</span>
-                          <span className="ml-2 font-medium">@{selectedUser.username}</span>
+                          <span className="ml-2 font-medium">@{selectedUser.username || 'unknown'}</span>
                         </div>
                         <div className="flex items-center">
                           <Email className="w-4 h-4 text-gray-500 mr-2" />
