@@ -19,7 +19,7 @@ export async function GET(request) {
     
     console.log('Dashboard API - User ID from token:', userId);
 
-    // Fetch user data
+    // Fetch user data with rank information
     const user = await prisma.user.findUnique({
       where: { id: parseInt(userId) },
       select: {
@@ -32,7 +32,14 @@ export async function GET(request) {
         referralCount: true,
         currentPackageId: true,
         packageExpiryDate: true,
-        createdAt: true
+        createdAt: true,
+        rank: {
+          select: {
+            id: true,
+            rank_name: true,
+            rank_level: true
+          }
+        }
       }
     });
 
@@ -46,6 +53,28 @@ export async function GET(request) {
     // Count user's orders
     const ordersCount = await prisma.order.count({
       where: { userId: parseInt(userId) }
+    });
+
+    // Calculate direct earnings total
+    const directEarnings = await prisma.earnings.aggregate({
+      where: {
+        userId: parseInt(userId),
+        type: 'direct_commission'
+      },
+      _sum: {
+        amount: true
+      }
+    });
+
+    // Calculate indirect earnings total
+    const indirectEarnings = await prisma.earnings.aggregate({
+      where: {
+        userId: parseInt(userId),
+        type: 'indirect_commission'
+      },
+      _sum: {
+        amount: true
+      }
     });
 
     // Get recent orders (last 5)
@@ -207,15 +236,19 @@ export async function GET(request) {
         hasActivePackage,
         currentPackageId: user.currentPackageId,
         packageExpiryDate: user.packageExpiryDate,
-        memberSince: user.createdAt
+        memberSince: user.createdAt,
+        rank: user.rank
       },
       recentActivity,
       stats: {
         balance: parseFloat(user.balance || 0),
         points: user.points || 0,
         totalEarnings: parseFloat(user.totalEarnings || 0),
+        directEarnings: parseFloat(directEarnings._sum.amount || 0),
+        indirectEarnings: parseFloat(indirectEarnings._sum.amount || 0),
         referralCount: user.referralCount || 0,
-        ordersCount: ordersCount
+        ordersCount: ordersCount,
+        rank: user.rank
       },
       inactiveMembersCount,
       potentialRevenue

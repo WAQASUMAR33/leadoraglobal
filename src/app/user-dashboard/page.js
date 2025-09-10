@@ -171,8 +171,9 @@ export default function UserDashboardHome() {
       </div>
 
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      {/* Stats Grid - 4 columns layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Balance */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -183,12 +184,47 @@ export default function UserDashboardHome() {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-400">Current Balance</p>
-              <p className="text-2xl font-bold text-white">PKR {stats.balance.toFixed(2)}</p>
+              <p className="text-sm font-medium text-gray-400">Total Balance</p>
+              <p className="text-lg font-bold text-white">PKR {stats.balance.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
+        {/* Direct Earnings */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-400">Direct Earnings</p>
+              <p className="text-lg font-bold text-white">PKR {stats.directEarnings.toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Indirect Earnings */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-400">Indirect Earnings</p>
+              <p className="text-lg font-bold text-white">PKR {stats.indirectEarnings.toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Points */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -200,27 +236,12 @@ export default function UserDashboardHome() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-400">Points</p>
-              <p className="text-2xl font-bold text-white">{stats.points}</p>
+              <p className="text-lg font-bold text-white">{stats.points}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-400">Total Earnings</p>
-              <p className="text-2xl font-bold text-white">PKR {stats.totalEarnings.toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-
+        {/* Total Referrals */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -231,16 +252,34 @@ export default function UserDashboardHome() {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-400">Referrals</p>
-              <p className="text-2xl font-bold text-white">{stats.referralCount}</p>
+              <p className="text-sm font-medium text-gray-400">Total Referrals</p>
+              <p className="text-lg font-bold text-white">{stats.referralCount}</p>
             </div>
           </div>
         </div>
 
+        {/* Rank */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+              </div>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-400">Rank</p>
+              <p className="text-lg font-bold text-white">{stats.rank?.rank_name || 'No Rank'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Orders */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
@@ -248,7 +287,7 @@ export default function UserDashboardHome() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-400">Orders</p>
-              <p className="text-2xl font-bold text-white">{stats.ordersCount}</p>
+              <p className="text-lg font-bold text-white">{stats.ordersCount}</p>
             </div>
           </div>
         </div>
