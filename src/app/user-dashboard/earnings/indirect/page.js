@@ -45,24 +45,6 @@ export default function IndirectEarningsPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted && context?.isAuthenticated && context?.user) {
-      fetchIndirectEarnings();
-    }
-  }, [mounted, context?.isAuthenticated, context?.user]);
-  
-  // Safety check for context
-  if (!context) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading...
-        </Typography>
-      </Box>
-    );
-  }
-
   const fetchIndirectEarnings = async () => {
     try {
       console.log('🔄 Fetching indirect earnings...');
@@ -90,6 +72,24 @@ export default function IndirectEarningsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (mounted && context?.isAuthenticated && context?.user) {
+      fetchIndirectEarnings();
+    }
+  }, [mounted, context?.isAuthenticated, context?.user]);
+  
+  // Safety check for context
+  if (!context) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Loading...
+        </Typography>
+      </Box>
+    );
+  }
 
   const formatCurrency = (amount) => {
     return `PKR ${parseFloat(amount).toLocaleString()}`;

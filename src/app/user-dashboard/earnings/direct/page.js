@@ -44,24 +44,6 @@ export default function DirectEarningsPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted && context?.isAuthenticated && context?.user) {
-      fetchDirectEarnings();
-    }
-  }, [mounted, context?.isAuthenticated, context?.user]);
-  
-  // Safety check for context
-  if (!context) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading...
-        </Typography>
-      </Box>
-    );
-  }
-
   const fetchDirectEarnings = async () => {
     try {
       console.log('🔄 Fetching direct earnings...');
@@ -89,6 +71,24 @@ export default function DirectEarningsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (mounted && context?.isAuthenticated && context?.user) {
+      fetchDirectEarnings();
+    }
+  }, [mounted, context?.isAuthenticated, context?.user]);
+  
+  // Safety check for context
+  if (!context) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Loading...
+        </Typography>
+      </Box>
+    );
+  }
 
   const formatCurrency = (amount) => {
     return `PKR ${parseFloat(amount).toLocaleString()}`;
