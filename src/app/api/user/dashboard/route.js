@@ -4,22 +4,35 @@ import { verifyToken } from '../../../../lib/auth';
 
 export async function GET(request) {
   try {
+    console.log('Dashboard API - Starting request');
+    
     // Verify user authentication
     const token = request.cookies.get('auth-token')?.value;
     if (!token) {
+      console.log('Dashboard API - No token found');
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
     if (!decoded) {
+      console.log('Dashboard API - Invalid token');
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const userId = decoded.userId;
     
     console.log('Dashboard API - User ID from token:', userId);
+    console.log('Dashboard API - User ID type:', typeof userId);
+    console.log('Dashboard API - Parsed User ID:', parseInt(userId));
+    
+    // Validate userId
+    if (!userId || isNaN(parseInt(userId))) {
+      console.log('Dashboard API - Invalid userId:', userId);
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
+    }
 
     // Fetch user data with rank information
+    console.log('Dashboard API - Fetching user data for ID:', parseInt(userId));
     const user = await prisma.user.findUnique({
       where: { id: parseInt(userId) },
       select: {
@@ -56,6 +69,7 @@ export async function GET(request) {
     });
 
     // Calculate direct earnings total
+    console.log('Dashboard API - Calculating direct earnings for user:', parseInt(userId));
     const directEarnings = await prisma.earnings.aggregate({
       where: {
         userId: parseInt(userId),
@@ -64,9 +78,14 @@ export async function GET(request) {
       _sum: {
         amount: true
       }
+    }).catch(error => {
+      console.error('Error calculating direct earnings:', error);
+      return { _sum: { amount: null } };
     });
+    console.log('Dashboard API - Direct earnings result:', directEarnings);
 
     // Calculate indirect earnings total
+    console.log('Dashboard API - Calculating indirect earnings for user:', parseInt(userId));
     const indirectEarnings = await prisma.earnings.aggregate({
       where: {
         userId: parseInt(userId),
@@ -75,7 +94,11 @@ export async function GET(request) {
       _sum: {
         amount: true
       }
+    }).catch(error => {
+      console.error('Error calculating indirect earnings:', error);
+      return { _sum: { amount: null } };
     });
+    console.log('Dashboard API - Indirect earnings result:', indirectEarnings);
 
     // Get recent orders (last 5)
     const recentOrders = await prisma.order.findMany({
@@ -261,8 +284,22 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('Dashboard API error:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    // Check if it's a Prisma validation error
+    if (error.name === 'PrismaClientValidationError') {
+      console.error('Prisma validation error details:', error.message);
+      return NextResponse.json({
+        error: 'Database validation error',
+        details: error.message
+      }, { status: 400 });
+    }
+    
     return NextResponse.json({
-      error: 'Failed to fetch dashboard data'
+      error: 'Failed to fetch dashboard data',
+      details: error.message
     }, { status: 500 });
   }
 }
