@@ -25,7 +25,8 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Avatar
+  Avatar,
+  Link
 } from '@mui/material';
 import {
   AccountBalance,
@@ -44,10 +45,10 @@ export default function WithdrawPage() {
   
   const [withdrawalData, setWithdrawalData] = useState({
     amount: '',
-    paymentMethod: '',
-    accountDetails: '',
+    paymentMethodId: '',
     notes: ''
   });
+  const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
@@ -64,27 +65,41 @@ export default function WithdrawPage() {
 
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user) {
-      const fetchWithdrawalHistory = async () => {
+      const fetchData = async () => {
         try {
           setHistoryLoading(true);
-          const response = await fetch('/api/user/withdrawals', {
+          
+          // Fetch withdrawal history
+          const withdrawalResponse = await fetch('/api/user/withdrawals', {
             credentials: 'include'
           });
 
-          if (response.ok) {
-            const data = await response.json();
-            setWithdrawalHistory(data.withdrawals || []);
+          if (withdrawalResponse.ok) {
+            const withdrawalData = await withdrawalResponse.json();
+            setWithdrawalHistory(withdrawalData.withdrawals || []);
           } else {
             console.error('Failed to fetch withdrawal history');
           }
+
+          // Fetch payment methods
+          const paymentResponse = await fetch('/api/user/payment-methods', {
+            credentials: 'include'
+          });
+
+          if (paymentResponse.ok) {
+            const paymentData = await paymentResponse.json();
+            setPaymentMethods(paymentData.paymentMethods || []);
+          } else {
+            console.error('Failed to fetch payment methods');
+          }
         } catch (error) {
-          console.error('Error fetching withdrawal history:', error);
+          console.error('Error fetching data:', error);
         } finally {
           setHistoryLoading(false);
         }
       };
       
-      fetchWithdrawalHistory();
+      fetchData();
     }
   }, [mounted, context?.isAuthenticated, context?.user]);
   
@@ -100,13 +115,31 @@ export default function WithdrawPage() {
     );
   }
 
-  // Payment method options
-  const paymentMethods = [
-    { value: 'bank_transfer', label: 'Bank Transfer' },
-    { value: 'easypaisa', label: 'EasyPaisa' },
-    { value: 'jazzcash', label: 'JazzCash' },
-    { value: 'paypal', label: 'PayPal' }
-  ];
+  // Helper function to get payment method type label
+  const getPaymentMethodTypeLabel = (type) => {
+    switch (type) {
+      case 'bank_transfer': return 'Bank Transfer';
+      case 'easypaisa': return 'EasyPaisa';
+      case 'jazzcash': return 'JazzCash';
+      case 'paypal': return 'PayPal';
+      default: return type;
+    }
+  };
+
+  // Helper function to get payment method details
+  const getPaymentMethodDetails = (method) => {
+    switch (method.type) {
+      case 'bank_transfer':
+        return `${method.bankName} - ${method.accountNumber}`;
+      case 'easypaisa':
+      case 'jazzcash':
+        return method.mobileNumber;
+      case 'paypal':
+        return method.email;
+      default:
+        return method.accountNumber || method.mobileNumber || method.email;
+    }
+  };
 
   // Withdrawal status options
   const statusOptions = {
@@ -147,13 +180,8 @@ export default function WithdrawPage() {
       return false;
     }
 
-    if (!withdrawalData.paymentMethod) {
+    if (!withdrawalData.paymentMethodId) {
       setError('Please select a payment method');
-      return false;
-    }
-
-    if (!withdrawalData.accountDetails.trim()) {
-      setError('Please provide account details');
       return false;
     }
 
@@ -176,8 +204,7 @@ export default function WithdrawPage() {
         credentials: 'include',
         body: JSON.stringify({
           amount: parseFloat(withdrawalData.amount),
-          paymentMethod: withdrawalData.paymentMethod,
-          accountDetails: withdrawalData.accountDetails,
+          paymentMethodId: parseInt(withdrawalData.paymentMethodId),
           notes: withdrawalData.notes
         })
       });
@@ -188,12 +215,17 @@ export default function WithdrawPage() {
         setMessage('Withdrawal request submitted successfully!');
         setWithdrawalData({
           amount: '',
-          paymentMethod: '',
-          accountDetails: '',
+          paymentMethodId: '',
           notes: ''
         });
         setConfirmDialogOpen(false);
         fetchWithdrawalHistory(); // Refresh history
+        
+        // Refresh user data to get updated balance
+        if (context?.refreshUserData) {
+          await context.refreshUserData();
+        }
+        
         setTimeout(() => setMessage(null), 5000);
       } else {
         setError(data.message || 'Failed to submit withdrawal request');
@@ -281,66 +313,81 @@ export default function WithdrawPage() {
 
                 {/* Fee Information */}
                 {withdrawalData.amount && parseFloat(withdrawalData.amount) > 0 && (
-                  <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, border: '1px solid #e0e0e0' }}>
-                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ p: 2, bgcolor: 'grey.800', borderRadius: 2, border: '1px solid', borderColor: 'grey.700' }}>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'white' }}>
                       <Info />
                       Withdrawal Information
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2">Requested Amount:</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        <Typography variant="body2" sx={{ color: 'grey.300' }}>Requested Amount:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white' }}>
                           {formatCurrency(withdrawalData.amount)}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2" color="warning.main">Processing Fee (10%):</Typography>
-                        <Typography variant="body2" color="warning.main" sx={{ fontWeight: 'bold' }}>
+                        <Typography variant="body2" sx={{ color: 'warning.light' }}>Processing Fee (10%):</Typography>
+                        <Typography variant="body2" sx={{ color: 'warning.light', fontWeight: 'bold' }}>
                           -{formatCurrency(parseFloat(withdrawalData.amount) * 0.1)}
                         </Typography>
                       </Box>
-                      <Divider />
+                      <Divider sx={{ borderColor: 'grey.600' }} />
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>Amount You&apos;ll Receive:</Typography>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'white' }}>Amount You&apos;ll Receive:</Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.light' }}>
                           {formatCurrency(parseFloat(withdrawalData.amount) * 0.9)}
                         </Typography>
                       </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                      <Typography variant="caption" sx={{ mt: 1, fontStyle: 'italic', color: 'grey.400' }}>
                         * Fee is deducted when withdrawal is approved by admin
                       </Typography>
                     </Box>
                   </Box>
                 )}
 
-                {/* Payment Method */}
+                {/* Payment Method Selection */}
                 <FormControl fullWidth required>
-                  <InputLabel>Payment Method</InputLabel>
+                  <InputLabel>Select Payment Method</InputLabel>
                   <Select
-                    value={withdrawalData.paymentMethod}
-                    onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
-                    label="Payment Method"
+                    value={withdrawalData.paymentMethodId}
+                    onChange={(e) => handleInputChange('paymentMethodId', e.target.value)}
+                    label="Select Payment Method"
                   >
-                    {paymentMethods.map((method) => (
-                      <MenuItem key={method.value} value={method.value}>
-                        {method.label}
+                    {paymentMethods.length > 0 ? (
+                      paymentMethods.map((method) => (
+                        <MenuItem key={method.id} value={method.id}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                              {getPaymentMethodTypeLabel(method.type)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {getPaymentMethodDetails(method)}
+                            </Typography>
+                            {method.isDefault && (
+                              <Typography variant="caption" color="success.main">
+                                Default
+                              </Typography>
+                            )}
+                          </Box>
+                        </MenuItem>
+                      ))
+                    ) : (
+                      <MenuItem disabled>
+                        <Typography variant="body2" color="text.secondary">
+                          No payment methods available. Please add a payment method first.
+                        </Typography>
                       </MenuItem>
-                    ))}
+                    )}
                   </Select>
+                  {paymentMethods.length === 0 && (
+                    <Typography variant="caption" color="error" sx={{ mt: 1 }}>
+                      You need to add a payment method before making withdrawal requests. 
+                      <Link href="/user-dashboard/payment-methods" sx={{ ml: 1, color: 'primary.main' }}>
+                        Add Payment Method
+                      </Link>
+                    </Typography>
+                  )}
                 </FormControl>
-
-                {/* Account Details */}
-                <TextField
-                  label="Account Details"
-                  multiline
-                  rows={3}
-                  value={withdrawalData.accountDetails}
-                  onChange={(e) => handleInputChange('accountDetails', e.target.value)}
-                  fullWidth
-                  required
-                  placeholder="Please provide your account details (account number, mobile number, email, etc.)"
-                  helperText="Include all necessary details for the selected payment method"
-                />
 
                 {/* Notes */}
                 <TextField
@@ -416,16 +463,16 @@ export default function WithdrawPage() {
                       </Box>
                       
                       {/* Fee Breakdown */}
-                      <Box sx={{ ml: 5, p: 1, bgcolor: 'grey.50', borderRadius: 1, fontSize: '0.75rem' }}>
+                      <Box sx={{ ml: 5, p: 1, bgcolor: 'grey.800', borderRadius: 1, fontSize: '0.75rem', border: '1px solid', borderColor: 'grey.700' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                          <Typography variant="caption" color="text.secondary">Fee (10%):</Typography>
-                          <Typography variant="caption" color="error.main" sx={{ fontWeight: 'bold' }}>
+                          <Typography variant="caption" sx={{ color: 'grey.300' }}>Fee (10%):</Typography>
+                          <Typography variant="caption" sx={{ color: 'error.light', fontWeight: 'bold' }}>
                             -{formatCurrency(withdrawal.feeAmount || 0)}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption" color="text.secondary">Net Amount:</Typography>
-                          <Typography variant="caption" color="success.main" sx={{ fontWeight: 'bold' }}>
+                          <Typography variant="caption" sx={{ color: 'grey.300' }}>Net Amount:</Typography>
+                          <Typography variant="caption" sx={{ color: 'success.light', fontWeight: 'bold' }}>
                             {formatCurrency(withdrawal.netAmount || 0)}
                           </Typography>
                         </Box>
@@ -615,26 +662,26 @@ export default function WithdrawPage() {
             Please review your withdrawal request details:
           </Typography>
           
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="body2" gutterBottom>
-              <strong>Requested Amount:</strong> {formatCurrency(withdrawalData.amount)}
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
+            <Typography variant="body2" gutterBottom sx={{ color: 'grey.300' }}>
+              <strong style={{ color: 'white' }}>Requested Amount:</strong> {formatCurrency(withdrawalData.amount)}
             </Typography>
-            <Typography variant="body2" gutterBottom color="warning.main">
-              <strong>Processing Fee (10%):</strong> -{formatCurrency(parseFloat(withdrawalData.amount) * 0.1)}
+            <Typography variant="body2" gutterBottom sx={{ color: 'warning.light' }}>
+              <strong style={{ color: 'white' }}>Processing Fee (10%):</strong> -{formatCurrency(parseFloat(withdrawalData.amount) * 0.1)}
             </Typography>
-            <Typography variant="body2" gutterBottom sx={{ fontWeight: 'bold', color: 'success.main' }}>
-              <strong>Amount You&apos;ll Receive:</strong> {formatCurrency(parseFloat(withdrawalData.amount) * 0.9)}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 'bold', color: 'success.light' }}>
+              <strong style={{ color: 'white' }}>Amount You&apos;ll Receive:</strong> {formatCurrency(parseFloat(withdrawalData.amount) * 0.9)}
             </Typography>
-            <Divider sx={{ my: 1 }} />
-            <Typography variant="body2">
-              <strong>Payment Method:</strong> {paymentMethods.find(m => m.value === withdrawalData.paymentMethod)?.label}
-            </Typography>
-            <Typography variant="body2">
-              <strong>Account Details:</strong> {withdrawalData.accountDetails}
+            <Divider sx={{ my: 1, borderColor: 'grey.600' }} />
+            <Typography variant="body2" sx={{ color: 'grey.300' }}>
+              <strong style={{ color: 'white' }}>Payment Method:</strong> {(() => {
+                const selectedMethod = paymentMethods.find(m => m.id === parseInt(withdrawalData.paymentMethodId));
+                return selectedMethod ? `${getPaymentMethodTypeLabel(selectedMethod.type)} - ${getPaymentMethodDetails(selectedMethod)}` : 'Not selected';
+              })()}
             </Typography>
             {withdrawalData.notes && (
-              <Typography variant="body2">
-                <strong>Notes:</strong> {withdrawalData.notes}
+              <Typography variant="body2" sx={{ color: 'grey.300' }}>
+                <strong style={{ color: 'white' }}>Notes:</strong> {withdrawalData.notes}
               </Typography>
             )}
           </Box>

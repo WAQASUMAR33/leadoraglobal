@@ -90,6 +90,28 @@ export function UserProvider({ children }) {
     }
   };
 
+  const refreshUserData = async () => {
+    try {
+      const response = await fetch('/api/user/profile', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user) {
+          // Update localStorage with fresh user data
+          auth.setUser(data.user);
+          setUser(data.user);
+          setError(null);
+          return data.user;
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+    return null;
+  };
+
   return (
     <UserContext.Provider value={{ 
       user, 
@@ -98,6 +120,7 @@ export function UserProvider({ children }) {
       loading, 
       error,
       refreshAuth,
+      refreshUserData,
       isAuthenticated: !!user 
     }}>
       {children}

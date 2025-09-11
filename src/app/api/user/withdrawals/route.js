@@ -65,10 +65,10 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { amount, paymentMethod, accountDetails, notes } = body;
+    const { amount, paymentMethodId, notes } = body;
 
     // Validate required fields
-    if (!amount || !paymentMethod || !accountDetails) {
+    if (!amount || !paymentMethodId) {
       return NextResponse.json({
         error: 'Missing required fields'
       }, { status: 400 });
@@ -114,6 +114,21 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
+    // Get payment method details
+    const paymentMethod = await prisma.paymentMethod.findFirst({
+      where: {
+        id: parseInt(paymentMethodId),
+        userId: decoded.userId,
+        status: 'active'
+      }
+    });
+
+    if (!paymentMethod) {
+      return NextResponse.json({
+        error: 'Payment method not found or inactive'
+      }, { status: 400 });
+    }
+
     // Check if user has any pending withdrawal requests
     const pendingWithdrawal = await prisma.withdrawalRequest.findFirst({
       where: {
@@ -142,8 +157,16 @@ export async function POST(request) {
         amount: withdrawalAmount,
         feeAmount: feeAmount,
         netAmount: netAmount,
-        paymentMethod,
-        accountDetails,
+        paymentMethod: paymentMethod.type,
+        accountDetails: JSON.stringify({
+          type: paymentMethod.type,
+          accountName: paymentMethod.accountName,
+          bankName: paymentMethod.bankName,
+          accountNumber: paymentMethod.accountNumber,
+          ibanNumber: paymentMethod.ibanNumber,
+          mobileNumber: paymentMethod.mobileNumber,
+          email: paymentMethod.email
+        }),
         notes: notes || null,
         status: 'pending',
         withdrawalRef

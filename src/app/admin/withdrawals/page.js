@@ -9,6 +9,7 @@ export default function AdminWithdrawalsPage() {
   const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showPaymentGatewayModal, setShowPaymentGatewayModal] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -92,6 +93,11 @@ export default function AdminWithdrawalsPage() {
     setNewStatus(withdrawal.status);
     setAdminNotes(withdrawal.adminNotes || '');
     setShowStatusModal(true);
+  };
+
+  const handleViewPaymentGateway = (withdrawal) => {
+    setSelectedWithdrawal(withdrawal);
+    setShowPaymentGatewayModal(true);
   };
 
   const updateWithdrawalStatus = async () => {
@@ -328,6 +334,15 @@ export default function AdminWithdrawalsPage() {
                         </svg>
                       </button>
                       <button
+                        onClick={() => handleViewPaymentGateway(withdrawal)}
+                        className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
+                        title="View Payment Gateway"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                      </button>
+                      <button
                         onClick={() => handleUpdateStatus(withdrawal)}
                         className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
                         title="Update Status"
@@ -561,6 +576,210 @@ export default function AdminWithdrawalsPage() {
                 className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed"
               >
                 {updating ? 'Updating...' : 'Update Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Gateway Details Modal */}
+      {showPaymentGatewayModal && selectedWithdrawal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  Payment Gateway Details
+                </h3>
+                <p className="text-gray-600">Reference: {selectedWithdrawal.withdrawalRef}</p>
+              </div>
+              <button
+                onClick={() => setShowPaymentGatewayModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* User Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    User Information
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Name:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.user?.fullname || 'Unknown'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">User ID:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.userId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Email:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.user?.email || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Withdrawal Summary */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    Withdrawal Summary
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Amount:</span>
+                      <span className="text-sm font-medium">{formatCurrency(selectedWithdrawal.amount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Payment Method:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.paymentMethod}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Status:</span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedWithdrawal.status)}`}>
+                        {selectedWithdrawal.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Gateway Details */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Payment Gateway Information
+                </h4>
+                <div className="bg-white rounded-lg p-4">
+                  {(() => {
+                    try {
+                      const accountDetails = JSON.parse(selectedWithdrawal.accountDetails);
+                      return (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+                                {accountDetails.type || 'N/A'}
+                              </p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+                                {accountDetails.accountName || 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {accountDetails.bankName && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+                                {accountDetails.bankName}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {accountDetails.accountNumber && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border font-mono">
+                                {accountDetails.accountNumber}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {accountDetails.ibanNumber && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">IBAN Number</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border font-mono">
+                                {accountDetails.ibanNumber}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {accountDetails.mobileNumber && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border font-mono">
+                                {accountDetails.mobileNumber}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {accountDetails.email && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+                                {accountDetails.email}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    } catch (error) {
+                      // Fallback for old format or invalid JSON
+                      return (
+                        <div className="bg-white rounded-lg p-3">
+                          <p className="text-sm text-gray-800 whitespace-pre-line">{selectedWithdrawal.accountDetails}</p>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+
+              {/* User Notes */}
+              {selectedWithdrawal.notes && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    User Notes
+                  </h4>
+                  <div className="bg-white rounded-lg p-3">
+                    <p className="text-sm text-gray-800">{selectedWithdrawal.notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Admin Notes */}
+              {selectedWithdrawal.adminNotes && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Admin Notes
+                  </h4>
+                  <div className="bg-white rounded-lg p-3">
+                    <p className="text-sm text-gray-800">{selectedWithdrawal.adminNotes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowPaymentGatewayModal(false)}
+                className="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

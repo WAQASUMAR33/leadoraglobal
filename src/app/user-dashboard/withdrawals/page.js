@@ -47,6 +47,10 @@ export default function WithdrawalsHistoryPage() {
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user) {
       fetchWithdrawalHistory();
+      // Refresh user data to get updated balance
+      if (context?.refreshUserData) {
+        context.refreshUserData();
+      }
     }
   }, [mounted, context?.isAuthenticated, context?.user]);
   
@@ -226,26 +230,26 @@ export default function WithdrawalsHistoryPage() {
 
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                      <Box sx={{ p: 2, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
+                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white' }}>
                           Amount Breakdown
                         </Typography>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2">Requested Amount:</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          <Typography variant="body2" sx={{ color: 'grey.300' }}>Requested Amount:</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white' }}>
                             {formatCurrency(withdrawal.amount)}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" color="error.main">Processing Fee (10%):</Typography>
-                          <Typography variant="body2" color="error.main" sx={{ fontWeight: 'bold' }}>
+                          <Typography variant="body2" sx={{ color: 'error.light' }}>Processing Fee (10%):</Typography>
+                          <Typography variant="body2" sx={{ color: 'error.light', fontWeight: 'bold' }}>
                             -{formatCurrency(withdrawal.feeAmount || 0)}
                           </Typography>
                         </Box>
-                        <Divider sx={{ my: 1 }} />
+                        <Divider sx={{ my: 1, borderColor: 'grey.600' }} />
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Net Amount:</Typography>
-                          <Typography variant="body2" color="success.main" sx={{ fontWeight: 'bold' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white' }}>Net Amount:</Typography>
+                          <Typography variant="body2" sx={{ color: 'success.light', fontWeight: 'bold' }}>
                             {formatCurrency(withdrawal.netAmount || 0)}
                           </Typography>
                         </Box>
@@ -253,19 +257,19 @@ export default function WithdrawalsHistoryPage() {
                     </Grid>
                     
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                      <Box sx={{ p: 2, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
+                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white' }}>
                           Payment Details
                         </Typography>
-                        <Typography variant="body2" gutterBottom>
-                          <strong>Method:</strong> {withdrawal.paymentMethod}
+                        <Typography variant="body2" gutterBottom sx={{ color: 'grey.300' }}>
+                          <strong style={{ color: 'white' }}>Method:</strong> {withdrawal.paymentMethod}
                         </Typography>
-                        <Typography variant="body2" gutterBottom>
-                          <strong>Account:</strong> {withdrawal.accountDetails}
+                        <Typography variant="body2" gutterBottom sx={{ color: 'grey.300' }}>
+                          <strong style={{ color: 'white' }}>Account:</strong> {withdrawal.accountDetails}
                         </Typography>
                         {withdrawal.notes && (
-                          <Typography variant="body2" gutterBottom>
-                            <strong>Notes:</strong> {withdrawal.notes}
+                          <Typography variant="body2" gutterBottom sx={{ color: 'grey.300' }}>
+                            <strong style={{ color: 'white' }}>Notes:</strong> {withdrawal.notes}
                           </Typography>
                         )}
                       </Box>
