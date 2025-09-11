@@ -203,16 +203,24 @@ async function distributeIndirectCommissions(username, indirectCommission, packa
     } else {
       // No member of this rank, give combined commission to upper rank
       const upperRank = findUpperRank(currentRank, rankHierarchy);
+      console.log(`No ${currentRank} members found. Looking for upper rank: ${upperRank}`);
+      
       if (upperRank && !processedRanks.has(upperRank)) {
         const upperRankMembers = membersByRank[upperRank] || [];
+        console.log(`Upper rank ${upperRank} has ${upperRankMembers.length} members`);
+        
         if (upperRankMembers.length > 0) {
           const firstUpperMember = upperRankMembers[0];
           // Combined commission: current rank's indirect + upper rank's own indirect
           const combinedCommission = indirectCommission * 2;
           await giveIndirectCommission(firstUpperMember, combinedCommission, packageRequestId, `${upperRank} (combined - includes ${currentRank})`);
           processedRanks.add(upperRank);
-          console.log(`Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
+          console.log(`✅ Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
+        } else {
+          console.log(`❌ No members found for upper rank ${upperRank}`);
         }
+      } else {
+        console.log(`❌ Upper rank ${upperRank} not found or already processed`);
       }
     }
   }
@@ -296,12 +304,20 @@ async function getTreeMembersExcludingDirectReferrer(username) {
 
 /**
  * Find the upper rank in the hierarchy
+ * Note: rankHierarchy is ordered from lowest to highest points
+ * Since we're processing from highest to lowest, upper rank is at higher index
  */
 function findUpperRank(currentRank, rankHierarchy) {
   const currentIndex = rankHierarchy.indexOf(currentRank);
+  console.log(`Finding upper rank for ${currentRank} (index ${currentIndex}) in hierarchy:`, rankHierarchy);
+  
   if (currentIndex < rankHierarchy.length - 1) {
-    return rankHierarchy[currentIndex + 1];
+    const upperRank = rankHierarchy[currentIndex + 1];
+    console.log(`Upper rank found: ${upperRank} (index ${currentIndex + 1})`);
+    return upperRank;
   }
+  
+  console.log(`No upper rank found for ${currentRank}`);
   return null;
 }
 

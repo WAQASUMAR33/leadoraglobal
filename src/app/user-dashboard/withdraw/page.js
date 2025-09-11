@@ -53,6 +53,7 @@ export default function WithdrawPage() {
   const [error, setError] = useState(null);
   const [withdrawalHistory, setWithdrawalHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [dataFetched, setDataFetched] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -63,10 +64,11 @@ export default function WithdrawPage() {
   }, []);
 
   useEffect(() => {
-    if (mounted && context?.isAuthenticated && context?.user) {
+    if (mounted && context?.isAuthenticated && context?.user && !dataFetched) {
       const fetchData = async () => {
         try {
           setHistoryLoading(true);
+          setDataFetched(true); // Prevent multiple calls
           
           // Refresh user data first to get latest balance
           if (context?.refreshUserData) {
@@ -98,6 +100,7 @@ export default function WithdrawPage() {
           }
         } catch (error) {
           console.error('Error fetching data:', error);
+          setDataFetched(false); // Reset on error to allow retry
         } finally {
           setHistoryLoading(false);
         }
@@ -105,7 +108,7 @@ export default function WithdrawPage() {
       
       fetchData();
     }
-  }, [mounted, context?.isAuthenticated, context?.user]);
+  }, [mounted, context?.isAuthenticated, dataFetched]);
   
   // Safety check for context
   if (!context) {
@@ -232,6 +235,9 @@ export default function WithdrawPage() {
           await context.refreshUserData();
         }
         
+        // Reset dataFetched to allow fresh data fetch on next visit
+        setDataFetched(false);
+        
         setTimeout(() => setMessage(null), 5000);
       } else {
         setError(data.message || 'Failed to submit withdrawal request');
@@ -316,6 +322,8 @@ export default function WithdrawPage() {
                         if (context?.refreshUserData) {
                           context.refreshUserData();
                         }
+                        // Reset dataFetched to allow fresh data fetch
+                        setDataFetched(false);
                       }}
                     >
                       Refresh
