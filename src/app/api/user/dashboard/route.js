@@ -2,6 +2,36 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { verifyToken } from '../../../../lib/auth';
 
+// Function to calculate business volume (sum of all tree balances)
+async function calculateBusinessVolume(username) {
+  try {
+    // Get all users in the tree (downline)
+    const treeUsers = await prisma.user.findMany({
+      where: {
+        referredBy: username
+      },
+      select: {
+        balance: true,
+        username: true
+      }
+    });
+
+    // Recursively get all downline users
+    let totalBalance = 0;
+    for (const user of treeUsers) {
+      totalBalance += parseFloat(user.balance || 0);
+      // Get their downline recursively
+      const downlineBalance = await calculateBusinessVolume(user.username);
+      totalBalance += downlineBalance;
+    }
+
+    return totalBalance;
+  } catch (error) {
+    console.error('Error calculating business volume:', error);
+    return 0;
+  }
+}
+
 export async function GET(request) {
   try {
     console.log('Dashboard API - Starting request');
@@ -217,6 +247,30 @@ export async function GET(request) {
       user.packageExpiryDate && 
       new Date(user.packageExpiryDate) > new Date();
 
+    // Get current package details
+    const currentPackage = user.currentPackageId ? await prisma.package.findUnique({
+      where: { id: user.currentPackageId },
+      select: {
+        package_name: true,
+        package_amount: true,
+        package_points: true
+      }
+    }) : null;
+
+    // Calculate business volume (sum of all tree balances)
+    const businessVolume = await calculateBusinessVolume(user.username);
+
+    // Get pending withdrawal amount
+    const pendingWithdrawals = await prisma.withdrawalRequest.aggregate({
+      where: {
+        userId: parseInt(userId),
+        status: 'pending'
+      },
+      _sum: {
+        amount: true
+      }
+    });
+
     // Get inactive package members count and potential revenue
     const inactiveMembers = await prisma.user.findMany({
       where: {
@@ -260,7 +314,8 @@ export async function GET(request) {
         currentPackageId: user.currentPackageId,
         packageExpiryDate: user.packageExpiryDate,
         memberSince: user.createdAt,
-        rank: user.rank
+        rank: user.rank,
+        currentPackage: currentPackage
       },
       recentActivity,
       stats: {
@@ -271,7 +326,9 @@ export async function GET(request) {
         indirectEarnings: parseFloat(indirectEarnings._sum.amount || 0),
         referralCount: user.referralCount || 0,
         ordersCount: ordersCount,
-        rank: user.rank
+        rank: user.rank,
+        businessVolume: businessVolume,
+        pendingWithdrawals: parseFloat(pendingWithdrawals._sum.amount || 0)
       },
       inactiveMembersCount,
       potentialRevenue
