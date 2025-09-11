@@ -45,7 +45,6 @@ export default function WithdrawPage() {
   
   const [withdrawalData, setWithdrawalData] = useState({
     amount: '',
-    paymentMethodId: '',
     notes: ''
   });
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -68,6 +67,11 @@ export default function WithdrawPage() {
       const fetchData = async () => {
         try {
           setHistoryLoading(true);
+          
+          // Refresh user data first to get latest balance
+          if (context?.refreshUserData) {
+            await context.refreshUserData();
+          }
           
           // Fetch withdrawal history
           const withdrawalResponse = await fetch('/api/user/withdrawals', {
@@ -180,8 +184,8 @@ export default function WithdrawPage() {
       return false;
     }
 
-    if (!withdrawalData.paymentMethodId) {
-      setError('Please select a payment method');
+    if (paymentMethods.length === 0) {
+      setError('You need to add a payment method before making withdrawal requests');
       return false;
     }
 
@@ -204,7 +208,10 @@ export default function WithdrawPage() {
         credentials: 'include',
         body: JSON.stringify({
           amount: parseFloat(withdrawalData.amount),
-          paymentMethodId: parseInt(withdrawalData.paymentMethodId),
+          paymentMethodId: (() => {
+            const defaultMethod = paymentMethods.find(m => m.isDefault) || paymentMethods[0];
+            return defaultMethod ? defaultMethod.id : null;
+          })(),
           notes: withdrawalData.notes
         })
       });
@@ -215,7 +222,6 @@ export default function WithdrawPage() {
         setMessage('Withdrawal request submitted successfully!');
         setWithdrawalData({
           amount: '',
-          paymentMethodId: '',
           notes: ''
         });
         setConfirmDialogOpen(false);
@@ -290,12 +296,36 @@ export default function WithdrawPage() {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {/* Current Balance */}
                 <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 2, color: 'white' }}>
-                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AccountBalance />
-                    Available Balance
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <AccountBalance />
+                      Available Balance
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      sx={{ 
+                        color: 'white', 
+                        borderColor: 'rgba(255,255,255,0.3)',
+                        '&:hover': { 
+                          borderColor: 'white',
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }
+                      }}
+                      onClick={() => {
+                        if (context?.refreshUserData) {
+                          context.refreshUserData();
+                        }
+                      }}
+                    >
+                      Refresh
+                    </Button>
+                  </Box>
                   <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1 }}>
                     {formatCurrency(user?.balance || 0)}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', mt: 1 }}>
+                    Raw balance: {user?.balance || 0}
                   </Typography>
                 </Box>
 
@@ -345,49 +375,50 @@ export default function WithdrawPage() {
                   </Box>
                 )}
 
-                {/* Payment Method Selection */}
-                <FormControl fullWidth required>
-                  <InputLabel>Select Payment Method</InputLabel>
-                  <Select
-                    value={withdrawalData.paymentMethodId}
-                    onChange={(e) => handleInputChange('paymentMethodId', e.target.value)}
-                    label="Select Payment Method"
-                  >
-                    {paymentMethods.length > 0 ? (
-                      paymentMethods.map((method) => (
-                        <MenuItem key={method.id} value={method.id}>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                              {getPaymentMethodTypeLabel(method.type)}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {getPaymentMethodDetails(method)}
-                            </Typography>
-                            {method.isDefault && (
-                              <Typography variant="caption" color="success.main">
-                                Default
-                              </Typography>
-                            )}
-                          </Box>
-                        </MenuItem>
-                      ))
-                    ) : (
-                      <MenuItem disabled>
-                        <Typography variant="body2" color="text.secondary">
-                          No payment methods available. Please add a payment method first.
-                        </Typography>
-                      </MenuItem>
-                    )}
-                  </Select>
-                  {paymentMethods.length === 0 && (
-                    <Typography variant="caption" color="error" sx={{ mt: 1 }}>
-                      You need to add a payment method before making withdrawal requests. 
-                      <Link href="/user-dashboard/payment-methods" sx={{ ml: 1, color: 'primary.main' }}>
-                        Add Payment Method
-                      </Link>
+                {/* Payment Method Information */}
+                {paymentMethods.length > 0 ? (
+                  <Box sx={{ p: 2, bgcolor: 'grey.800', borderRadius: 2, border: '1px solid', borderColor: 'grey.700' }}>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'white' }}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      Payment Method
                     </Typography>
-                  )}
-                </FormControl>
+                    {(() => {
+                      const defaultMethod = paymentMethods.find(m => m.isDefault) || paymentMethods[0];
+                      return (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <Typography variant="body2" sx={{ color: 'grey.300' }}>
+                            <strong style={{ color: 'white' }}>Type:</strong> {getPaymentMethodTypeLabel(defaultMethod.type)}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: 'grey.300' }}>
+                            <strong style={{ color: 'white' }}>Details:</strong> {getPaymentMethodDetails(defaultMethod)}
+                          </Typography>
+                          {defaultMethod.isDefault && (
+                            <Typography variant="caption" sx={{ color: 'success.light' }}>
+                              ✓ This is your default payment method
+                            </Typography>
+                          )}
+                        </Box>
+                      );
+                    })()}
+                  </Box>
+                ) : (
+                  <Box sx={{ p: 2, bgcolor: 'error.dark', borderRadius: 2, border: '1px solid', borderColor: 'error.main' }}>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'white' }}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      No Payment Method
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'white', mb: 2 }}>
+                      You need to add a payment method before making withdrawal requests.
+                    </Typography>
+                    <Link href="/user-dashboard/payment-methods" sx={{ color: 'white', textDecoration: 'underline' }}>
+                      Add Payment Method →
+                    </Link>
+                  </Box>
+                )}
 
                 {/* Notes */}
                 <TextField
@@ -675,8 +706,8 @@ export default function WithdrawPage() {
             <Divider sx={{ my: 1, borderColor: 'grey.600' }} />
             <Typography variant="body2" sx={{ color: 'grey.300' }}>
               <strong style={{ color: 'white' }}>Payment Method:</strong> {(() => {
-                const selectedMethod = paymentMethods.find(m => m.id === parseInt(withdrawalData.paymentMethodId));
-                return selectedMethod ? `${getPaymentMethodTypeLabel(selectedMethod.type)} - ${getPaymentMethodDetails(selectedMethod)}` : 'Not selected';
+                const defaultMethod = paymentMethods.find(m => m.isDefault) || paymentMethods[0];
+                return defaultMethod ? `${getPaymentMethodTypeLabel(defaultMethod.type)} - ${getPaymentMethodDetails(defaultMethod)}` : 'No payment method';
               })()}
             </Typography>
             {withdrawalData.notes && (
