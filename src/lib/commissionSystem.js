@@ -1,4 +1,5 @@
 import prisma from './prisma';
+import { updateUserRank } from './packageApproval';
 
 // Rank hierarchy will be fetched from database
 let RANK_HIERARCHY = [];
@@ -85,7 +86,10 @@ async function distributePointsToTree(username, points) {
       }
     });
 
-    console.log(`Added ${points} points to ${user.username}`);
+    // Update user's rank based on new points
+    await updateUserRank(user.id);
+
+    console.log(`Added ${points} points to ${user.username} and updated rank`);
     processedUsers.add(user.id);
     currentUsername = user.referredBy;
   }
@@ -117,6 +121,9 @@ async function giveDirectCommission(referredByUsername, directCommission, packag
     }
   });
 
+  // Update user's rank based on current points (in case points were added earlier)
+  await updateUserRank(referrer.id);
+
   // Create earnings record
   await prisma.earnings.create({
     data: {
@@ -128,7 +135,7 @@ async function giveDirectCommission(referredByUsername, directCommission, packag
     }
   });
 
-  console.log(`Added ${directCommission} direct commission to ${referrer.username}`);
+  console.log(`Added ${directCommission} direct commission to ${referrer.username} and updated rank`);
 }
 
 /**
@@ -176,10 +183,8 @@ async function distributeIndirectCommissions(username, indirectCommission, packa
   for (let i = rankHierarchy.length - 1; i >= 0; i--) {
     const currentRank = rankHierarchy[i];
     
-    // Skip Consultant and Ambassador ranks (they don't get indirect commission)
-    if (currentRank === 'Consultant' || currentRank === 'Ambassador' || 
-        currentRank === 'Sapphire Ambassador' || currentRank === 'Royal Ambassador' || 
-        currentRank === 'Global Ambassador') {
+    // Skip Consultant rank (they don't get indirect commission)
+    if (currentRank === 'Consultant') {
       continue;
     }
 
@@ -317,6 +322,9 @@ async function giveIndirectCommission(user, commission, packageRequestId, descri
     }
   });
 
+  // Update user's rank based on current points (in case points were added earlier)
+  await updateUserRank(user.id);
+
   // Create earnings record
   await prisma.earnings.create({
     data: {
@@ -361,12 +369,15 @@ export async function updateUserPackageAndRank(packageRequestId) {
       data: {
         currentPackageId: packageData.id,
         packageExpiryDate: packageExpiryDate,
-        packageId: packageData.id,
-        rankId: packageData.rankId
+        packageId: packageData.id
+        // Note: rankId will be updated later based on points after commission distribution
       }
     });
 
-    console.log(`Updated user ${user.username} with package ${packageData.package_name}`);
+    // Update user's rank based on their current points (this will be called again after points are distributed)
+    await updateUserRank(user.id);
+
+    console.log(`Updated user ${user.username} with package ${packageData.package_name} and updated rank`);
     return { success: true };
 
   } catch (error) {

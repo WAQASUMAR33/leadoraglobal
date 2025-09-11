@@ -1,23 +1,344 @@
 import prisma from './prisma';
 import { calculateMLMCommissions, updateUserPackageAndRank } from './commissionSystem';
 
-// Rank point thresholds
-const RANK_THRESHOLDS = {
-  'Consultant': { min: 0, max: 999 },
-  'Manager': { min: 1000, max: 1999 },
-  'Sapphire Manager': { min: 2000, max: 7999 },
-  'Diamond': { min: 8000, max: 23999 },
-  'Sapphire Diamond': { min: 24000, max: Infinity }
+// Rank point thresholds and conditions
+const RANK_CONDITIONS = {
+  'Consultant': { minPoints: 0, maxPoints: 999, requiresDownline: false },
+  'Manager': { minPoints: 1000, maxPoints: 1999, requiresDownline: false },
+  'Sapphire Manager': { minPoints: 2000, maxPoints: 7999, requiresDownline: false },
+  'Diamond': { 
+    minPoints: 8000, 
+    maxPoints: Infinity, 
+    requiresDownline: true,
+    downlineCondition: { type: 'direct_trees_with_rank', count: 3, requiredRank: 'Sapphire Manager' }
+  },
+  'Sapphire Diamond': { 
+    minPoints: 0, 
+    maxPoints: Infinity, 
+    requiresDownline: true,
+    downlineCondition: { type: 'trees_with_count_of_rank', count: 3, requiredRank: 'Diamond', requiredCount: 3 }
+  },
+  'Ambassador': { 
+    minPoints: 0, 
+    maxPoints: Infinity, 
+    requiresDownline: true,
+    downlineCondition: [
+      { type: 'trees_with_rank', count: 3, requiredRank: 'Sapphire Diamond' },
+      { type: 'trees_with_rank', count: 6, requiredRank: 'Diamond' }
+    ]
+  },
+  'Sapphire Ambassador': { 
+    minPoints: 0, 
+    maxPoints: Infinity, 
+    requiresDownline: true,
+    downlineCondition: [
+      { type: 'trees_with_rank', count: 3, requiredRank: 'Ambassador' },
+      { type: 'trees_with_rank', count: 10, requiredRank: 'Diamond' }
+    ]
+  },
+  'Royal Ambassador': { 
+    minPoints: 0, 
+    maxPoints: Infinity, 
+    requiresDownline: true,
+    downlineCondition: [
+      { type: 'trees_with_rank', count: 4, requiredRank: 'Sapphire Ambassador' },
+      { type: 'trees_with_rank', count: 10, requiredRank: 'Sapphire Diamond' }
+    ]
+  },
+  'Global Ambassador': { 
+    minPoints: 0, 
+    maxPoints: Infinity, 
+    requiresDownline: true,
+    downlineCondition: [
+      { type: 'trees_with_rank', count: 4, requiredRank: 'Royal Ambassador' },
+      { type: 'trees_with_rank', count: 10, requiredRank: 'Ambassador' }
+    ]
+  },
+  'Honorary Share Holder': { 
+    minPoints: 0, 
+    maxPoints: Infinity, 
+    requiresDownline: true,
+    downlineCondition: [
+      { type: 'trees_with_rank', count: 5, requiredRank: 'Global Ambassador' },
+      { type: 'trees_with_rank', count: 10, requiredRank: 'Royal Ambassador' }
+    ]
+  }
 };
 
-// Get rank by points
+// Get rank by points only (for basic ranks)
 export function getRankByPoints(points) {
-  for (const [rankName, threshold] of Object.entries(RANK_THRESHOLDS)) {
-    if (points >= threshold.min && points <= threshold.max) {
+  for (const [rankName, condition] of Object.entries(RANK_CONDITIONS)) {
+    if (!condition.requiresDownline && points >= condition.minPoints && points <= condition.maxPoints) {
       return rankName;
     }
   }
   return 'Consultant'; // Default rank
+}
+
+// Get all possible ranks for a user based on points and downline structure
+export async function getEligibleRanks(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      points: true,
+      rank: {
+        select: {
+          title: true
+        }
+      }
+    }
+  });
+
+  if (!user) return [];
+
+  const eligibleRanks = [];
+  
+  for (const [rankName, condition] of Object.entries(RANK_CONDITIONS)) {
+    // Check if user meets point requirements
+    if (user.points < condition.minPoints) {
+      continue;
+    }
+
+    // For ranks that don't require downline structure
+    if (!condition.requiresDownline) {
+      eligibleRanks.push(rankName);
+      continue;
+    }
+
+    // For ranks that require downline structure
+    const meetsDownlineCondition = await checkDownlineCondition(userId, condition.downlineCondition);
+    if (meetsDownlineCondition) {
+      eligibleRanks.push(rankName);
+    }
+  }
+
+  return eligibleRanks;
+}
+
+// Get the highest eligible rank for a user
+export async function getHighestEligibleRank(userId) {
+  const eligibleRanks = await getEligibleRanks(userId);
+  
+  if (eligibleRanks.length === 0) {
+    return 'Consultant';
+  }
+
+  // Return the highest rank (last in the hierarchy)
+  const rankHierarchy = [
+    'Consultant', 'Manager', 'Sapphire Manager', 'Diamond', 
+    'Sapphire Diamond', 'Ambassador', 'Sapphire Ambassador', 
+    'Royal Ambassador', 'Global Ambassador', 'Honorary Share Holder'
+  ];
+
+  let highestRank = 'Consultant';
+  for (const rank of rankHierarchy) {
+    if (eligibleRanks.includes(rank)) {
+      highestRank = rank;
+    }
+  }
+
+  return highestRank;
+}
+
+// Check if user meets downline condition
+async function checkDownlineCondition(userId, downlineCondition) {
+  if (Array.isArray(downlineCondition)) {
+    // Multiple conditions (OR logic)
+    for (const condition of downlineCondition) {
+      if (await checkSingleDownlineCondition(userId, condition)) {
+        return true;
+      }
+    }
+    return false;
+  } else {
+    // Single condition
+    return await checkSingleDownlineCondition(userId, downlineCondition);
+  }
+}
+
+// Check a single downline condition
+async function checkSingleDownlineCondition(userId, condition) {
+  switch (condition.type) {
+    case 'direct_trees_with_rank':
+      return await checkDirectTreesWithRank(userId, condition.count, condition.requiredRank);
+    
+    case 'trees_with_rank':
+      return await checkTreesWithRank(userId, condition.count, condition.requiredRank);
+    
+    case 'trees_with_count_of_rank':
+      return await checkTreesWithCountOfRank(userId, condition.count, condition.requiredRank, condition.requiredCount);
+    
+    default:
+      return false;
+  }
+}
+
+// Check if user has at least X direct trees with specific rank
+async function checkDirectTreesWithRank(userId, requiredCount, requiredRank) {
+  // Get the user
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true }
+  });
+
+  if (!user) return false;
+
+  // Get direct referrals of the user
+  const directReferrals = await prisma.user.findMany({
+    where: { referredBy: user.username },
+    include: {
+      rank: true
+    }
+  });
+
+  // Count direct referrals that have the required rank
+  const treesWithRequiredRank = directReferrals.filter(referral => 
+    referral.rank && referral.rank.title === requiredRank
+  );
+
+  console.log(`User ${user.username} has ${treesWithRequiredRank.length} direct trees with ${requiredRank} rank (required: ${requiredCount})`);
+  return treesWithRequiredRank.length >= requiredCount;
+}
+
+// Check if user has at least X trees (anywhere in downline) with specific rank
+async function checkTreesWithRank(userId, requiredCount, requiredRank) {
+  // Get the user
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true }
+  });
+
+  if (!user) return false;
+
+  // Get all users in the downline
+  const downlineUsers = await getDownlineUsers(userId);
+  const usersWithRequiredRank = downlineUsers.filter(downlineUser => 
+    downlineUser.rank && downlineUser.rank.title === requiredRank
+  );
+
+  // Group users by their direct referral tree
+  const treeGroups = new Map();
+  for (const downlineUser of usersWithRequiredRank) {
+    const treeRoot = await getTreeRoot(downlineUser.id, user.username);
+    if (treeRoot) {
+      if (!treeGroups.has(treeRoot)) {
+        treeGroups.set(treeRoot, []);
+      }
+      treeGroups.get(treeRoot).push(downlineUser);
+    }
+  }
+
+  // Count trees that have at least one user with the required rank
+  const qualifyingTrees = Array.from(treeGroups.values()).filter(users => users.length > 0);
+
+  console.log(`User ${user.username} has ${qualifyingTrees.length} trees with ${requiredRank} rank (required: ${requiredCount})`);
+  return qualifyingTrees.length >= requiredCount;
+}
+
+// Check if user has at least X trees with at least Y users of specific rank
+async function checkTreesWithCountOfRank(userId, requiredTreeCount, requiredRank, requiredUserCount) {
+  // Get the user
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true }
+  });
+
+  if (!user) return false;
+
+  // Get all users in the downline
+  const downlineUsers = await getDownlineUsers(userId);
+  const usersWithRequiredRank = downlineUsers.filter(downlineUser => 
+    downlineUser.rank && downlineUser.rank.title === requiredRank
+  );
+
+  // Group users by their direct referral tree
+  const treeGroups = new Map();
+  for (const downlineUser of usersWithRequiredRank) {
+    const treeRoot = await getTreeRoot(downlineUser.id, user.username);
+    if (treeRoot) {
+      if (!treeGroups.has(treeRoot)) {
+        treeGroups.set(treeRoot, []);
+      }
+      treeGroups.get(treeRoot).push(downlineUser);
+    }
+  }
+
+  // Count trees that have at least requiredUserCount users of requiredRank
+  let qualifyingTrees = 0;
+  for (const [treeRoot, users] of treeGroups) {
+    if (users.length >= requiredUserCount) {
+      qualifyingTrees++;
+    }
+  }
+
+  console.log(`User ${user.username} has ${qualifyingTrees} trees with at least ${requiredUserCount} ${requiredRank} users (required: ${requiredTreeCount} trees)`);
+  return qualifyingTrees >= requiredTreeCount;
+}
+
+// Get all users in downline
+async function getDownlineUsers(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true }
+  });
+
+  if (!user) return [];
+
+  const allUsers = await prisma.user.findMany({
+    where: { referredBy: { not: null } },
+    include: {
+      rank: true
+    }
+  });
+
+  const downlineUsers = [];
+  const processed = new Set();
+
+  function findDownline(currentUsername) {
+    if (processed.has(currentUsername)) return;
+    processed.add(currentUsername);
+
+    const directReferrals = allUsers.filter(u => u.referredBy === currentUsername);
+    for (const referral of directReferrals) {
+      downlineUsers.push(referral);
+      findDownline(referral.username);
+    }
+  }
+
+  findDownline(user.username);
+  return downlineUsers;
+}
+
+// Get the root of a tree (direct referral of the main user)
+async function getTreeRoot(userId, mainUserUsername) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { referredBy: true }
+  });
+
+  if (!user || !user.referredBy) return null;
+
+  // If this user is directly referred by main user, return their username (they are the tree root)
+  if (user.referredBy === mainUserUsername) {
+    return user.referredBy;
+  }
+
+  // Otherwise, find the tree root recursively by going up the referral chain
+  const referrer = await prisma.user.findUnique({
+    where: { username: user.referredBy },
+    select: { id: true, referredBy: true }
+  });
+
+  if (!referrer) return null;
+
+  // If the referrer is directly referred by main user, then the referrer is the tree root
+  if (referrer.referredBy === mainUserUsername) {
+    return user.referredBy; // This is the direct referral (tree root)
+  }
+
+  // Continue up the chain
+  return await getTreeRoot(referrer.id, mainUserUsername);
 }
 
 // Get or create rank
@@ -27,7 +348,8 @@ export async function getOrCreateRank(rankName) {
   });
 
   if (!rank) {
-    const points = RANK_THRESHOLDS[rankName]?.min || 0;
+    const condition = RANK_CONDITIONS[rankName];
+    const points = condition?.minPoints || 0;
     rank = await prisma.rank.create({
       data: {
         title: rankName,
@@ -100,7 +422,7 @@ export async function getReferralTree(userId) {
   return tree;
 }
 
-// Update user rank based on points
+// Update user rank based on points and downline structure
 export async function updateUserRank(userId) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -117,7 +439,8 @@ export async function updateUserRank(userId) {
 
   if (!user) return null;
 
-  const newRankName = getRankByPoints(user.points);
+  // Get the highest eligible rank based on points and downline structure
+  const newRankName = await getHighestEligibleRank(userId);
   const newRank = await getOrCreateRank(newRankName);
 
   // Only update if rank changed
