@@ -126,11 +126,6 @@ export default function UserDashboardHome() {
                 : "Complete your package subscription to start earning!"
               }
             </p>
-            {userData?.hasActivePackage && userData?.packageExpiryDate && (
-              <p className="text-blue-200 text-sm mt-1">
-                Package expires: {formatDate(userData.packageExpiryDate)}
-              </p>
-            )}
           </div>
           <div className="hidden md:block">
             <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
@@ -138,58 +133,6 @@ export default function UserDashboardHome() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Referral Link Section */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-          <svg className="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-          </svg>
-          Your Referral Link
-        </h2>
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              value={referralLink}
-              readOnly
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
-            />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={copyToClipboard}
-              className={`px-4 py-3 rounded-lg font-medium transition-colors ${
-                copySuccess 
-                  ? 'bg-green-600 text-white' 
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-            >
-              {copySuccess ? '✓ Copied!' : 'Copy Link'}
-            </button>
-            <button
-              onClick={() => {
-                if (navigator.share) {
-                  navigator.share({
-                    title: 'Join me on Ledora Global!',
-                    text: 'Use my referral link to get started',
-                    url: referralLink
-                  });
-                } else {
-                  // Fallback for browsers that don't support Web Share API
-                  copyToClipboard();
-                }
-              }}
-              className="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-              </svg>
-              Share
-            </button>
           </div>
         </div>
       </div>
@@ -368,6 +311,58 @@ export default function UserDashboardHome() {
               <p className="text-sm font-medium text-gray-400">Withdrawal Pending</p>
               <p className="text-lg font-bold text-white">{formatCurrency(stats.pendingWithdrawals)}</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Referral Link Section */}
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+          <svg className="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          Your Referral Link
+        </h2>
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={referralLink}
+              readOnly
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={copyToClipboard}
+              className={`px-4 py-3 rounded-lg font-medium transition-colors ${
+                copySuccess 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {copySuccess ? '✓ Copied!' : 'Copy Link'}
+            </button>
+            <button
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'Join me on Ledora Global!',
+                    text: 'Use my referral link to get started',
+                    url: referralLink
+                  });
+                } else {
+                  // Fallback for browsers that don't support Web Share API
+                  copyToClipboard();
+                }
+              }}
+              className="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+              </svg>
+              Share
+            </button>
           </div>
         </div>
       </div>
