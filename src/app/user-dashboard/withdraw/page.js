@@ -324,9 +324,6 @@ export default function WithdrawPage() {
                   <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1 }}>
                     {formatCurrency(user?.balance || 0)}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', mt: 1 }}>
-                    Raw balance: {user?.balance || 0}
-                  </Typography>
                 </Box>
 
                 {/* Withdrawal Amount */}
