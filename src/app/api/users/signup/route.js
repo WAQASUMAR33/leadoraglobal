@@ -37,18 +37,8 @@ export async function POST(req) {
     // Note: Email uniqueness check removed to allow multiple accounts with same email
     // Users can now use the same email for multiple accounts
 
-    // Check if phone number already exists
-    const existingPhone = await prisma.user.findFirst({
-      where: { 
-        phoneNumber: phoneNumber 
-      }
-    })
-    
-    if (existingPhone) {
-      return new Response(JSON.stringify({ 
-        message: 'Phone number already exists. Please use a different phone number.' 
-      }), { status: 400 })
-    }
+    // Note: Phone number uniqueness check removed to allow multiple accounts with same phone number
+    // Users can now use the same phone number for multiple accounts
 
     // Validate referral code exists and is active
     const referrer = await prisma.user.findUnique({
@@ -147,11 +137,6 @@ export async function POST(req) {
       if (err.meta?.target?.includes('username')) {
         return new Response(JSON.stringify({ 
           message: 'Username already exists. Please try a different one.' 
-        }), { status: 400 })
-      }
-      if (err.meta?.target?.includes('phone_number')) {
-        return new Response(JSON.stringify({ 
-          message: 'Phone number already exists. Please use a different phone number.' 
         }), { status: 400 })
       }
       return new Response(JSON.stringify({ 
