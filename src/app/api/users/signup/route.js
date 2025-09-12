@@ -1,8 +1,6 @@
 // app/api/users/signup/route.js
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../../../lib/prisma';
 import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 export async function POST(req) {
   try {
@@ -40,11 +38,14 @@ export async function POST(req) {
     // Note: Phone number uniqueness check removed to allow multiple accounts with same phone number
     // Users can now use the same phone number for multiple accounts
 
-    // Validate referral code exists and is active
+    // Validate referral code exists, is active, and has an active package
     const referrer = await prisma.user.findUnique({
       where: { 
         username: referralCode,
         status: 'active'
+      },
+      include: {
+        currentPackage: true
       }
     })
     
@@ -53,6 +54,15 @@ export async function POST(req) {
         message: 'Invalid referral code. Please check and try again.' 
       }), { status: 400 })
     }
+
+    // Check if referrer has an active package
+    if (!referrer.currentPackageId || !referrer.currentPackage) {
+      return new Response(JSON.stringify({ 
+        message: 'The referral person does not have an active package. Please use a different referral code.' 
+      }), { status: 400 })
+    }
+
+    // Note: Package expiry check removed - users can refer even with expired packages
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)

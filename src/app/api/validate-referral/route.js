@@ -22,7 +22,16 @@ export async function POST(request) {
         id: true,
         fullname: true,
         username: true,
-        status: true
+        status: true,
+        currentPackageId: true,
+        packageExpiryDate: true,
+        currentPackage: {
+          select: {
+            id: true,
+            name: true,
+            price: true
+          }
+        }
       }
     });
 
@@ -40,14 +49,26 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
+    // Check if referrer has an active package
+    if (!referrer.currentPackageId || !referrer.currentPackage) {
+      return NextResponse.json({ 
+        valid: false, 
+        message: 'The referral person does not have an active package. Please use a different referral code.' 
+      }, { status: 400 });
+    }
+
+    // Note: Package expiry check removed - users can refer even with expired packages
+
     return NextResponse.json({
       valid: true,
       referrer: {
         id: referrer.id,
         fullname: referrer.fullname,
-        username: referrer.username
+        username: referrer.username,
+        packageName: referrer.currentPackage.name,
+        packagePrice: referrer.currentPackage.price
       },
-      message: `Valid referral code! You will be referred by ${referrer.fullname}`
+      message: `Valid referral code! You will be referred by ${referrer.fullname} (${referrer.currentPackage.name} package)`
     });
 
   } catch (error) {
