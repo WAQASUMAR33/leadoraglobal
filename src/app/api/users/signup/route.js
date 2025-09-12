@@ -34,16 +34,8 @@ export async function POST(req) {
       }), { status: 400 })
     }
 
-    // Check if email already exists
-    const existingEmail = await prisma.user.findUnique({
-      where: { email }
-    })
-    
-    if (existingEmail) {
-      return new Response(JSON.stringify({ 
-        message: 'Email already exists. Please use a different email address.' 
-      }), { status: 400 })
-    }
+    // Note: Email uniqueness check removed to allow multiple accounts with same email
+    // Users can now use the same email for multiple accounts
 
     // Check if phone number already exists
     const existingPhone = await prisma.user.findFirst({
@@ -155,11 +147,6 @@ export async function POST(req) {
       if (err.meta?.target?.includes('username')) {
         return new Response(JSON.stringify({ 
           message: 'Username already exists. Please try a different one.' 
-        }), { status: 400 })
-      }
-      if (err.meta?.target?.includes('email')) {
-        return new Response(JSON.stringify({ 
-          message: 'Email already exists. Please use a different email address.' 
         }), { status: 400 })
       }
       if (err.meta?.target?.includes('phone_number')) {
