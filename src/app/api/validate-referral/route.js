@@ -28,8 +28,8 @@ export async function POST(request) {
         currentPackage: {
           select: {
             id: true,
-            name: true,
-            price: true
+            package_name: true,
+            package_amount: true
           }
         }
       }
@@ -65,10 +65,10 @@ export async function POST(request) {
         id: referrer.id,
         fullname: referrer.fullname,
         username: referrer.username,
-        packageName: referrer.currentPackage.name,
-        packagePrice: referrer.currentPackage.price
+        packageName: referrer.currentPackage.package_name,
+        packagePrice: referrer.currentPackage.package_amount
       },
-      message: `Valid referral code! You will be referred by ${referrer.fullname} (${referrer.currentPackage.name} package)`
+      message: `Valid referral code! You will be referred by ${referrer.fullname} (${referrer.currentPackage.package_name} package)`
     });
 
   } catch (error) {

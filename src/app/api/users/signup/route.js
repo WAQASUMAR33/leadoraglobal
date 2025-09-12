@@ -45,7 +45,13 @@ export async function POST(req) {
         status: 'active'
       },
       include: {
-        currentPackage: true
+        currentPackage: {
+          select: {
+            id: true,
+            package_name: true,
+            package_amount: true
+          }
+        }
       }
     })
     
