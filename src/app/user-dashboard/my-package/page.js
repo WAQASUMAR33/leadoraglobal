@@ -13,7 +13,7 @@ export default function MyPackage() {
 
   useEffect(() => {
     if (user && isAuthenticated) {
-      console.log('🔄 useEffect triggered - fetching data for user:', user.id);
+      console.log('🔄 useEffect triggered - fetching data for user');
       fetchUserPackage(user.id);
       fetchPackageRequests(user.id);
     } else {
@@ -51,7 +51,7 @@ export default function MyPackage() {
 
   const fetchPackageRequests = async (userId) => {
     try {
-      console.log('Fetching package requests for userId:', userId);
+      console.log('Fetching package requests for user');
       const response = await fetch(`/api/package-requests?userId=${userId}`);
       console.log('Package requests response status:', response.status);
       
@@ -84,38 +84,6 @@ export default function MyPackage() {
   };
 
 
-  const testPackageRequestsAPI = async () => {
-    if (!user?.id) {
-      alert('User not authenticated');
-      return;
-    }
-    
-    try {
-      console.log('🧪 Testing package requests API...');
-      const response = await fetch(`/api/package-requests?userId=${user.id}`);
-      console.log('🧪 Response status:', response.status);
-      console.log('🧪 Response headers:', response.headers);
-      
-      const data = await response.json();
-      console.log('🧪 Full API response:', data);
-      
-      if (data.packageRequests) {
-        console.log('🧪 Package requests found:', data.packageRequests);
-        console.log('🧪 Count:', data.packageRequests.length);
-        if (data.packageRequests.length > 0) {
-          console.log('🧪 First request:', data.packageRequests[0]);
-        }
-      } else {
-        console.log('🧪 No packageRequests field found');
-        console.log('🧪 Available fields:', Object.keys(data));
-      }
-      
-      alert(`API Test Complete! Check console for details. Status: ${response.status}`);
-    } catch (error) {
-      console.error('🧪 API test error:', error);
-      alert(`API Test Error: ${error.message}`);
-    }
-  };
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -193,35 +161,6 @@ export default function MyPackage() {
             </Link>
           </div>
           
-          {/* Debug Information */}
-          <div className="mb-4 p-3 bg-gray-700 rounded-lg">
-            <div className="flex items-center justify-between">
-              <p className="text-gray-300 text-sm">
-                <span className="text-gray-400">Debug:</span> Package requests loaded: {packageRequests.length} | 
-                User ID: {user?.id} | 
-                Authenticated: {isAuthenticated ? 'Yes' : 'No'}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => fetchPackageRequests(user?.id)}
-                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                >
-                  Refresh
-                </button>
-                <button
-                  onClick={testPackageRequestsAPI}
-                  className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                >
-                  Test API
-                </button>
-              </div>
-            </div>
-            {packageRequests.length > 0 && (
-              <p className="text-green-400 text-xs mt-2">
-                ✅ Data loaded successfully. Check console for details.
-              </p>
-            )}
-          </div>
           
           {/* Package Requests Summary */}
           {packageRequests.length > 0 && (
@@ -409,9 +348,6 @@ export default function MyPackage() {
                '⚠️ Package Status Unknown'}
             </span>
           </div>
-          <div className="text-blue-100 text-sm">
-            <p>Package ID: {userPackage.packageId || 'N/A'}</p>
-          </div>
         </div>
       </div>
 
@@ -508,35 +444,6 @@ export default function MyPackage() {
           </Link>
         </div>
         
-        {/* Debug Information */}
-        <div className="mb-4 p-3 bg-gray-700 rounded-lg">
-          <div className="flex items-center justify-between">
-            <p className="text-gray-300 text-sm">
-              <span className="text-gray-400">Debug:</span> Package requests loaded: {packageRequests.length} | 
-              User ID: {user?.id} | 
-              Authenticated: {isAuthenticated ? 'Yes' : 'No'}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => fetchPackageRequests(user?.id)}
-                className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-              >
-                Refresh
-              </button>
-              <button
-                onClick={testPackageRequestsAPI}
-                className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-              >
-                Test API
-              </button>
-            </div>
-          </div>
-          {packageRequests.length > 0 && (
-            <p className="text-green-400 text-xs mt-2">
-              ✅ Data loaded successfully. Check console for details.
-            </p>
-          )}
-        </div>
         
         {/* Package Requests Summary */}
         {packageRequests.length > 0 && (
