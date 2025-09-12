@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useUser } from "../../lib/userContext";
 import {
   Box,
@@ -174,15 +175,18 @@ function LoginForm() {
       }}>
         {/* Ledora Global Image */}
         <Box sx={{ mb: 4 }}>
-          <img 
+          <Image 
             src="/leadora_global.jpg" 
             alt="Ledora Global" 
+            width={300}
+            height={200}
             style={{ 
               maxWidth: '300px', 
               height: 'auto',
               borderRadius: '12px',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
             }}
+            priority
           />
         </Box>
         

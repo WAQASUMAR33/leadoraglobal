@@ -80,7 +80,7 @@ export async function PUT(request, { params }) {
             id: true,
             username: true,
             fullname: true
-          }
+          }  
         },
         package: {
           select: {

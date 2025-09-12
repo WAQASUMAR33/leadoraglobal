@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { auth } from "../../lib/auth";
 import {
   Box,
@@ -295,15 +296,18 @@ function SignupForm() {
       }}>
         {/* Ledora Global Image */}
         <Box sx={{ mb: 4 }}>
-          <img 
+          <Image 
             src="/leadora_global.jpg" 
             alt="Ledora Global" 
+            width={300}
+            height={200}
             style={{ 
               maxWidth: '300px', 
               height: 'auto',
               borderRadius: '12px',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
             }}
+            priority
           />
         </Box>
         
@@ -337,9 +341,11 @@ function SignupForm() {
             mb: 4
           }}>
             <Box sx={{ mb: 2 }}>
-              <img 
+              <Image 
                 src="/leadora_global.jpg" 
                 alt="Ledora Global" 
+                width={200}
+                height={133}
                 style={{ 
                   maxWidth: '200px', 
                   height: 'auto',

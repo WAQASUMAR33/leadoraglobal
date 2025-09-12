@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Cart() {
   const [cart, setCart] = useState([]);
@@ -113,9 +114,11 @@ export default function Cart() {
                 <div className="flex items-center">
                   {/* Product Image */}
                   <div className="w-20 h-20 bg-gray-700 rounded-lg overflow-hidden mr-4">
-                    <img
+                    <Image
                       src={item.image}
                       alt={item.title}
+                      width={80}
+                      height={80}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.target.src = '/placeholder-product.jpg';

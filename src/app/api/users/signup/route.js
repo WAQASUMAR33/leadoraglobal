@@ -41,8 +41,7 @@ export async function POST(req) {
     // Validate referral code exists, is active, and has an active package
     const referrer = await prisma.user.findUnique({
       where: { 
-        username: referralCode,
-        status: 'active'
+        username: referralCode
       },
       include: {
         currentPackage: {
@@ -58,6 +57,13 @@ export async function POST(req) {
     if (!referrer) {
       return new Response(JSON.stringify({ 
         message: 'Invalid referral code. Please check and try again.' 
+      }), { status: 400 })
+    }
+
+    // Check if referrer account is active
+    if (referrer.status !== 'active') {
+      return new Response(JSON.stringify({ 
+        message: 'Referral code is not active. Please use a different code.' 
       }), { status: 400 })
     }
 

@@ -12,11 +12,10 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Find user by username (referral code)
+    // Find user by username (referral code) - check all users first
     const referrer = await prisma.user.findUnique({
       where: { 
-        username: referralCode,
-        status: 'active' // Only active users can be referrers
+        username: referralCode
       },
       select: {
         id: true,
@@ -42,6 +41,7 @@ export async function POST(request) {
       }, { status: 404 });
     }
 
+    // Check if referrer account is active
     if (referrer.status !== 'active') {
       return NextResponse.json({ 
         valid: false, 
