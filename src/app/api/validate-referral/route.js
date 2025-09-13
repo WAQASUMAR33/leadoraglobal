@@ -15,7 +15,7 @@ export async function POST(request) {
     // Find user by username (referral code) - check all users first
     const referrer = await prisma.user.findUnique({
       where: { 
-        username: referralCode
+        username: referralCode.toLowerCase()
       },
       select: {
         id: true,

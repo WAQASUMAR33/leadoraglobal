@@ -41,7 +41,7 @@ export async function POST(req) {
     // Validate referral code exists, is active, and has an active package
     const referrer = await prisma.user.findUnique({
       where: { 
-        username: referralCode
+        username: referralCode.toLowerCase()
       },
       include: {
         currentPackage: {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -69,51 +69,11 @@ function SignupForm() {
     }
   }, []);
 
-  // Check for referral code in URL params
-  useEffect(() => {
-    const refCode = searchParams.get('ref');
-    if (refCode) {
-      setForm(prev => ({ ...prev, referralCode: refCode }));
-    }
-  }, [searchParams]);
-
-  // Clear messages after 5 seconds
-  useEffect(() => {
-    if (message || error) {
-      const timer = setTimeout(() => {
-        setMessage(null);
-        setError(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message, error]);
-
-  // Update form field
-  const updateField = (field) => (e) => {
-    const value = e.target.value;
-    setForm({ ...form, [field]: value });
-    
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors({ ...errors, [field]: "" });
-    }
-
-    // Validate referral code in real-time
-    if (field === 'referralCode' && value.length >= 3) {
-      validateReferralCode(value);
-    } else if (field === 'referralCode' && value.length < 3) {
-      setReferralValidation({
-        isValidating: false,
-        isValid: false,
-        referrerName: '',
-        message: ''
-      });
-    }
-  };
-
-  const validateReferralCode = async (referralCode) => {
+  // Define validateReferralCode function first
+  const validateReferralCode = useCallback(async (referralCode) => {
     if (!referralCode || referralCode.length < 3) return;
 
+    console.log('Validating referral code:', referralCode);
     setReferralValidation(prev => ({ ...prev, isValidating: true }));
 
     try {
@@ -125,7 +85,9 @@ function SignupForm() {
         body: JSON.stringify({ referralCode }),
       });
 
+      console.log('Validation response status:', response.status);
       const data = await response.json();
+      console.log('Validation response data:', data);
 
       if (data.valid) {
         setReferralValidation({
@@ -152,7 +114,51 @@ function SignupForm() {
         isValidating: false,
         isValid: false,
         referrerName: '',
-        message: 'Error validating referral code'
+        message: 'Error validating referral code. Please check your connection.'
+      });
+    }
+  }, []);
+
+  // Check for referral code in URL params
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setForm(prev => ({ ...prev, referralCode: refCode }));
+      // Auto-validate the referral code from URL
+      validateReferralCode(refCode.toLowerCase());
+    }
+  }, [searchParams, validateReferralCode]);
+
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (message || error) {
+      const timer = setTimeout(() => {
+        setMessage(null);
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message, error]);
+
+  // Update form field
+  const updateField = (field) => (e) => {
+    const value = e.target.value;
+    setForm({ ...form, [field]: value });
+    
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: "" });
+    }
+
+    // Validate referral code in real-time
+    if (field === 'referralCode' && value.length >= 3) {
+      validateReferralCode(value.toLowerCase());
+    } else if (field === 'referralCode' && value.length < 3) {
+      setReferralValidation({
+        isValidating: false,
+        isValid: false,
+        referrerName: '',
+        message: ''
       });
     }
   };
@@ -240,7 +246,7 @@ function SignupForm() {
           username: form.username,
           email: form.email,
           phoneNumber: form.phoneNumber,
-          referralCode: form.referralCode,
+          referralCode: form.referralCode.toLowerCase(),
           password: form.password,
         }),
       });
@@ -732,7 +738,17 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading signup form...
+      </div>
+    }>
       <SignupForm />
     </Suspense>
   );
