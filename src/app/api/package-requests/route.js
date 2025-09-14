@@ -127,6 +127,9 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const status = searchParams.get('status');
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = parseInt(searchParams.get('limit')) || 20; // Default 20 items per page
+    const skip = (page - 1) * limit;
 
     let whereClause = {};
     
@@ -138,9 +141,24 @@ export async function GET(request) {
       whereClause.status = status;
     }
 
+    // Get total count for pagination
+    const totalCount = await prisma.packageRequest.count({
+      where: whereClause
+    });
+
+    // Get paginated results
     const packageRequests = await prisma.packageRequest.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        packageId: true,
+        transactionId: true,
+        notes: true,
+        status: true,
+        adminNotes: true,
+        createdAt: true,
+        updatedAt: true,
         user: {
           select: {
             id: true,
@@ -155,16 +173,31 @@ export async function GET(request) {
             package_amount: true
           }
         }
+        // Note: transactionReceipt is excluded from list view for performance
       },
       orderBy: {
         createdAt: 'desc'
-      }
+      },
+      skip: skip,
+      take: limit
     });
+
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
 
     return new Response(
       JSON.stringify({
         success: true,
-        packageRequests
+        packageRequests,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalCount,
+          limit,
+          hasNextPage,
+          hasPrevPage
+        }
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

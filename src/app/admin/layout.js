@@ -131,42 +131,88 @@ export default function AdminLayout({ children }) {
   const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
-    // If it's the login page, don't check authentication
+    // If it's the login page, clear any existing admin data and don't check authentication
     if (isLoginPage) {
+      // Clear any existing admin data from localStorage
+      localStorage.removeItem('admin');
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth-token');
       return;
     }
 
-    // Check if admin is logged in
-    const adminData = localStorage.getItem('admin');
-    const adminToken = localStorage.getItem('adminToken');
+    // CRITICAL: Check if admin is logged in via server-side validation
+    const checkAdminAuth = async () => {
+      try {
+        const response = await fetch('/api/admin/stats', {
+          method: 'GET',
+          credentials: 'include', // Include cookies
+        });
 
-    if (!adminData || !adminToken) {
-      router.push('/admin/login');
-      return;
-    }
+        if (!response.ok) {
+          // Admin not authenticated, clear localStorage and redirect
+          localStorage.removeItem('admin');
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('user');
+          localStorage.removeItem('auth-token');
+          router.push('/admin/login');
+          return;
+        }
 
-    try {
-      const parsedAdmin = JSON.parse(adminData);
-      setAdmin(parsedAdmin);
-    } catch (error) {
-      console.error('Error parsing admin data:', error);
-      router.push('/admin/login');
-    }
+        const data = await response.json();
+        if (data.success) {
+          // Admin is authenticated, get admin data from localStorage
+          const adminData = localStorage.getItem('admin');
+          if (adminData) {
+            try {
+              const parsedAdmin = JSON.parse(adminData);
+              setAdmin(parsedAdmin);
+            } catch (error) {
+              console.error('Error parsing admin data:', error);
+              router.push('/admin/login');
+            }
+          }
+        } else {
+          // Authentication failed
+          localStorage.removeItem('admin');
+          localStorage.removeItem('adminToken');
+          router.push('/admin/login');
+        }
+      } catch (error) {
+        console.error('Admin auth check failed:', error);
+        localStorage.removeItem('admin');
+        localStorage.removeItem('adminToken');
+        router.push('/admin/login');
+      }
+    };
+
+    checkAdminAuth();
   }, [router, isLoginPage]);
 
   const handleLogout = async () => {
     try {
+      // Call logout API to invalidate server-side session
       await fetch('/api/admin/login', {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        }
+        },
+        credentials: 'include'
       });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // CRITICAL: Clear ALL authentication data
       localStorage.removeItem('admin');
       localStorage.removeItem('adminToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth-token');
+      
+      // Clear any other potential auth data
+      localStorage.removeItem('token');
+      localStorage.removeItem('auth');
+      
+      // Redirect to admin login
       router.push('/admin/login');
     }
   };

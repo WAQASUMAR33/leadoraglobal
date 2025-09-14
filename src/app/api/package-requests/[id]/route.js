@@ -136,6 +136,7 @@ export async function GET(request, { params }) {
             package_amount: true
           }
         }
+        // transactionReceipt is included for individual request view
       }
     });
 

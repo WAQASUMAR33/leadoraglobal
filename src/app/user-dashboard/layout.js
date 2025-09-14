@@ -198,6 +198,10 @@ export default function UserDashboardLayout({ children }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    // CRITICAL: Clear any admin sessions when accessing user dashboard
+    localStorage.removeItem('admin');
+    localStorage.removeItem('adminToken');
+    
     // Get user from auth utility
     const currentUser = auth.getUser();
     if (currentUser) {
@@ -214,7 +218,15 @@ export default function UserDashboardLayout({ children }) {
     } catch (error) {
       console.warn('Failed to call logout API:', error);
     } finally {
+      // CRITICAL: Clear ALL authentication data
       auth.logout();
+      localStorage.removeItem('admin');
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth-token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('auth');
+      
       window.location.href = "/login";
     }
   };

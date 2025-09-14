@@ -58,7 +58,7 @@ export function middleware(request) {
     }
   }
 
-  // Handle admin routes
+  // Handle admin routes - CRITICAL SECURITY FIX
   if (isAdminRoute) {
     // If accessing admin login with valid admin token, redirect to admin dashboard
     if (isAdminPublicRoute && adminToken) {
@@ -68,23 +68,24 @@ export function middleware(request) {
       }
     }
 
-    // If accessing admin routes without admin token, redirect to admin login
+    // CRITICAL: If accessing admin routes without admin token, redirect to admin login
     if (!isAdminPublicRoute && !adminToken) {
+      console.log('SECURITY: Admin route accessed without admin token:', pathname);
       const loginUrl = new URL('/admin/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    // Verify admin token for admin routes
+    // CRITICAL: Verify admin token for ALL admin routes
     if (!isAdminPublicRoute && adminToken) {
       const validation = validateJWT(adminToken);
       
       if (!validation.valid || !validation.payload.adminId) {
-        console.log('Admin token validation failed:', validation.error);
-        // Invalid token, redirect to admin login
-        const loginUrl = new URL('/admin/login', request.url);
-        loginUrl.searchParams.set('redirect', pathname);
-        return NextResponse.redirect(loginUrl);
+        console.log('SECURITY: Admin token validation failed:', validation.error);
+        // Clear invalid admin token
+        const response = NextResponse.redirect(new URL('/admin/login', request.url));
+        response.cookies.delete('admin-token');
+        return response;
       }
 
       // Add admin info to headers for API routes
@@ -103,7 +104,32 @@ export function middleware(request) {
       }
     }
 
+    // CRITICAL: If no admin token and not public route, redirect to login
+    if (!isAdminPublicRoute && !adminToken) {
+      console.log('SECURITY: Admin route accessed without token:', pathname);
+      const loginUrl = new URL('/admin/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
     return NextResponse.next();
+  }
+
+  // CRITICAL: Clear conflicting sessions when switching roles
+  if (isAdminRoute && userToken) {
+    // User trying to access admin routes - clear user session
+    console.log('SECURITY: User session detected on admin route, clearing user session');
+    const response = NextResponse.next();
+    response.cookies.delete('auth-token');
+    return response;
+  }
+
+  if (isDashboardRoute && adminToken) {
+    // Admin trying to access user routes - clear admin session
+    console.log('SECURITY: Admin session detected on user route, clearing admin session');
+    const response = NextResponse.next();
+    response.cookies.delete('admin-token');
+    return response;
   }
 
   // Handle user routes
