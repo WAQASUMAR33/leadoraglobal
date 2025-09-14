@@ -32,6 +32,14 @@ export default function AdminDashboard() {
 
   const fetchDashboardStats = async () => {
     try {
+      // First test the headers endpoint
+      console.log('Testing admin headers...');
+      const headersResponse = await fetch('/api/admin/test-headers');
+      if (headersResponse.ok) {
+        const headersData = await headersResponse.json();
+        console.log('Headers test result:', headersData);
+      }
+      
       const response = await fetch('/api/admin/stats');
       
       if (response.ok) {
