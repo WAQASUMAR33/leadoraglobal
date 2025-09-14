@@ -50,11 +50,19 @@ export function middleware(request) {
   const userToken = request.cookies.get('auth-token')?.value;
   let adminToken = request.cookies.get('admin-token')?.value;
   
+  // Debug logging for admin routes
+  if (isAdminRoute) {
+    console.log('Admin route accessed:', pathname);
+    console.log('Admin token from cookie:', adminToken ? 'exists' : 'missing');
+    console.log('All cookies:', request.cookies.getAll().map(c => c.name));
+  }
+  
   // If no admin token in cookies, check Authorization header
   if (!adminToken) {
     const authHeader = request.headers.get('authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       adminToken = authHeader.substring(7);
+      console.log('Admin token from Authorization header:', adminToken ? 'exists' : 'missing');
     }
   }
 
