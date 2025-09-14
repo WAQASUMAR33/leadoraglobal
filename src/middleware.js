@@ -35,6 +35,9 @@ function validateJWT(token) {
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
+  
+  // Debug: Log all requests
+  console.log('🔍 Middleware called for:', pathname, request.method);
 
   // Public routes that don't require authentication
   const publicRoutes = ['/login', '/signup', '/forgot-password', '/reset-password'];
