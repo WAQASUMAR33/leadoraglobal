@@ -28,7 +28,7 @@ export default function PackageRequests() {
   const fetchPackageRequests = async (page = 1) => {
     try {
       setLoading(true);
-      let url = `/api/package-requests?page=${page}&limit=20`;
+      let url = `/api/admin/package-requests?page=${page}&limit=20`;
       if (selectedStatus !== 'all') {
         url += `&status=${selectedStatus}`;
       }
@@ -45,6 +45,10 @@ export default function PackageRequests() {
           hasNextPage: false,
           hasPrevPage: false
         });
+      } else if (response.status === 401) {
+        // Handle authentication error
+        alert('Session expired. Please login again.');
+        router.push('/admin/login');
       }
     } catch (error) {
       console.error('Error fetching package requests:', error);
@@ -56,11 +60,15 @@ export default function PackageRequests() {
   const fetchRequestDetails = async (requestId) => {
     setDetailLoading(true);
     try {
-      const response = await fetch(`/api/package-requests/${requestId}`);
+      const response = await fetch(`/api/admin/package-requests/${requestId}`);
       if (response.ok) {
         const data = await response.json();
         setSelectedRequest(data.packageRequest);
         setShowDetailModal(true);
+      } else if (response.status === 401) {
+        // Handle authentication error
+        alert('Session expired. Please login again.');
+        router.push('/admin/login');
       } else {
         alert('Failed to fetch request details');
       }
@@ -74,7 +82,7 @@ export default function PackageRequests() {
 
   const handleStatusUpdate = async (requestId, newStatus, adminNotes = '') => {
     try {
-      const response = await fetch(`/api/package-requests/${requestId}`, {
+      const response = await fetch(`/api/admin/package-requests/${requestId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -89,6 +97,10 @@ export default function PackageRequests() {
         alert(`Package request ${newStatus} successfully!`);
         fetchPackageRequests(); // Refresh the list
         setShowDetailModal(false); // Close modal after update
+      } else if (response.status === 401) {
+        // Handle authentication error
+        alert('Session expired. Please login again.');
+        router.push('/admin/login');
       } else {
         alert('Failed to update package request status');
       }
