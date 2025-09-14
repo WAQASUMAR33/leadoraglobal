@@ -86,7 +86,9 @@ export function middleware(request) {
 
     // CRITICAL: Verify admin token for ALL admin routes
     if (!isAdminPublicRoute && adminToken) {
+      console.log('Validating admin token for route:', pathname);
       const validation = validateJWT(adminToken);
+      console.log('JWT validation result:', validation);
       
       if (!validation.valid || !validation.payload.adminId) {
         console.log('SECURITY: Admin token validation failed:', validation.error);
@@ -95,14 +97,24 @@ export function middleware(request) {
         response.cookies.delete('admin-token');
         return response;
       }
+      
+      console.log('JWT validation successful, payload:', validation.payload);
 
       // Add admin info to headers for API routes
       if (pathname.startsWith('/api/admin/')) {
+        console.log('Setting admin headers for API route:', pathname);
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set('x-admin-id', validation.payload.adminId);
         requestHeaders.set('x-admin-username', validation.payload.username);
         requestHeaders.set('x-admin-email', validation.payload.email);
         requestHeaders.set('x-admin-role', validation.payload.role);
+        
+        console.log('Admin headers set:', {
+          'x-admin-id': validation.payload.adminId,
+          'x-admin-username': validation.payload.username,
+          'x-admin-email': validation.payload.email,
+          'x-admin-role': validation.payload.role
+        });
 
         return NextResponse.next({
           request: {
