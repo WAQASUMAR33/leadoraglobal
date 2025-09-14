@@ -32,15 +32,15 @@ export default function AdminDashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const response = await fetch('/api/admin/stats', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        }
-      });
+      const response = await fetch('/api/admin/stats');
       
       if (response.ok) {
         const data = await response.json();
         setStats(data);
+      } else if (response.status === 401) {
+        // Handle authentication error
+        console.log('Admin session expired, redirecting to login');
+        window.location.href = '/admin/login';
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
