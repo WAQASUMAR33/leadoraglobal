@@ -1,18 +1,46 @@
+import jwt from 'jsonwebtoken';
 import prisma from '../../../../../lib/prisma';
 import { approvePackageRequest } from '../../../../../lib/packageApproval';
 
 export async function PUT(request, { params }) {
   try {
-    // Admin authentication is handled by middleware
-    const adminId = request.headers.get('x-admin-id');
+    // Get admin token from cookie
+    const adminToken = request.cookies.get('admin-token')?.value;
     
-    if (!adminId) {
+    if (!adminToken) {
       return new Response(
         JSON.stringify({
           success: false,
-          message: 'Admin authentication required'
+          message: 'Admin authentication required - no token found'
         }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate JWT token
+    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(adminToken, jwtSecret);
+    } catch (error) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Invalid admin token'
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Check if it's an admin token
+    if (!decoded.adminId) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Admin access required'
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -129,16 +157,43 @@ export async function PUT(request, { params }) {
 
 export async function GET(request, { params }) {
   try {
-    // Admin authentication is handled by middleware
-    const adminId = request.headers.get('x-admin-id');
+    // Get admin token from cookie
+    const adminToken = request.cookies.get('admin-token')?.value;
     
-    if (!adminId) {
+    if (!adminToken) {
       return new Response(
         JSON.stringify({
           success: false,
-          message: 'Admin authentication required'
+          message: 'Admin authentication required - no token found'
         }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate JWT token
+    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(adminToken, jwtSecret);
+    } catch (error) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Invalid admin token'
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Check if it's an admin token
+    if (!decoded.adminId) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Admin access required'
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
