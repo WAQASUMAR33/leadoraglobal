@@ -126,6 +126,22 @@ export async function POST(req) {
     };
 
     // Set HTTP-only cookie with JWT token
+    const isProduction = process.env.NODE_ENV === 'production';
+    const domain = process.env.NEXT_PUBLIC_DOMAIN;
+    
+    // Build cookie string with proper production settings
+    let cookieString = `admin-token=${token}; HttpOnly; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`;
+    
+    // Only add Secure flag if we're actually on HTTPS
+    if (isProduction) {
+      cookieString += '; Secure';
+    }
+    
+    // Add domain if specified
+    if (domain) {
+      cookieString += `; Domain=${domain}`;
+    }
+
     const response = new Response(
       JSON.stringify({
         success: true,
@@ -137,7 +153,7 @@ export async function POST(req) {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Set-Cookie': `admin-token=${token}; HttpOnly; ${process.env.NODE_ENV === 'production' ? 'Secure;' : ''} SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`
+          'Set-Cookie': cookieString
         }
       }
     );
@@ -172,6 +188,20 @@ export async function DELETE(req) {
       });
     }
 
+    // Clear cookie with proper production settings
+    const isProduction = process.env.NODE_ENV === 'production';
+    const domain = process.env.NEXT_PUBLIC_DOMAIN;
+    
+    let cookieString = `admin-token=; HttpOnly; SameSite=Strict; Max-Age=0; Path=/`;
+    
+    if (isProduction) {
+      cookieString += '; Secure';
+    }
+    
+    if (domain) {
+      cookieString += `; Domain=${domain}`;
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -181,7 +211,7 @@ export async function DELETE(req) {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Set-Cookie': `admin-token=; HttpOnly; ${process.env.NODE_ENV === 'production' ? 'Secure;' : ''} SameSite=Strict; Max-Age=0; Path=/`
+          'Set-Cookie': cookieString
         }
       }
     );

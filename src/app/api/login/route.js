@@ -124,13 +124,21 @@ export async function POST(req) {
     };
 
     // Set HTTP-only cookie with JWT token
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/'
-    };
+    const isProduction = process.env.NODE_ENV === 'production';
+    const domain = process.env.NEXT_PUBLIC_DOMAIN;
+    
+    // Build cookie string with proper production settings
+    let cookieString = `auth-token=${token}; HttpOnly; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`;
+    
+    // Only add Secure flag if we're actually on HTTPS
+    if (isProduction) {
+      cookieString += '; Secure';
+    }
+    
+    // Add domain if specified
+    if (domain) {
+      cookieString += `; Domain=${domain}`;
+    }
 
     const response = new Response(
       JSON.stringify({
@@ -143,7 +151,7 @@ export async function POST(req) {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Set-Cookie': `auth-token=${token}; HttpOnly; ${process.env.NODE_ENV === 'production' ? 'Secure;' : ''} SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`
+          'Set-Cookie': cookieString
         }
       }
     );

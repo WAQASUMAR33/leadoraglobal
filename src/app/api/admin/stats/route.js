@@ -6,10 +6,12 @@ export async function GET(req) {
     // Get admin token from cookie
     const adminToken = req.cookies.get('admin-token')?.value;
     
-    // Debug logging
+    // Enhanced debug logging for production
     console.log('Admin stats API called');
+    console.log('Environment:', process.env.NODE_ENV);
     console.log('Admin token from cookie:', adminToken ? 'exists' : 'missing');
-    console.log('All cookies:', req.cookies.getAll().map(c => c.name));
+    console.log('All cookies:', req.cookies.getAll().map(c => `${c.name}=${c.value ? 'exists' : 'empty'}`));
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
     
     if (!adminToken) {
       return new Response(
