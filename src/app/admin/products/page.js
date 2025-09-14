@@ -86,27 +86,30 @@ export default function AdminProducts() {
 
   const fetchProducts = async () => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      console.log('Admin token:', adminToken);
-      
-      const response = await fetch('/api/product_management', {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
+      const response = await fetch('/api/admin/products', {
+        credentials: 'include'
       });
       
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched products data:', data);
-        console.log('Products array:', data.products);
-        setProducts(data.products || []);
+        if (data.success && data.products) {
+          setProducts(data.products);
+        } else {
+          console.error('No products data received');
+          setProducts([]);
+        }
+      } else if (response.status === 401) {
+        // Redirect to admin login on authentication failure
+        window.location.href = '/admin/login';
+        return;
       } else {
         console.error('Response not ok:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
+        setProducts([]);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -132,12 +135,12 @@ export default function AdminProducts() {
     }
 
     try {
-      const response = await fetch('/api/product_management', {
+      const response = await fetch('/api/admin/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         },
+        credentials: 'include',
         body: JSON.stringify(formData)
       });
 
@@ -148,9 +151,12 @@ export default function AdminProducts() {
         setImagePreview('');
         fetchProducts();
         alert('Product added successfully!');
+      } else if (response.status === 401) {
+        window.location.href = '/admin/login';
+        return;
       } else {
         const errorData = await response.json();
-        alert(`Failed to add product: ${errorData.message || 'Unknown error'}`);
+        alert(`Failed to add product: ${errorData.error || errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error adding product:', error);
@@ -178,12 +184,12 @@ export default function AdminProducts() {
     }
 
     try {
-      const response = await fetch(`/api/product_management/${selectedProduct.id}`, {
+      const response = await fetch(`/api/admin/products/${selectedProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         },
+        credentials: 'include',
         body: JSON.stringify(formData)
       });
 
@@ -195,9 +201,12 @@ export default function AdminProducts() {
         setImagePreview('');
         fetchProducts();
         alert('Product updated successfully!');
+      } else if (response.status === 401) {
+        window.location.href = '/admin/login';
+        return;
       } else {
         const errorData = await response.json();
-        alert(`Failed to update product: ${errorData.message || 'Unknown error'}`);
+        alert(`Failed to update product: ${errorData.error || errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating product:', error);
@@ -207,20 +216,26 @@ export default function AdminProducts() {
 
   const handleDeleteProduct = async () => {
     try {
-      const response = await fetch(`/api/product_management/${selectedProduct.id}`, {
+      const response = await fetch(`/api/admin/products/${selectedProduct.id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-        }
+        credentials: 'include'
       });
 
       if (response.ok) {
         setShowDeleteModal(false);
         setSelectedProduct(null);
         fetchProducts();
+        alert('Product deleted successfully!');
+      } else if (response.status === 401) {
+        window.location.href = '/admin/login';
+        return;
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to delete product: ${errorData.error || errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error deleting product:', error);
+      alert('Error deleting product. Please try again.');
     }
   };
 

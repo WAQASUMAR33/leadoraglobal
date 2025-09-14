@@ -92,7 +92,7 @@ export default function UserManagement() {
 
   useEffect(() => {
     applyFilters();
-  }, [users, filters]);
+  }, [users, filters, applyFilters]);
 
   const applyFilters = useCallback(() => {
     let filtered = [...users];
@@ -130,15 +130,21 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/users');
+      const response = await fetch('/api/admin/users', {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
-        if (data.users) {
+        if (data.success && data.users) {
           setUsers(data.users);
         } else {
           console.error('No users data received');
           setUsers([]);
         }
+      } else if (response.status === 401) {
+        // Redirect to admin login on authentication failure
+        window.location.href = '/admin/login';
+        return;
       } else {
         console.error('Failed to fetch users:', response.status);
         setUsers([]);
@@ -155,11 +161,12 @@ export default function UserManagement() {
     e.preventDefault();
     setAddLoading(true);
     try {
-      const response = await fetch('/api/users', {
+      const response = await fetch('/api/admin/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
@@ -176,8 +183,11 @@ export default function UserManagement() {
         });
         fetchUsers();
         alert('User created successfully!');
+      } else if (response.status === 401) {
+        window.location.href = '/admin/login';
+        return;
       } else {
-        alert(data.message || 'Error creating user');
+        alert(data.error || data.message || 'Error creating user');
       }
     } catch (error) {
       console.error('Error creating user:', error);
@@ -191,11 +201,12 @@ export default function UserManagement() {
     e.preventDefault();
     setEditLoading(true);
     try {
-      const response = await fetch(`/api/users/${editingUser.id}`, {
+      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
@@ -213,8 +224,11 @@ export default function UserManagement() {
         });
         fetchUsers();
         alert('User updated successfully!');
+      } else if (response.status === 401) {
+        window.location.href = '/admin/login';
+        return;
       } else {
-        alert(data.message || 'Error updating user');
+        alert(data.error || data.message || 'Error updating user');
       }
     } catch (error) {
       console.error('Error updating user:', error);
@@ -232,16 +246,20 @@ export default function UserManagement() {
     setDeleteLoading(true);
     setDeletingUserId(userId);
     try {
-      const response = await fetch(`/api/users/${userId}`, {
+      const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'DELETE',
+        credentials: 'include'
       });
 
       if (response.ok) {
         fetchUsers();
         alert('User deleted successfully!');
+      } else if (response.status === 401) {
+        window.location.href = '/admin/login';
+        return;
       } else {
         const data = await response.json();
-        alert(data.message || 'Error deleting user');
+        alert(data.error || data.message || 'Error deleting user');
       }
     } catch (error) {
       console.error('Error deleting user:', error);

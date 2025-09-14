@@ -6,14 +6,9 @@ import { verifyAdminToken } from '../../../../lib/adminAuth';
 export async function GET(request) {
   try {
     // Verify admin authentication
-    const token = request.cookies.get('admin-auth-token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const admin = verifyAdminToken(token);
+    const admin = verifyAdminToken(request);
     if (!admin) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -94,14 +89,9 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     // Verify admin authentication
-    const token = request.cookies.get('admin-auth-token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const admin = verifyAdminToken(token);
+    const admin = verifyAdminToken(request);
     if (!admin) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { username, amount, description } = await request.json();
