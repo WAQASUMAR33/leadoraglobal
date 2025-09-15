@@ -46,6 +46,9 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const status = searchParams.get('status');
+    const username = searchParams.get('username');
+    const requestNumber = searchParams.get('requestNumber');
+    const userName = searchParams.get('userName');
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 20; // Default 20 items per page
     const skip = (page - 1) * limit;
@@ -58,6 +61,41 @@ export async function GET(request) {
     
     if (status) {
       whereClause.status = status;
+    }
+
+    // Add search filters
+    if (username || requestNumber || userName) {
+      whereClause.OR = [];
+      
+      if (username) {
+        whereClause.OR.push({
+          user: {
+            username: {
+              contains: username,
+              mode: 'insensitive'
+            }
+          }
+        });
+      }
+      
+      if (requestNumber) {
+        whereClause.OR.push({
+          id: {
+            equals: parseInt(requestNumber) || 0
+          }
+        });
+      }
+      
+      if (userName) {
+        whereClause.OR.push({
+          user: {
+            fullname: {
+              contains: userName,
+              mode: 'insensitive'
+            }
+          }
+        });
+      }
     }
 
     // Get total count for pagination

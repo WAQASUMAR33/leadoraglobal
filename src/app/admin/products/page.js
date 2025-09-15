@@ -408,7 +408,7 @@ export default function AdminProducts() {
 
           {/* Price Range */}
           <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Price Range ($)</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Price Range (PKR)</label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -484,14 +484,14 @@ export default function AdminProducts() {
               <div className="mb-2">
                 {product.discount && product.sale_price ? (
                   <div className="flex items-center space-x-2">
-                    <p className="text-lg line-through text-gray-400">${product.price}</p>
-                    <p className="text-2xl font-bold text-red-600">${product.sale_price}</p>
+                    <p className="text-lg line-through text-gray-400">PKR {parseFloat(product.price).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-red-600">PKR {parseFloat(product.sale_price).toFixed(2)}</p>
                     <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
                       -{product.discount}%
                     </span>
                   </div>
                 ) : (
-                  <p className="text-2xl font-bold text-purple-600">${product.price}</p>
+                  <p className="text-2xl font-bold text-purple-600">PKR {parseFloat(product.price).toFixed(2)}</p>
                 )}
               </div>
               {product.description && (
@@ -549,7 +549,7 @@ export default function AdminProducts() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price (PKR)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -574,7 +574,7 @@ export default function AdminProducts() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price (PKR)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -684,7 +684,7 @@ export default function AdminProducts() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price (PKR)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -709,7 +709,7 @@ export default function AdminProducts() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price (PKR)</label>
                   <input
                     type="number"
                     step="0.01"

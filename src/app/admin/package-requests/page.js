@@ -12,6 +12,11 @@ export default function PackageRequests() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [searchFilters, setSearchFilters] = useState({
+    username: '',
+    requestNumber: '',
+    userName: ''
+  });
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -31,6 +36,17 @@ export default function PackageRequests() {
       let url = `/api/admin/package-requests?page=${page}&limit=20`;
       if (selectedStatus !== 'all') {
         url += `&status=${selectedStatus}`;
+      }
+      
+      // Add search parameters
+      if (searchFilters.username) {
+        url += `&username=${encodeURIComponent(searchFilters.username)}`;
+      }
+      if (searchFilters.requestNumber) {
+        url += `&requestNumber=${encodeURIComponent(searchFilters.requestNumber)}`;
+      }
+      if (searchFilters.userName) {
+        url += `&userName=${encodeURIComponent(searchFilters.userName)}`;
       }
       
       const response = await fetch(url);
@@ -107,6 +123,32 @@ export default function PackageRequests() {
     } catch (error) {
       console.error('Error updating status:', error);
       alert('Error updating package request status');
+    }
+  };
+
+  const handleSearch = () => {
+    fetchPackageRequests(1); // Reset to first page when searching
+  };
+
+  const clearFilters = () => {
+    setSearchFilters({
+      username: '',
+      requestNumber: '',
+      userName: ''
+    });
+    fetchPackageRequests(1);
+  };
+
+  const handleSearchInputChange = (field, value) => {
+    setSearchFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   };
 
@@ -225,6 +267,96 @@ export default function PackageRequests() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          {/* Username Search */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Search by Username</label>
+            <input
+              type="text"
+              placeholder="Enter username..."
+              value={searchFilters.username}
+              onChange={(e) => handleSearchInputChange('username', e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-800"
+            />
+          </div>
+
+          {/* Request Number Search */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Search by Request Number</label>
+            <input
+              type="text"
+              placeholder="Enter request number..."
+              value={searchFilters.requestNumber}
+              onChange={(e) => handleSearchInputChange('requestNumber', e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-800"
+            />
+          </div>
+
+          {/* User Name Search */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Search by User Name</label>
+            <input
+              type="text"
+              placeholder="Enter user full name..."
+              value={searchFilters.userName}
+              onChange={(e) => handleSearchInputChange('userName', e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-800"
+            />
+          </div>
+        </div>
+
+        {/* Search Actions */}
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleSearch}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span>Search</span>
+          </button>
+          <button
+            onClick={clearFilters}
+            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 flex items-center space-x-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <span>Clear Filters</span>
+          </button>
+        </div>
+
+        {/* Active Filters Display */}
+        {(searchFilters.username || searchFilters.requestNumber || searchFilters.userName) && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800 font-medium mb-2">Active Filters:</p>
+            <div className="flex flex-wrap gap-2">
+              {searchFilters.username && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Username: {searchFilters.username}
+                </span>
+              )}
+              {searchFilters.requestNumber && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Request #: {searchFilters.requestNumber}
+                </span>
+              )}
+              {searchFilters.userName && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Name: {searchFilters.userName}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Package Requests List */}
