@@ -49,11 +49,9 @@ export default function PackageRequests() {
         url += `&userName=${encodeURIComponent(searchFilters.userName)}`;
       }
       
-      console.log('Fetching package requests with URL:', url);
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        console.log('Package requests response:', data);
         setPackageRequests(data.packageRequests || []);
         setPagination(data.pagination || {
           currentPage: 1,
