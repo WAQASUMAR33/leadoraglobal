@@ -379,7 +379,17 @@ export async function updateUserPackageAndRank(packageRequestId) {
     const packageExpiryDate = new Date();
     packageExpiryDate.setFullYear(packageExpiryDate.getFullYear() + 1); // 1 year expiry
 
-    // Update user's package
+    // Check if user already has a package
+    const currentPackage = user.currentPackageId;
+    const existingPackage = user.packageId;
+    
+    if (currentPackage && currentPackage === packageData.id) {
+      console.log(`User ${user.username} already has package ${packageData.package_name}. This appears to be a renewal.`);
+    } else if (currentPackage && currentPackage !== packageData.id) {
+      console.log(`User ${user.username} is upgrading from package ${currentPackage} to ${packageData.package_name}.`);
+    }
+
+    // Update user's package (allow renewals and upgrades)
     await prisma.user.update({
       where: { id: user.id },
       data: {

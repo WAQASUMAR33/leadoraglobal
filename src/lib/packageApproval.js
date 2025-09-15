@@ -612,6 +612,9 @@ export async function approvePackageRequest(packageRequestId) {
             referredBy: true,
             points: true,
             balance: true,
+            currentPackageId: true,
+            packageId: true,
+            status: true,
             rank: {
               select: {
                 title: true
@@ -626,7 +629,8 @@ export async function approvePackageRequest(packageRequestId) {
             package_amount: true,
             package_direct_commission: true,
             package_indirect_commission: true,
-            package_points: true
+            package_points: true,
+            status: true
           }
         }
       }
@@ -637,11 +641,30 @@ export async function approvePackageRequest(packageRequestId) {
     }
 
     if (packageRequest.status !== 'pending') {
-      throw new Error('Package request is not pending');
+      throw new Error(`Package request is not pending (current status: ${packageRequest.status})`);
+    }
+
+    // Validate user status
+    if (packageRequest.user.status !== 'active') {
+      throw new Error(`User is not active (current status: ${packageRequest.user.status})`);
+    }
+
+    // Validate package status
+    if (packageRequest.package.status !== 'active') {
+      throw new Error(`Package is not active (current status: ${packageRequest.package.status})`);
     }
 
     const { user, package: packageData } = packageRequest;
     console.log(`📦 Approving package: ${packageData.package_name} (₨${packageData.package_amount}) for user: ${user.username}`);
+
+    // Check if this is a renewal or upgrade
+    if (user.currentPackageId === packageData.id) {
+      console.log(`🔄 This is a package renewal for user ${user.username}`);
+    } else if (user.currentPackageId && user.currentPackageId !== packageData.id) {
+      console.log(`⬆️ This is a package upgrade for user ${user.username}`);
+    } else {
+      console.log(`🆕 This is a new package assignment for user ${user.username}`);
+    }
 
     // Step 1: Update user's package and rank
     await updateUserPackageAndRank(requestId);
@@ -668,7 +691,9 @@ export async function approvePackageRequest(packageRequestId) {
       user: user.username,
       package: packageData.package_name,
       packageAmount: packageData.package_amount,
-      packagePoints: packageData.package_points
+      packagePoints: packageData.package_points,
+      isRenewal: user.currentPackageId === packageData.id,
+      isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id
     };
 
   } catch (error) {
