@@ -53,6 +53,8 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get('limit')) || 20; // Default 20 items per page
     const skip = (page - 1) * limit;
 
+    console.log('Search parameters received:', { username, requestNumber, userName, status, page, limit });
+
     let whereClause = {};
     
     if (userId) {
@@ -97,6 +99,8 @@ export async function GET(request) {
         });
       }
     }
+
+    console.log('Final whereClause:', JSON.stringify(whereClause, null, 2));
 
     // Get total count for pagination
     const totalCount = await prisma.packageRequest.count({
