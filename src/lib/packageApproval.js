@@ -1,72 +1,54 @@
-import prisma from './prisma';
-import { calculateMLMCommissions, updateUserPackageAndRank } from './commissionSystem';
+import prisma from './prisma.js';
+import { calculateMLMCommissions, updateUserPackageAndRank, calculateMLMCommissionsInTransaction, updateUserPackageAndRankInTransaction } from './commissionSystem.js';
 
-// Rank point thresholds and conditions
-const RANK_CONDITIONS = {
-  'Consultant': { minPoints: 0, maxPoints: 999, requiresDownline: false },
-  'Manager': { minPoints: 1000, maxPoints: 1999, requiresDownline: false },
-  'Sapphire Manager': { minPoints: 2000, maxPoints: 7999, requiresDownline: false },
-  'Diamond': { 
-    minPoints: 8000, 
-    maxPoints: Infinity, 
-    requiresDownline: true,
-    downlineCondition: { type: 'direct_trees_with_rank', count: 3, requiredRank: 'Sapphire Manager' }
-  },
-  'Sapphire Diamond': { 
-    minPoints: 0, 
-    maxPoints: Infinity, 
-    requiresDownline: true,
-    downlineCondition: { type: 'trees_with_count_of_rank', count: 3, requiredRank: 'Diamond', requiredCount: 3 }
-  },
-  'Ambassador': { 
-    minPoints: 0, 
-    maxPoints: Infinity, 
-    requiresDownline: true,
-    downlineCondition: [
-      { type: 'trees_with_rank', count: 3, requiredRank: 'Sapphire Diamond' },
-      { type: 'trees_with_rank', count: 6, requiredRank: 'Diamond' }
-    ]
-  },
-  'Sapphire Ambassador': { 
-    minPoints: 0, 
-    maxPoints: Infinity, 
-    requiresDownline: true,
-    downlineCondition: [
-      { type: 'trees_with_rank', count: 3, requiredRank: 'Ambassador' },
-      { type: 'trees_with_rank', count: 10, requiredRank: 'Diamond' }
-    ]
-  },
-  'Royal Ambassador': { 
-    minPoints: 0, 
-    maxPoints: Infinity, 
-    requiresDownline: true,
-    downlineCondition: [
-      { type: 'trees_with_rank', count: 4, requiredRank: 'Sapphire Ambassador' },
-      { type: 'trees_with_rank', count: 10, requiredRank: 'Sapphire Diamond' }
-    ]
-  },
-  'Global Ambassador': { 
-    minPoints: 0, 
-    maxPoints: Infinity, 
-    requiresDownline: true,
-    downlineCondition: [
-      { type: 'trees_with_rank', count: 4, requiredRank: 'Royal Ambassador' },
-      { type: 'trees_with_rank', count: 10, requiredRank: 'Ambassador' }
-    ]
-  },
-  'Honorary Share Holder': { 
-    minPoints: 0, 
-    maxPoints: Infinity, 
-    requiresDownline: true,
-    downlineCondition: [
-      { type: 'trees_with_rank', count: 5, requiredRank: 'Global Ambassador' },
-      { type: 'trees_with_rank', count: 10, requiredRank: 'Royal Ambassador' }
-    ]
+// Rank conditions will be loaded from database
+let RANK_CONDITIONS = {};
+
+// Load rank conditions from database
+async function loadRankConditions() {
+  try {
+    const ranks = await prisma.rank.findMany({
+      orderBy: { required_points: 'asc' }
+    });
+
+    RANK_CONDITIONS = {};
+    ranks.forEach(rank => {
+      RANK_CONDITIONS[rank.title] = {
+        minPoints: rank.required_points,
+        maxPoints: Infinity, // Will be determined by next rank's minPoints
+        requiresDownline: false // For now, keep it simple - only points based
+      };
+    });
+
+    // Set maxPoints for each rank (except the highest)
+    const rankTitles = Object.keys(RANK_CONDITIONS);
+    for (let i = 0; i < rankTitles.length - 1; i++) {
+      const currentRank = rankTitles[i];
+      const nextRank = rankTitles[i + 1];
+      RANK_CONDITIONS[currentRank].maxPoints = RANK_CONDITIONS[nextRank].minPoints - 1;
+    }
+
+    console.log('✅ Rank conditions loaded from database:', RANK_CONDITIONS);
+  } catch (error) {
+    console.error('❌ Error loading rank conditions:', error);
+    // Fallback to basic conditions
+    RANK_CONDITIONS = {
+      'Consultant': { minPoints: 0, maxPoints: 999, requiresDownline: false },
+      'Manager': { minPoints: 1000, maxPoints: 1999, requiresDownline: false },
+      'Sapphire Manager': { minPoints: 2000, maxPoints: 7999, requiresDownline: false },
+      'Diamond': { minPoints: 8000, maxPoints: Infinity, requiresDownline: false }
+    };
   }
-};
+}
 
 // Get rank by points only (for basic ranks)
-export function getRankByPoints(points) {
+function getRankByPoints(points) {
+  // Ensure rank conditions are loaded
+  if (Object.keys(RANK_CONDITIONS).length === 0) {
+    console.warn('⚠️ Rank conditions not loaded, using fallback');
+    return 'Consultant';
+  }
+
   for (const [rankName, condition] of Object.entries(RANK_CONDITIONS)) {
     if (!condition.requiresDownline && points >= condition.minPoints && points <= condition.maxPoints) {
       return rankName;
@@ -424,39 +406,53 @@ export async function getReferralTree(userId) {
 
 // Update user rank based on points and downline structure
 export async function updateUserRank(userId) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      points: true,
-      rank: {
-        select: {
-          title: true
-        }
-      }
+  try {
+    // Load rank conditions if not already loaded
+    if (Object.keys(RANK_CONDITIONS).length === 0) {
+      await loadRankConditions();
     }
-  });
 
-  if (!user) return null;
-
-  // Get the highest eligible rank based on points and downline structure
-  const newRankName = await getHighestEligibleRank(userId);
-  const newRank = await getOrCreateRank(newRankName);
-
-  // Only update if rank changed
-  if (!user.rank || user.rank.title !== newRankName) {
-    await prisma.user.update({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
-      data: {
-        rankId: newRank.id
+      select: {
+        id: true,
+        points: true,
+        rank: {
+          select: {
+            title: true
+          }
+        }
       }
     });
 
-    console.log(`✅ Updated rank for user ${userId}: ${user.rank?.title || 'No rank'} → ${newRankName}`);
-    return newRankName;
-  }
+    if (!user) {
+      console.log(`❌ User ${userId} not found for rank update`);
+      return null;
+    }
 
-  return user.rank.title;
+    // Get the highest eligible rank based on points
+    const newRankName = getRankByPoints(user.points);
+    const newRank = await getOrCreateRank(newRankName);
+
+    // Only update if rank changed
+    if (!user.rank || user.rank.title !== newRankName) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          rankId: newRank.id
+        }
+      });
+
+      console.log(`✅ Updated rank for user ${userId}: ${user.rank?.title || 'No rank'} → ${newRankName} (${user.points} points)`);
+      return newRankName;
+    }
+
+    console.log(`ℹ️ User ${userId} rank unchanged: ${user.rank.title} (${user.points} points)`);
+    return user.rank.title;
+  } catch (error) {
+    console.error(`❌ Error updating rank for user ${userId}:`, error);
+    return null;
+  }
 }
 
 // Distribute commissions in referral tree
@@ -596,9 +592,12 @@ export function calculatePointsFromPackageAmount(packageAmount) {
 
 // Main package approval function using new MLM commission system
 export async function approvePackageRequest(packageRequestId) {
+  const requestId = parseInt(packageRequestId);
+  console.log(`🚀 Starting package approval for request ${requestId}`);
+
   try {
-    const requestId = parseInt(packageRequestId);
-    console.log(`🚀 Starting package approval for request ${requestId}`);
+    // Load rank conditions first
+    await loadRankConditions();
 
     // Get package request with all related data
     const packageRequest = await prisma.packageRequest.findUnique({
@@ -666,38 +665,204 @@ export async function approvePackageRequest(packageRequestId) {
       console.log(`🆕 This is a new package assignment for user ${user.username}`);
     }
 
-    // Step 1: Update user's package and rank
-    await updateUserPackageAndRank(requestId);
-    console.log(`✅ Updated user ${user.username} with package and rank`);
+    // Use database transaction to ensure all operations succeed or fail together
+    const result = await prisma.$transaction(async (tx) => {
+      // Step 1: Update user's package and rank
+      console.log(`📝 Step 1: Updating user package and rank...`);
+      await updateUserPackageAndRankInTransaction(requestId, tx);
+      console.log(`✅ Updated user ${user.username} with package and rank`);
 
-    // Step 2: Calculate and distribute MLM commissions
-    await calculateMLMCommissions(requestId);
-    console.log(`💰 MLM commissions distributed successfully`);
+      // Step 2: Calculate and distribute MLM commissions
+      console.log(`💰 Step 2: Distributing MLM commissions...`);
+      await calculateMLMCommissionsInTransaction(requestId, tx);
+      console.log(`✅ MLM commissions distributed successfully`);
 
-    // Step 3: Update package request status
-    await prisma.packageRequest.update({
-      where: { id: requestId },
-      data: {
-        status: 'approved',
-        updatedAt: new Date()
-      }
+      // Step 3: Update ranks for all affected users
+      console.log(`🏆 Step 3: Updating ranks for all affected users...`);
+      await updateRanksForAllAffectedUsers(requestId, tx);
+      console.log(`✅ Ranks updated successfully`);
+
+      // Step 4: Update package request status
+      console.log(`📋 Step 4: Updating package request status...`);
+      await tx.packageRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'approved',
+          updatedAt: new Date()
+        }
+      });
+      console.log(`✅ Package request status updated to approved`);
+
+      return {
+        success: true,
+        message: 'Package approved successfully with MLM commission distribution',
+        user: user.username,
+        package: packageData.package_name,
+        packageAmount: packageData.package_amount,
+        packagePoints: packageData.package_points,
+        isRenewal: user.currentPackageId === packageData.id,
+        isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id
+      };
     });
 
-    console.log(`✅ Package request ${packageRequestId} approved successfully`);
-
-    return {
-      success: true,
-      message: 'Package approved successfully with MLM commission distribution',
-      user: user.username,
-      package: packageData.package_name,
-      packageAmount: packageData.package_amount,
-      packagePoints: packageData.package_points,
-      isRenewal: user.currentPackageId === packageData.id,
-      isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id
-    };
+    console.log(`🎉 Package request ${packageRequestId} approved successfully`);
+    return result;
 
   } catch (error) {
     console.error('❌ Package approval failed:', error);
+    
+    // Try to update package request status to failed if possible
+    try {
+      await prisma.packageRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'failed',
+          adminNotes: `Approval failed: ${error.message}`,
+          updatedAt: new Date()
+        }
+      });
+    } catch (updateError) {
+      console.error('❌ Failed to update package request status to failed:', updateError);
+    }
+    
     throw error;
   }
 }
+
+/**
+ * Update ranks for all users affected by the package approval
+ */
+async function updateRanksForAllAffectedUsers(packageRequestId, tx) {
+  try {
+    // Get the package request to find the user
+    const packageRequest = await tx.packageRequest.findUnique({
+      where: { id: packageRequestId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            referredBy: true
+          }
+        }
+      }
+    });
+
+    if (!packageRequest) {
+      throw new Error('Package request not found');
+    }
+
+    const { user } = packageRequest;
+    const usersToUpdate = new Set();
+
+    // Add the main user
+    usersToUpdate.add(user.id);
+
+    // Add all users in the referral tree (upward)
+    let currentUsername = user.username;
+    while (currentUsername) {
+      const currentUser = await tx.user.findUnique({
+        where: { username: currentUsername },
+        select: { id: true, referredBy: true }
+      });
+
+      if (!currentUser) break;
+
+      usersToUpdate.add(currentUser.id);
+      currentUsername = currentUser.referredBy;
+    }
+
+    // Update ranks for all affected users
+    for (const userId of usersToUpdate) {
+      await updateUserRankInTransaction(userId, tx);
+    }
+
+    console.log(`Updated ranks for ${usersToUpdate.size} users`);
+  } catch (error) {
+    console.error('Error updating ranks for affected users:', error);
+    throw error;
+  }
+}
+
+/**
+ * Transaction-based version of updateUserRank
+ */
+async function updateUserRankInTransaction(userId, tx) {
+  try {
+    // Load rank conditions if not already loaded
+    if (Object.keys(RANK_CONDITIONS).length === 0) {
+      await loadRankConditions();
+    }
+
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        points: true,
+        rank: {
+          select: {
+            title: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      console.log(`❌ User ${userId} not found for rank update`);
+      return null;
+    }
+
+    // Get the highest eligible rank based on points
+    const newRankName = getRankByPoints(user.points);
+    const newRank = await getOrCreateRankInTransaction(newRankName, tx);
+
+    // Only update if rank changed
+    if (!user.rank || user.rank.title !== newRankName) {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          rankId: newRank.id
+        }
+      });
+
+      console.log(`✅ Updated rank for user ${userId}: ${user.rank?.title || 'No rank'} → ${newRankName} (${user.points} points)`);
+      return newRankName;
+    }
+
+    console.log(`ℹ️ User ${userId} rank unchanged: ${user.rank.title} (${user.points} points)`);
+    return user.rank.title;
+  } catch (error) {
+    console.error(`❌ Error updating rank for user ${userId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Transaction-based version of getOrCreateRank
+ */
+async function getOrCreateRankInTransaction(rankName, tx) {
+  let rank = await tx.rank.findFirst({
+    where: { title: rankName }
+  });
+
+  if (!rank) {
+    const condition = RANK_CONDITIONS[rankName];
+    const points = condition?.minPoints || 0;
+    rank = await tx.rank.create({
+      data: {
+        title: rankName,
+        required_points: points,
+        details: `Auto-created rank for ${rankName}`
+      }
+    });
+  }
+
+  return rank;
+}
+
+ 
+ / /   E x p o r t   a l l   f u n c t i o n s 
+ 
+ e x p o r t   { 
+ 
+ 
