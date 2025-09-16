@@ -1,5 +1,5 @@
 import prisma from './prisma.js';
-import { updateUserRank } from './packageApproval.js';
+import { updateUserRank } from './rankUtils.js';
 
 // Rank hierarchy will be fetched from database
 let RANK_HIERARCHY = [];
@@ -745,3 +745,8 @@ async function giveIndirectCommissionInTransaction(user, commission, packageRequ
     }
   });
 }
+
+ 
+ / /   A d d   u p d a t e U s e r R a n k   f u n c t i o n   t o   a v o i d   c i r c u l a r   i m p o r t 
+ 
+ 
