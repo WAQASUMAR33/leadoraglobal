@@ -125,7 +125,7 @@ export default function DashboardHome() {
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white">
         <h1 className="text-2xl font-bold">Welcome back, {user.fullname}!</h1>
-        <p className="text-purple-100 mt-2">Here's your dashboard overview</p>
+        <p className="text-purple-100 mt-2">Here&apos;s your dashboard overview</p>
       </div>
 
       {/* Stats Grid */}
