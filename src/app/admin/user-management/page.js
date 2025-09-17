@@ -13,8 +13,7 @@ export default function UserManagement() {
   const [updating, setUpdating] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
-    status: 'all',
-    role: 'all'
+    status: 'all'
   });
 
   useEffect(() => {
@@ -31,8 +30,7 @@ export default function UserManagement() {
     // Search filter
     if (filters.search) {
       filtered = filtered.filter(user => 
-        (user.firstname || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-        (user.lastname || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+        (user.fullname || '').toLowerCase().includes(filters.search.toLowerCase()) ||
         (user.username || '').toLowerCase().includes(filters.search.toLowerCase()) ||
         (user.email || '').toLowerCase().includes(filters.search.toLowerCase())
       );
@@ -43,10 +41,6 @@ export default function UserManagement() {
       filtered = filtered.filter(user => user.status === filters.status);
     }
 
-    // Role filter
-    if (filters.role !== 'all') {
-      filtered = filtered.filter(user => user.role === filters.role);
-    }
 
     setFilteredUsers(filtered);
   };
@@ -148,18 +142,6 @@ export default function UserManagement() {
     }
   };
 
-  const getRoleColor = (role) => {
-    switch (role) {
-      case 'super_admin':
-        return 'bg-purple-100 text-purple-800';
-      case 'admin':
-        return 'bg-blue-100 text-blue-800';
-      case 'user':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -219,25 +201,11 @@ export default function UserManagement() {
             </select>
           </div>
 
-          {/* Role Filter */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
-            <select
-              value={filters.role}
-              onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
-            >
-              <option value="all">All Roles</option>
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-              <option value="super_admin">Super Admin</option>
-            </select>
-          </div>
 
           {/* Clear Filters */}
           <div>
             <button
-              onClick={() => setFilters({ search: '', status: 'all', role: 'all' })}
+              onClick={() => setFilters({ search: '', status: 'all' })}
               className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-300 font-semibold"
             >
               Clear Filters
@@ -265,9 +233,6 @@ export default function UserManagement() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contact
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -308,11 +273,6 @@ export default function UserManagement() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-800">{user.email || 'No email'}</div>
                     <div className="text-sm text-gray-500">{user.phoneNumber || 'No phone'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
-                      {user.role}
-                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.status)}`}>

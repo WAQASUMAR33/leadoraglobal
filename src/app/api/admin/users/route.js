@@ -16,14 +16,10 @@ export async function GET(request) {
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 50;
     const skip = (page - 1) * limit;
-    const role = searchParams.get('role');
     const status = searchParams.get('status');
 
     // Build where clause
     const where = {};
-    if (role && role !== 'all') {
-      where.role = role;
-    }
     if (status && status !== 'all') {
       where.status = status;
     }
@@ -32,15 +28,16 @@ export async function GET(request) {
       where,
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
         fullname: true,
         username: true,
         email: true,
         phoneNumber: true,
-        role: true,
         status: true,
         balance: true,
+        points: true,
+        referredBy: true,
+        referralCount: true,
+        totalEarnings: true,
         createdAt: true,
         updatedAt: true
       },
@@ -84,12 +81,12 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { firstname, lastname, username, password, role, status } = body;
+    const { fullname, username, password, status } = body;
 
     // Validate required fields
-    if (!firstname || !username || !password) {
+    if (!fullname || !username || !password) {
       return NextResponse.json(
-        { error: 'Missing required fields: firstname, username, password' },
+        { error: 'Missing required fields: fullname, username, password' },
         { status: 400 }
       );
     }
@@ -111,25 +108,20 @@ export async function POST(request) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        firstname,
-        lastname: lastname || '',
-        fullname: `${firstname} ${lastname || ''}`.trim(),
+        fullname,
         username,
         password: hashedPassword,
-        role: role || 'user',
         status: status || 'active'
       },
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
         fullname: true,
         username: true,
         email: true,
         phoneNumber: true,
-        role: true,
         status: true,
         balance: true,
+        points: true,
         createdAt: true,
         updatedAt: true
       }
