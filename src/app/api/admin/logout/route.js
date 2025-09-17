@@ -1,22 +1,10 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../lib/prisma';
+import prisma from '../../../../lib/prisma';
 
 export async function POST(request) {
   try {
-    // Get tokens from cookies
-    const userToken = request.cookies.get('auth-token')?.value;
+    // Get admin token from cookies
     const adminToken = request.cookies.get('admin-token')?.value;
-
-    // Clear user session if exists
-    if (userToken) {
-      try {
-        await prisma.session.deleteMany({
-          where: { token: userToken }
-        });
-      } catch (error) {
-        console.warn('Failed to delete user session:', error);
-      }
-    }
 
     // Clear admin session if exists
     if (adminToken) {
@@ -32,25 +20,23 @@ export async function POST(request) {
     // Create response
     const response = NextResponse.json({
       success: true,
-      message: 'Logged out successfully'
+      message: 'Admin logged out successfully'
     });
 
-    // Clear all authentication cookies
-    response.cookies.delete('auth-token');
+    // Clear admin authentication cookie
     response.cookies.delete('admin-token');
 
     return response;
 
   } catch (error) {
-    console.error('Logout error:', error);
+    console.error('Admin logout error:', error);
     
-    // Even if there's an error, clear the cookies
+    // Even if there's an error, clear the cookie
     const response = NextResponse.json({
       success: true,
-      message: 'Logged out successfully'
+      message: 'Admin logged out successfully'
     });
 
-    response.cookies.delete('auth-token');
     response.cookies.delete('admin-token');
 
     return response;

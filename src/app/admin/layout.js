@@ -202,10 +202,10 @@ export default function AdminLayout({ children }) {
   const handleLogout = async () => {
     try {
       // Call logout API to invalidate server-side session
-      await fetch('/api/admin/login', {
-        method: 'DELETE',
+      await fetch('/api/admin/logout', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+          'Content-Type': 'application/json',
         },
         credentials: 'include'
       });

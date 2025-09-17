@@ -79,6 +79,19 @@ export function middleware(request) {
       }
     }
 
+    // CRITICAL: Check if regular user token is trying to access admin routes
+    if (userToken && !adminToken) {
+      console.log('SECURITY: Regular user token detected on admin route:', pathname);
+      const userValidation = validateJWT(userToken);
+      if (userValidation.valid && userValidation.payload.userId) {
+        console.log('SECURITY: Blocking regular user from admin route');
+        // Clear user token and redirect to admin login
+        const response = NextResponse.redirect(new URL('/admin/login', request.url));
+        response.cookies.delete('auth-token');
+        return response;
+      }
+    }
+
     // CRITICAL: If accessing admin routes without admin token, redirect to admin login
     if (!isAdminPublicRoute && !adminToken) {
       console.log('SECURITY: Admin route accessed without admin token:', pathname);
@@ -138,19 +151,19 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  // CRITICAL: Clear conflicting sessions when switching roles
-  if (isAdminRoute && userToken) {
-    // User trying to access admin routes - clear user session
-    console.log('SECURITY: User session detected on admin route, clearing user session');
-    const response = NextResponse.next();
+  // CRITICAL: Handle conflicting sessions when switching roles
+  if (isAdminRoute && userToken && !adminToken) {
+    // User trying to access admin routes - redirect to admin login
+    console.log('SECURITY: User session detected on admin route, redirecting to admin login');
+    const response = NextResponse.redirect(new URL('/admin/login', request.url));
     response.cookies.delete('auth-token');
     return response;
   }
 
-  if (isDashboardRoute && adminToken) {
-    // Admin trying to access user routes - clear admin session
-    console.log('SECURITY: Admin session detected on user route, clearing admin session');
-    const response = NextResponse.next();
+  if (isDashboardRoute && adminToken && !userToken) {
+    // Admin trying to access user routes - redirect to admin dashboard
+    console.log('SECURITY: Admin session detected on user route, redirecting to admin dashboard');
+    const response = NextResponse.redirect(new URL('/admin/dashboard', request.url));
     response.cookies.delete('admin-token');
     return response;
   }
