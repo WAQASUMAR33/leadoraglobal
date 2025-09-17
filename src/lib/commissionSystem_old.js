@@ -1,4 +1,4 @@
-import prisma from './prisma.js';
+﻿import prisma from './prisma.js';
 import { updateUserRank } from './rankUtils.js';
 
 // Rank hierarchy will be fetched from database
@@ -215,12 +215,12 @@ async function distributeIndirectCommissions(username, indirectCommission, packa
           const combinedCommission = indirectCommission * 2;
           await giveIndirectCommission(firstUpperMember, combinedCommission, packageRequestId, `${upperRank} (combined - includes ${currentRank})`);
           processedRanks.add(upperRank);
-          console.log(`✅ Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
+          console.log(`âœ… Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
         } else {
-          console.log(`❌ No members found for upper rank ${upperRank}`);
+          console.log(`âŒ No members found for upper rank ${upperRank}`);
         }
       } else {
-        console.log(`❌ Upper rank ${upperRank} not found or already processed`);
+        console.log(`âŒ Upper rank ${upperRank} not found or already processed`);
       }
     }
   }
@@ -611,8 +611,7 @@ async function giveDirectCommissionInTransaction(referredByUsername, directCommi
 }
 
 /**
- * NEW LOGIC: Transaction-based version of distributeIndirectCommissions
- * Start from Manager rank, accumulate missing rank commissions
+ * Transaction-based version of distributeIndirectCommissions
  */
 async function distributeIndirectCommissionsInTransaction(username, indirectCommission, packageRequestId, tx) {
   // Get all ranks from database
@@ -623,15 +622,6 @@ async function distributeIndirectCommissionsInTransaction(username, indirectComm
   // Create rank hierarchy map (from lowest to highest points)
   const rankHierarchy = ranks.map(rank => rank.title);
   console.log('Rank hierarchy from database:', rankHierarchy);
-
-  // Find Manager rank index (starting point for indirect commissions)
-  const managerIndex = rankHierarchy.findIndex(rank => rank === 'Manager');
-  if (managerIndex === -1) {
-    console.log('❌ Manager rank not found - cannot distribute indirect commissions');
-    return;
-  }
-
-  console.log(`✅ Starting indirect commission distribution from Manager rank (index: ${managerIndex})`);
 
   // Get the tree structure (excluding the direct referrer)
   const treeMembers = await getTreeMembersExcludingDirectReferrerInTransaction(username, tx);
@@ -653,13 +643,11 @@ async function distributeIndirectCommissionsInTransaction(username, indirectComm
     console.log(`  ${rank}: ${members.map(m => m.username).join(', ')}`);
   });
 
-  // NEW LOGIC: Start from Manager rank and work up
+  // Process indirect commissions according to new rules
   const processedRanks = new Set();
-  let accumulatedCommission = 0;
-  let accumulatedRanks = [];
-
-  // Process ranks from Manager onwards (upward in hierarchy)
-  for (let i = managerIndex; i < rankHierarchy.length; i++) {
+  
+  // Start from the highest rank and work down
+  for (let i = rankHierarchy.length - 1; i >= 0; i--) {
     const currentRank = rankHierarchy[i];
     
     // Skip Consultant rank (they don't get indirect commission)
@@ -674,47 +662,43 @@ async function distributeIndirectCommissionsInTransaction(username, indirectComm
     const membersOfRank = membersByRank[currentRank] || [];
     
     if (membersOfRank.length > 0) {
-      // Found users with this rank - give accumulated commission to first user
-      const firstMember = membersOfRank[0];
-      
-      // Check if this member meets rank requirements
-      const meetsRequirements = await checkRankRequirementsInTransaction(firstMember, currentRank, tx);
-      
-      if (meetsRequirements) {
-        // Calculate total commission: accumulated + current rank's commission
-        const totalCommission = accumulatedCommission + indirectCommission;
-        const rankDescription = accumulatedRanks.length > 0 
-          ? `${currentRank} (includes: ${accumulatedRanks.join(', ')})`
-          : currentRank;
+      // Check each member to see if they meet the rank requirements
+      for (const member of membersOfRank) {
+        const meetsRequirements = await checkRankRequirementsInTransaction(member, currentRank, tx);
         
-        await giveIndirectCommissionInTransaction(firstMember, totalCommission, packageRequestId, rankDescription, tx);
-        processedRanks.add(currentRank);
-        
-        console.log(`✅ Gave ${totalCommission} indirect commission to ${currentRank}: ${firstMember.username}`);
-        if (accumulatedRanks.length > 0) {
-          console.log(`   Includes accumulated commissions from: ${accumulatedRanks.join(', ')}`);
+        if (meetsRequirements) {
+          // Give commission to the first member who meets requirements
+          await giveIndirectCommissionInTransaction(member, indirectCommission, packageRequestId, currentRank, tx);
+          processedRanks.add(currentRank);
+          console.log(`✅ Gave ${indirectCommission} indirect commission to ${currentRank}: ${member.username} (meets requirements)`);
+          break; // Only give to first eligible member
+        } else {
+          console.log(`❌ ${member.username} has ${currentRank} rank but doesn't meet requirements - skipping`);
         }
-        
-        // Reset accumulation since we've distributed it
-        accumulatedCommission = 0;
-        accumulatedRanks = [];
-      } else {
-        console.log(`❌ ${firstMember.username} has ${currentRank} rank but doesn't meet requirements - accumulating commission`);
-        // Accumulate this rank's commission
-        accumulatedCommission += indirectCommission;
-        accumulatedRanks.push(currentRank);
       }
     } else {
-      // No users with this rank - accumulate the commission
-      console.log(`❌ No users found with ${currentRank} rank - accumulating commission`);
-      accumulatedCommission += indirectCommission;
-      accumulatedRanks.push(currentRank);
+      // No member of this rank, give combined commission to upper rank
+      const upperRank = findUpperRank(currentRank, rankHierarchy);
+      console.log(`No ${currentRank} members found. Looking for upper rank: ${upperRank}`);
+      
+      if (upperRank && !processedRanks.has(upperRank)) {
+        const upperRankMembers = membersByRank[upperRank] || [];
+        console.log(`Upper rank ${upperRank} has ${upperRankMembers.length} members`);
+        
+        if (upperRankMembers.length > 0) {
+          const firstUpperMember = upperRankMembers[0];
+          // Combined commission: current rank's indirect + upper rank's own indirect
+          const combinedCommission = indirectCommission * 2;
+          await giveIndirectCommissionInTransaction(firstUpperMember, combinedCommission, packageRequestId, `${upperRank} (combined - includes ${currentRank})`, tx);
+          processedRanks.add(upperRank);
+          console.log(`âœ… Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
+        } else {
+          console.log(`âŒ No members found for upper rank ${upperRank}`);
+        }
+      } else {
+        console.log(`âŒ Upper rank ${upperRank} not found or already processed`);
+      }
     }
-  }
-
-  // If there's still accumulated commission at the end, log it
-  if (accumulatedCommission > 0) {
-    console.log(`⚠️  ${accumulatedCommission} commission accumulated from ranks: ${accumulatedRanks.join(', ')} - no eligible users found`);
   }
 }
 
@@ -733,15 +717,22 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
 
   const directReferrerUsername = newUser.referredBy;
   
-  // Get all users first to reduce database queries
+  // Get the direct referrer to find their referrer
+  const directReferrer = await tx.user.findUnique({
+    where: { username: directReferrerUsername }
+  });
+  
+  if (!directReferrer || !directReferrer.referredBy) {
+    return []; // Direct referrer has no referrer, so no tree members to process
+  }
+
+  // Use a more efficient approach: get all users and build the chain in memory
+  // This reduces database queries significantly
   const allUsers = await tx.user.findMany({
     select: {
       id: true,
       username: true,
       referredBy: true,
-      rankId: true
-    },
-    include: {
       rank: true
     }
   });
@@ -755,24 +746,17 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
   // Build the referral chain starting from direct referrer's referrer
   const members = [];
   const processedUsers = new Set();
-  let level = 0;
-  const maxLevels = 10; // Prevent infinite loops
-
-  // Get the direct referrer to find their referrer
-  const directReferrer = userMap.get(directReferrerUsername);
-  
-  if (!directReferrer || !directReferrer.referredBy) {
-    return []; // Direct referrer has no referrer, so no tree members to process
-  }
-
-  // Start from the direct referrer's referrer
   let currentUsername = directReferrer.referredBy;
+
+  // Limit to 10 levels to prevent infinite loops
+  let level = 0;
+  const maxLevels = 10;
 
   while (currentUsername && level < maxLevels) {
     const user = userMap.get(currentUsername);
 
     if (!user || processedUsers.has(user.id)) {
-      break; // Prevent infinite loops
+      break;
     }
 
     members.push(user);
@@ -782,6 +766,89 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
   }
 
   return members;
+}
+
+/**
+ * Check if a user meets the requirements for their rank
+ */
+async function checkRankRequirementsInTransaction(user, rankTitle, tx) {
+  // Define rank requirements for higher ranks
+  const rankRequirements = {
+    'Sapphire Diamond': {
+      directTreesWithRank: { count: 2, rank: 'Diamond' }
+    },
+    'Ambassador': {
+      directTreesWithRank: { count: 3, rank: 'Sapphire Diamond' }
+    },
+    'Sapphire Ambassador': {
+      directTreesWithRank: { count: 4, rank: 'Ambassador' }
+    },
+    'Royal Ambassador': {
+      directTreesWithRank: { count: 5, rank: 'Sapphire Ambassador' }
+    },
+    'Global Ambassador': {
+      directTreesWithRank: { count: 6, rank: 'Royal Ambassador' }
+    },
+    'Honory Share Holder': {
+      directTreesWithRank: { count: 7, rank: 'Global Ambassador' }
+    }
+  };
+
+  const requirements = rankRequirements[rankTitle];
+  
+  // If no specific requirements defined, user meets requirements
+  if (!requirements) {
+    return true;
+  }
+
+  console.log(`🔍 Checking requirements for ${user.username} (${rankTitle}):`, requirements);
+
+  // Check direct trees with specific rank requirement
+  if (requirements.directTreesWithRank) {
+    const { count, rank } = requirements.directTreesWithRank;
+    const meetsRequirement = await checkDirectTreesWithRankInTransaction(user.id, count, rank, tx);
+    
+    if (!meetsRequirement) {
+      console.log(`❌ ${user.username} doesn't meet ${rankTitle} requirement: needs ${count} direct trees with ${rank} rank`);
+      return false;
+    }
+    
+    console.log(`✅ ${user.username} meets ${rankTitle} requirement: has ${count} direct trees with ${rank} rank`);
+  }
+
+  return true;
+}
+
+/**
+ * Check direct trees with specific rank (transaction version)
+ */
+async function checkDirectTreesWithRankInTransaction(userId, requiredCount, requiredRank, tx) {
+  const user = await tx.user.findUnique({
+    where: { id: userId },
+    select: { username: true }
+  });
+
+  if (!user) return false;
+
+  const directReferrals = await tx.user.findMany({
+    where: { referredBy: user.username },
+    select: {
+      id: true,
+      username: true,
+      rank: {
+        select: { title: true }
+      }
+    }
+  });
+
+  let treesWithRank = 0;
+  for (const referral of directReferrals) {
+    if (referral.rank?.title === requiredRank) {
+      treesWithRank++;
+    }
+  }
+
+  return treesWithRank >= requiredCount;
 }
 
 /**
@@ -811,147 +878,4 @@ async function giveIndirectCommissionInTransaction(user, commission, packageRequ
       packageRequestId: packageRequestId
     }
   });
-}
-
-/**
- * Check if a user meets the requirements for their rank
- * This function checks if the user has the required downline structure
- */
-async function checkRankRequirementsInTransaction(user, rankTitle, tx) {
-  // Get rank requirements from database
-  const rank = await tx.rank.findFirst({
-    where: { title: rankTitle }
-  });
-
-  if (!rank) {
-    console.log(`Rank ${rankTitle} not found in database`);
-    return false;
-  }
-
-  // Define specific requirements for higher ranks
-  const rankRequirements = {
-    'Sapphire Diamond': { requiredDirectDiamonds: 2, requiredDirectSapphireManagers: 1 },
-    'Ambassador': { requiredDirectDiamonds: 3, requiredDirectSapphireDiamonds: 1 },
-    'Sapphire Ambassador': { requiredDirectDiamonds: 5, requiredDirectSapphireDiamonds: 2 },
-    'Royal Ambassador': { requiredDirectDiamonds: 8, requiredDirectSapphireDiamonds: 3 },
-    'Global Ambassador': { requiredDirectDiamonds: 12, requiredDirectSapphireDiamonds: 5 },
-    'Honory Share Holder': { requiredDirectDiamonds: 20, requiredDirectSapphireDiamonds: 8 }
-  };
-
-  const requirements = rankRequirements[rankTitle];
-  if (!requirements) {
-    // For ranks without specific requirements, just check if they have the rank
-    return true;
-  }
-
-  // Check if user meets the downline requirements
-  const meetsRequirements = await checkDirectTreesWithRankInTransaction(user, requirements, tx);
-  
-  if (meetsRequirements) {
-    console.log(`✅ ${user.username} meets ${rankTitle} requirements`);
-  } else {
-    console.log(`❌ ${user.username} does not meet ${rankTitle} requirements`);
-  }
-
-  return meetsRequirements;
-}
-
-/**
- * Check if a user has the required number of direct referrals with specific ranks
- */
-async function checkDirectTreesWithRankInTransaction(user, requirements, tx) {
-  // Get all direct referrals of the user
-  const directReferrals = await tx.user.findMany({
-    where: { referredBy: user.username },
-    include: { rank: true }
-  });
-
-  let directDiamonds = 0;
-  let directSapphireManagers = 0;
-
-  // Count direct referrals with required ranks
-  directReferrals.forEach(referral => {
-    if (referral.rank?.title === 'Diamond') {
-      directDiamonds++;
-    } else if (referral.rank?.title === 'Sapphire Manager') {
-      directSapphireManagers++;
-    }
-  });
-
-  // Check if requirements are met
-  const meetsDiamondRequirement = directDiamonds >= (requirements.requiredDirectDiamonds || 0);
-  const meetsSapphireManagerRequirement = directSapphireManagers >= (requirements.requiredDirectSapphireManagers || 0);
-
-  console.log(`Direct referrals check for ${user.username}:`);
-  console.log(`  Diamonds: ${directDiamonds}/${requirements.requiredDirectDiamonds || 0}`);
-  console.log(`  Sapphire Managers: ${directSapphireManagers}/${requirements.requiredDirectSapphireManagers || 0}`);
-
-  return meetsDiamondRequirement && meetsSapphireManagerRequirement;
-}
-
-/**
- * Update ranks for all affected users after commission distribution
- */
-export async function updateRanksForAllAffectedUsers(packageRequestId, tx) {
-  try {
-    // Get the package request to find the user
-    const packageRequest = await tx.packageRequest.findUnique({
-      where: { id: packageRequestId },
-      include: { user: true }
-    });
-
-    if (!packageRequest) {
-      throw new Error('Package request not found');
-    }
-
-    const { user } = packageRequest;
-
-    // Get all users in the referral tree (including the package buyer)
-    const allUsers = await tx.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        referredBy: true
-      }
-    });
-
-    // Create a lookup map
-    const userMap = new Map();
-    allUsers.forEach(u => {
-      userMap.set(u.username, u);
-    });
-
-    // Build the referral chain
-    const usersToUpdate = [];
-    let currentUsername = user.username;
-    const processedUsers = new Set();
-    let level = 0;
-    const maxLevels = 10;
-
-    while (currentUsername && level < maxLevels) {
-      const currentUser = userMap.get(currentUsername);
-      if (!currentUser || processedUsers.has(currentUser.id)) {
-        break;
-      }
-
-      usersToUpdate.push(currentUser);
-      processedUsers.add(currentUser.id);
-      currentUsername = currentUser.referredBy;
-      level++;
-    }
-
-    // Update ranks for all users in the tree
-    const updatePromises = usersToUpdate.map(userToUpdate => 
-      updateUserRank(userToUpdate.id)
-    );
-
-    await Promise.all(updatePromises);
-    
-    console.log(`Updated ranks for ${usersToUpdate.length} users in the referral tree`);
-    return { success: true };
-
-  } catch (error) {
-    console.error('Error updating ranks for affected users:', error);
-    throw error;
-  }
 }
