@@ -127,6 +127,16 @@ const adminMenuItems = [
       </svg>
     ),
     description: "Debug admin authentication"
+  },
+  {
+    label: "Auth Debug",
+    href: "/admin/auth-debug",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    ),
+    description: "Debug authentication issues"
   }
 ];
 
@@ -154,12 +164,17 @@ export default function AdminLayout({ children }) {
     // CRITICAL: Check if admin is logged in via server-side validation
     const checkAdminAuth = async () => {
       try {
+        console.log('Checking admin authentication...');
+        
         const response = await fetch('/api/admin/stats', {
           method: 'GET',
           credentials: 'include', // Include cookies
         });
 
+        console.log('Admin stats response status:', response.status);
+
         if (!response.ok) {
+          console.log('Admin authentication failed, status:', response.status);
           // Admin not authenticated, clear localStorage and redirect
           localStorage.removeItem('admin');
           localStorage.removeItem('adminToken');
@@ -170,6 +185,8 @@ export default function AdminLayout({ children }) {
         }
 
         const data = await response.json();
+        console.log('Admin stats response data:', data);
+        
         if (data.success) {
           // Admin is authenticated, get admin data from localStorage
           const adminData = localStorage.getItem('admin');
@@ -177,13 +194,18 @@ export default function AdminLayout({ children }) {
             try {
               const parsedAdmin = JSON.parse(adminData);
               setAdmin(parsedAdmin);
+              console.log('Admin data loaded successfully');
             } catch (error) {
               console.error('Error parsing admin data:', error);
               router.push('/admin/login');
             }
+          } else {
+            console.log('No admin data in localStorage, redirecting to login');
+            router.push('/admin/login');
           }
         } else {
           // Authentication failed
+          console.log('Admin authentication failed, clearing data');
           localStorage.removeItem('admin');
           localStorage.removeItem('adminToken');
           router.push('/admin/login');
