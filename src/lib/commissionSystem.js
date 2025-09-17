@@ -1,4 +1,4 @@
-import prisma from './prisma.js';
+﻿import prisma from './prisma.js';
 import { updateUserRank } from './rankUtils.js';
 
 // Rank hierarchy will be fetched from database
@@ -215,12 +215,12 @@ async function distributeIndirectCommissions(username, indirectCommission, packa
           const combinedCommission = indirectCommission * 2;
           await giveIndirectCommission(firstUpperMember, combinedCommission, packageRequestId, `${upperRank} (combined - includes ${currentRank})`);
           processedRanks.add(upperRank);
-          console.log(`✅ Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
+          console.log(`âœ… Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
         } else {
-          console.log(`❌ No members found for upper rank ${upperRank}`);
+          console.log(`âŒ No members found for upper rank ${upperRank}`);
         }
       } else {
-        console.log(`❌ Upper rank ${upperRank} not found or already processed`);
+        console.log(`âŒ Upper rank ${upperRank} not found or already processed`);
       }
     }
   }
@@ -654,12 +654,12 @@ async function distributeIndirectCommissionsInTransaction(username, indirectComm
           const combinedCommission = indirectCommission * 2;
           await giveIndirectCommissionInTransaction(firstUpperMember, combinedCommission, packageRequestId, `${upperRank} (combined - includes ${currentRank})`, tx);
           processedRanks.add(upperRank);
-          console.log(`✅ Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
+          console.log(`âœ… Gave ${combinedCommission} combined indirect commission to ${upperRank}: ${firstUpperMember.username} (includes ${currentRank} commission)`);
         } else {
-          console.log(`❌ No members found for upper rank ${upperRank}`);
+          console.log(`âŒ No members found for upper rank ${upperRank}`);
         }
       } else {
-        console.log(`❌ Upper rank ${upperRank} not found or already processed`);
+        console.log(`âŒ Upper rank ${upperRank} not found or already processed`);
       }
     }
   }
@@ -745,8 +745,3 @@ async function giveIndirectCommissionInTransaction(user, commission, packageRequ
     }
   });
 }
-
- 
- / /   A d d   u p d a t e U s e r R a n k   f u n c t i o n   t o   a v o i d   c i r c u l a r   i m p o r t 
- 
- 
