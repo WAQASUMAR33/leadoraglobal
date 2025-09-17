@@ -662,11 +662,20 @@ async function distributeIndirectCommissionsInTransaction(username, indirectComm
     const membersOfRank = membersByRank[currentRank] || [];
     
     if (membersOfRank.length > 0) {
-      // Give commission to the first member of this rank
-      const firstMember = membersOfRank[0];
-      await giveIndirectCommissionInTransaction(firstMember, indirectCommission, packageRequestId, currentRank, tx);
-      processedRanks.add(currentRank);
-      console.log(`Gave ${indirectCommission} indirect commission to first ${currentRank}: ${firstMember.username}`);
+      // Check each member to see if they meet the rank requirements
+      for (const member of membersOfRank) {
+        const meetsRequirements = await checkRankRequirementsInTransaction(member, currentRank, tx);
+        
+        if (meetsRequirements) {
+          // Give commission to the first member who meets requirements
+          await giveIndirectCommissionInTransaction(member, indirectCommission, packageRequestId, currentRank, tx);
+          processedRanks.add(currentRank);
+          console.log(`✅ Gave ${indirectCommission} indirect commission to ${currentRank}: ${member.username} (meets requirements)`);
+          break; // Only give to first eligible member
+        } else {
+          console.log(`❌ ${member.username} has ${currentRank} rank but doesn't meet requirements - skipping`);
+        }
+      }
     } else {
       // No member of this rank, give combined commission to upper rank
       const upperRank = findUpperRank(currentRank, rankHierarchy);
@@ -757,6 +766,89 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
   }
 
   return members;
+}
+
+/**
+ * Check if a user meets the requirements for their rank
+ */
+async function checkRankRequirementsInTransaction(user, rankTitle, tx) {
+  // Define rank requirements for higher ranks
+  const rankRequirements = {
+    'Sapphire Diamond': {
+      directTreesWithRank: { count: 2, rank: 'Diamond' }
+    },
+    'Ambassador': {
+      directTreesWithRank: { count: 3, rank: 'Sapphire Diamond' }
+    },
+    'Sapphire Ambassador': {
+      directTreesWithRank: { count: 4, rank: 'Ambassador' }
+    },
+    'Royal Ambassador': {
+      directTreesWithRank: { count: 5, rank: 'Sapphire Ambassador' }
+    },
+    'Global Ambassador': {
+      directTreesWithRank: { count: 6, rank: 'Royal Ambassador' }
+    },
+    'Honory Share Holder': {
+      directTreesWithRank: { count: 7, rank: 'Global Ambassador' }
+    }
+  };
+
+  const requirements = rankRequirements[rankTitle];
+  
+  // If no specific requirements defined, user meets requirements
+  if (!requirements) {
+    return true;
+  }
+
+  console.log(`🔍 Checking requirements for ${user.username} (${rankTitle}):`, requirements);
+
+  // Check direct trees with specific rank requirement
+  if (requirements.directTreesWithRank) {
+    const { count, rank } = requirements.directTreesWithRank;
+    const meetsRequirement = await checkDirectTreesWithRankInTransaction(user.id, count, rank, tx);
+    
+    if (!meetsRequirement) {
+      console.log(`❌ ${user.username} doesn't meet ${rankTitle} requirement: needs ${count} direct trees with ${rank} rank`);
+      return false;
+    }
+    
+    console.log(`✅ ${user.username} meets ${rankTitle} requirement: has ${count} direct trees with ${rank} rank`);
+  }
+
+  return true;
+}
+
+/**
+ * Check direct trees with specific rank (transaction version)
+ */
+async function checkDirectTreesWithRankInTransaction(userId, requiredCount, requiredRank, tx) {
+  const user = await tx.user.findUnique({
+    where: { id: userId },
+    select: { username: true }
+  });
+
+  if (!user) return false;
+
+  const directReferrals = await tx.user.findMany({
+    where: { referredBy: user.username },
+    select: {
+      id: true,
+      username: true,
+      rank: {
+        select: { title: true }
+      }
+    }
+  });
+
+  let treesWithRank = 0;
+  for (const referral of directReferrals) {
+    if (referral.rank?.title === requiredRank) {
+      treesWithRank++;
+    }
+  }
+
+  return treesWithRank >= requiredCount;
 }
 
 /**
