@@ -514,32 +514,60 @@ export async function calculateMLMCommissionsInTransaction(packageRequestId, tx)
  * Transaction-based version of distributePointsToTree
  */
 async function distributePointsToTreeInTransaction(username, points, tx) {
+  // Get all users first to reduce database queries
+  const allUsers = await tx.user.findMany({
+    select: {
+      id: true,
+      username: true,
+      referredBy: true,
+      points: true
+    }
+  });
+
+  // Create a lookup map for faster access
+  const userMap = new Map();
+  allUsers.forEach(user => {
+    userMap.set(user.username, user);
+  });
+
+  // Build the referral chain
+  const usersToUpdate = [];
   let currentUsername = username;
   const processedUsers = new Set();
+  let level = 0;
+  const maxLevels = 10; // Prevent infinite loops
 
-  while (currentUsername) {
-    const user = await tx.user.findUnique({
-      where: { username: currentUsername }
-    });
+  while (currentUsername && level < maxLevels) {
+    const user = userMap.get(currentUsername);
 
     if (!user || processedUsers.has(user.id)) {
       break; // Prevent infinite loops
     }
 
-    // Add points to user
-    await tx.user.update({
+    usersToUpdate.push(user);
+    processedUsers.add(user.id);
+    currentUsername = user.referredBy;
+    level++;
+  }
+
+  // Batch update all users at once using Promise.all for better performance
+  const updatePromises = usersToUpdate.map(user => 
+    tx.user.update({
       where: { id: user.id },
       data: {
         points: {
           increment: points
         }
       }
-    });
+    })
+  );
 
-    console.log(`Added ${points} points to ${user.username}`);
-    processedUsers.add(user.id);
-    currentUsername = user.referredBy;
-  }
+  await Promise.all(updatePromises);
+  
+  console.log(`Added ${points} points to ${usersToUpdate.length} users in the referral tree`);
+  usersToUpdate.forEach(user => {
+    console.log(`  - ${user.username}: +${points} points`);
+  });
 }
 
 /**
@@ -679,11 +707,6 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
   }
 
   const directReferrerUsername = newUser.referredBy;
-  const members = [];
-  const processedUsers = new Set();
-
-  // Start from the direct referrer's referrer (skip the direct referrer)
-  let currentUsername = directReferrerUsername;
   
   // Get the direct referrer to find their referrer
   const directReferrer = await tx.user.findUnique({
@@ -694,16 +717,34 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
     return []; // Direct referrer has no referrer, so no tree members to process
   }
 
-  // Start from the direct referrer's referrer
-  currentUsername = directReferrer.referredBy;
+  // Use a more efficient approach: get all users and build the chain in memory
+  // This reduces database queries significantly
+  const allUsers = await tx.user.findMany({
+    select: {
+      id: true,
+      username: true,
+      referredBy: true,
+      rank: true
+    }
+  });
 
-  while (currentUsername) {
-    const user = await tx.user.findUnique({
-      where: { username: currentUsername },
-      include: {
-        rank: true
-      }
-    });
+  // Create a lookup map for faster access
+  const userMap = new Map();
+  allUsers.forEach(user => {
+    userMap.set(user.username, user);
+  });
+
+  // Build the referral chain starting from direct referrer's referrer
+  const members = [];
+  const processedUsers = new Set();
+  let currentUsername = directReferrer.referredBy;
+
+  // Limit to 10 levels to prevent infinite loops
+  let level = 0;
+  const maxLevels = 10;
+
+  while (currentUsername && level < maxLevels) {
+    const user = userMap.get(currentUsername);
 
     if (!user || processedUsers.has(user.id)) {
       break;
@@ -712,6 +753,7 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
     members.push(user);
     processedUsers.add(user.id);
     currentUsername = user.referredBy;
+    level++;
   }
 
   return members;

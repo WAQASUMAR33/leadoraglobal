@@ -416,6 +416,7 @@ export async function approvePackageRequest(packageRequestId) {
     }
 
     // Use database transaction to ensure all operations succeed or fail together
+    // Increase timeout to 30 seconds for complex MLM calculations
     const result = await prisma.$transaction(async (tx) => {
     // Step 1: Update user's package and rank
       console.log(`📝 Step 1: Updating user package and rank...`);
@@ -445,10 +446,10 @@ export async function approvePackageRequest(packageRequestId) {
       package: packageData.package_name,
       packageAmount: packageData.package_amount,
       packagePoints: packageData.package_points,
-      isRenewal: user.currentPackageId === packageData.id,
-      isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id
-    };
-    });
+        isRenewal: user.currentPackageId === packageData.id,
+        isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id
+      };
+    }, { timeout: 30000 }); // 30 second timeout for complex MLM calculations
 
     console.log(`🎉 Package request ${packageRequestId} approved successfully`);
     return result;
