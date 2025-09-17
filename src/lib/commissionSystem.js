@@ -735,12 +735,6 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
   
   // Get all users first to reduce database queries
   const allUsers = await tx.user.findMany({
-    select: {
-      id: true,
-      username: true,
-      referredBy: true,
-      rankId: true
-    },
     include: {
       rank: true
     }
