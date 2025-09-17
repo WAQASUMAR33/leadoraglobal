@@ -1,6 +1,52 @@
 import prisma from './prisma.js';
 import { updateUserRank } from './rankUtils.js';
 
+/**
+ * Transaction-based version of updateUserRank
+ */
+async function updateUserRankInTransaction(userId, currentPoints, tx) {
+  try {
+    // Get all ranks ordered by required points
+    const ranks = await tx.rank.findMany({
+      orderBy: { required_points: 'asc' }
+    });
+
+    // Determine the appropriate rank based on points
+    let newRankTitle = 'Consultant'; // Default rank
+    
+    if (currentPoints >= 24000) {
+      newRankTitle = 'Sapphire Diamond';
+    } else if (currentPoints >= 8000) {
+      newRankTitle = 'Diamond';
+    } else if (currentPoints >= 2000) {
+      newRankTitle = 'Sapphire Manager';
+    } else if (currentPoints >= 1000) {
+      newRankTitle = 'Manager';
+    }
+
+    // Find the rank record
+    const rankRecord = ranks.find(rank => rank.title === newRankTitle);
+    
+    if (!rankRecord) {
+      console.log(`Rank '${newRankTitle}' not found in database`);
+      return 'No Rank';
+    }
+
+    // Update user's rank
+    await tx.user.update({
+      where: { id: userId },
+      data: { rankId: rankRecord.id }
+    });
+
+    console.log(`✅ Updated rank for user ${userId}: ${newRankTitle} (${currentPoints} points)`);
+    return newRankTitle;
+
+  } catch (error) {
+    console.error(`❌ Failed to update rank for user ${userId}:`, error);
+    return 'No Rank';
+  }
+}
+
 // Rank hierarchy will be fetched from database
 let RANK_HIERARCHY = [];
 
@@ -451,6 +497,17 @@ export async function updateUserPackageAndRankInTransaction(packageRequestId, tx
     }
   });
 
+  // Update user's rank based on current points
+  const updatedUser = await tx.user.findUnique({
+    where: { id: user.id },
+    select: { points: true }
+  });
+
+  if (updatedUser) {
+    const newRank = await updateUserRankInTransaction(user.id, updatedUser.points, tx);
+    console.log(`Updated user ${user.username} with package ${packageData.package_name} and rank ${newRank}`);
+  }
+
   console.log(`Updated user ${user.username} with package ${packageData.package_name}`);
   return { success: true };
 }
@@ -564,10 +621,28 @@ async function distributePointsToTreeInTransaction(username, points, tx) {
 
   await Promise.all(updatePromises);
   
-  console.log(`Added ${points} points to ${usersToUpdate.length} users in the referral tree`);
-  usersToUpdate.forEach(user => {
-    console.log(`  - ${user.username}: +${points} points`);
+  // Update ranks for all users after points are updated
+  console.log(`Updating ranks for ${usersToUpdate.length} users after points distribution...`);
+  const rankUpdatePromises = usersToUpdate.map(async (user) => {
+    try {
+      const updatedUser = await tx.user.findUnique({
+        where: { id: user.id },
+        select: { points: true }
+      });
+      
+      if (updatedUser) {
+        const newRank = await updateUserRankInTransaction(user.id, updatedUser.points, tx);
+        console.log(`  - ${user.username}: ${newRank} (${updatedUser.points} points)`);
+        return newRank;
+      }
+    } catch (error) {
+      console.error(`Failed to update rank for ${user.username}:`, error);
+    }
   });
+  
+  await Promise.all(rankUpdatePromises);
+  
+  console.log(`Added ${points} points to ${usersToUpdate.length} users in the referral tree and updated their ranks`);
 }
 
 /**
