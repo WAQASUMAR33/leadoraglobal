@@ -2,58 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { verifyToken } from '../../../../lib/auth';
 
-// Function to calculate business volume (sum of all tree balances) - ULTRA OPTIMIZED
-async function calculateBusinessVolume(username) {
-  try {
-    // Get all users in a single query - this is much faster than recursive queries
-    const allUsers = await prisma.user.findMany({
-      select: {
-        username: true,
-        referredBy: true,
-        balance: true
-      }
-    });
-
-    // Build the tree structure in memory
-    const userMap = new Map();
-    allUsers.forEach(user => {
-      userMap.set(user.username, {
-        balance: parseFloat(user.balance || 0),
-        referredBy: user.referredBy,
-        children: []
-      });
-    });
-
-    // Build parent-child relationships
-    allUsers.forEach(user => {
-      if (user.referredBy && userMap.has(user.referredBy)) {
-        userMap.get(user.referredBy).children.push(user.username);
-      }
-    });
-
-    // Calculate total balance for the tree starting from the given username
-    function calculateTreeBalance(currentUsername) {
-      const user = userMap.get(currentUsername);
-      if (!user) return 0;
-
-      let totalBalance = user.balance;
-      
-      // Add balances from all children recursively
-      for (const childUsername of user.children) {
-        totalBalance += calculateTreeBalance(childUsername);
-      }
-
-      return totalBalance;
-    }
-
-    const totalBalance = calculateTreeBalance(username);
-    return totalBalance;
-
-  } catch (error) {
-    console.error('Error calculating business volume:', error);
-    return 0;
-  }
-}
+// Business volume calculation removed for faster dashboard loading
 
 export async function GET(request) {
   try {
@@ -280,12 +229,7 @@ export async function GET(request) {
       }
     }) : null;
 
-    // Calculate business volume (sum of all tree balances)
-    console.log('Dashboard API - Starting business volume calculation...');
-    const businessVolumeStart = Date.now();
-    const businessVolume = await calculateBusinessVolume(user.username);
-    const businessVolumeTime = Date.now() - businessVolumeStart;
-    console.log(`Dashboard API - Business volume calculation completed in ${businessVolumeTime}ms`);
+    // Business volume calculation removed for faster loading
 
     // Get pending withdrawal amount
     const pendingWithdrawals = await prisma.withdrawalRequest.aggregate({
@@ -355,7 +299,6 @@ export async function GET(request) {
         referralCount: user.referralCount || 0,
         ordersCount: ordersCount,
         rank: user.rank,
-        businessVolume: businessVolume,
         pendingWithdrawals: parseFloat(pendingWithdrawals._sum.amount || 0)
       },
       inactiveMembersCount,
