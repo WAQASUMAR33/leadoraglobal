@@ -118,16 +118,6 @@ const menuItems = [
         label: "Indirect Earning",
         href: "/user-dashboard/earnings/indirect",
         description: "View your indirect earnings"
-      },
-      {
-        label: "Transfer to Wallet",
-        href: "/user-dashboard/earnings/transfer",
-        description: "Transfer earnings to wallet"
-      },
-      {
-        label: "Transfer to Others",
-        href: "/user-dashboard/transfer-to-others",
-        description: "Send money to other users"
       }
     ]
   },
