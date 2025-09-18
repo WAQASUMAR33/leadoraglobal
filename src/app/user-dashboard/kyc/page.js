@@ -90,6 +90,11 @@ export default function KYCPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.kyc) {
+          console.log('KYC data retrieved:', data.kyc);
+          console.log('Profile image URL:', data.kyc.profile_image);
+          console.log('ID card front URL:', data.kyc.id_card_front);
+          console.log('ID card back URL:', data.kyc.id_card_back);
+          
           setExistingKYC(data.kyc);
           setKycStatus(data.kyc.kyc_status);
           setKycData({
@@ -106,6 +111,8 @@ export default function KYCPage() {
             cnic_number: data.kyc.cnic_number || "",
             cnic_expiry_date: data.kyc.cnic_expiry_date || "",
             profile_image: data.kyc.profile_image || "",
+            id_card_front: data.kyc.id_card_front || "",
+            id_card_back: data.kyc.id_card_back || "",
             beneficiary_name: data.kyc.beneficiary_name || "",
             beneficiary_phone_mobile: data.kyc.beneficiary_phone_mobile || "",
             beneficiary_relation: data.kyc.beneficiary_relation || "",
@@ -224,6 +231,33 @@ export default function KYCPage() {
     }
   };
 
+  // Helper function to get proper image URL
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return '';
+    
+    // If it's already a full URL (starts with http), return as is
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    
+    // If it's a relative path (starts with /), return as is
+    if (imageUrl.startsWith('/')) {
+      return imageUrl;
+    }
+    
+    // If it's a base64 data URL, return as is
+    if (imageUrl.startsWith('data:image/')) {
+      return imageUrl;
+    }
+    
+    // If it's just a filename, assume it's in the uploads folder
+    if (imageUrl && !imageUrl.includes('/')) {
+      return `/uploads/${imageUrl}`;
+    }
+    
+    return imageUrl;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -241,8 +275,20 @@ export default function KYCPage() {
       // Prepare KYC data for submission
       let submissionData = { ...kycData };
 
-      // Upload ID card images if they exist
-      if (kycData.id_card_front) {
+      // Upload profile image if it exists and is a base64 data URL
+      if (kycData.profile_image && kycData.profile_image.startsWith('data:image/')) {
+        try {
+          const profileImageUrl = await uploadImageToAPI(kycData.profile_image);
+          submissionData.profile_image = profileImageUrl;
+        } catch (error) {
+          console.error('Error uploading profile image:', error);
+          setError('Failed to upload profile image. Please try again.');
+          return;
+        }
+      }
+
+      // Upload ID card images if they exist and are base64 data URLs
+      if (kycData.id_card_front && kycData.id_card_front.startsWith('data:image/')) {
         try {
           const frontImageUrl = await uploadImageToAPI(kycData.id_card_front);
           submissionData.id_card_front = frontImageUrl;
@@ -253,7 +299,7 @@ export default function KYCPage() {
         }
       }
 
-      if (kycData.id_card_back) {
+      if (kycData.id_card_back && kycData.id_card_back.startsWith('data:image/')) {
         try {
           const backImageUrl = await uploadImageToAPI(kycData.id_card_back);
           submissionData.id_card_back = backImageUrl;
@@ -501,7 +547,7 @@ export default function KYCPage() {
               <Box sx={{ textAlign: 'center', mb: 2 }}>
                 <Box sx={{ position: 'relative', display: 'inline-block' }}>
                   <Avatar
-                    src={kycData.profile_image}
+                    src={getImageUrl(kycData.profile_image)}
                     sx={{ 
                       width: { xs: 80, sm: 100, md: 120 }, 
                       height: { xs: 80, sm: 100, md: 120 }, 
@@ -828,7 +874,7 @@ export default function KYCPage() {
                     {kycData.id_card_front ? (
                       <Box sx={{ mb: 2 }}>
                         <Image 
-                          src={kycData.id_card_front} 
+                          src={getImageUrl(kycData.id_card_front)} 
                           alt="ID Card Front" 
                           width={300}
                           height={200}
@@ -877,7 +923,7 @@ export default function KYCPage() {
                     {kycData.id_card_back ? (
                       <Box sx={{ mb: 2 }}>
                         <Image 
-                          src={kycData.id_card_back} 
+                          src={getImageUrl(kycData.id_card_back)} 
                           alt="ID Card Back" 
                           width={300}
                           height={200}
