@@ -419,7 +419,7 @@ export default function KYCPage() {
   // Prevent hydration mismatch by showing loading until mounted
   if (!mounted) {
     return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
+      <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto', textAlign: 'center' }}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
         <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
           Loading KYC form...
@@ -429,20 +429,21 @@ export default function KYCPage() {
   }
 
   return (
-    <Box key={mounted ? 'mounted' : 'loading'} sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+    <Box key={mounted ? 'mounted' : 'loading'} sx={{ p: 1, maxWidth: '100%', mx: 'auto' }}>
       {/* Header */}
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
+      <Box sx={{ mb: 2, textAlign: 'center' }}>
         <Typography variant="h3" component="h1" sx={{ 
           fontWeight: 'bold', 
           mb: 2,
           background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
           backgroundClip: 'text',
           WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
+          WebkitTextFillColor: 'transparent',
+          fontSize: { xs: '1.8rem', sm: '2.5rem', md: '3rem' }
         }}>
           KYC Verification
         </Typography>
-        <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography variant="h6" color="text.secondary" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.2rem' } }}>
           Complete your Know Your Customer verification
         </Typography>
         
@@ -462,9 +463,16 @@ export default function KYCPage() {
         border: '1px solid rgba(255, 255, 255, 0.1)',
         backdropFilter: 'blur(10px)'
       }}>
-        <CardContent sx={{ p: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: 2,
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 }
+          }}>
+            <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', fontSize: { xs: '1.3rem', sm: '1.5rem' } }}>
               Personal Information
             </Typography>
             {existingKYC && (
@@ -484,19 +492,19 @@ export default function KYCPage() {
             )}
           </Box>
 
-          {message && <Alert severity="success" sx={{ mb: 3 }}>{message}</Alert>}
-          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+          {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
           <Box component="form" onSubmit={handleSubmit}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* Profile Image */}
               <Box sx={{ textAlign: 'center', mb: 2 }}>
                 <Box sx={{ position: 'relative', display: 'inline-block' }}>
                   <Avatar
                     src={kycData.profile_image}
                     sx={{ 
-                      width: 120, 
-                      height: 120, 
+                      width: { xs: 80, sm: 100, md: 120 }, 
+                      height: { xs: 80, sm: 100, md: 120 }, 
                       border: '4px solid #e5e7eb',
                       boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
                     }}
@@ -530,7 +538,7 @@ export default function KYCPage() {
 
               {/* Personal Details */}
               <Box>
-                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
+                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                   Personal Details
                 </Typography>
               </Box>
@@ -543,7 +551,7 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('fullname', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><Person /></InputAdornment>,
                   }}
@@ -554,7 +562,7 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('father_name', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><Person /></InputAdornment>,
                   }}
@@ -570,7 +578,7 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><Email /></InputAdornment>,
                   }}
@@ -581,7 +589,7 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><Phone /></InputAdornment>,
                   }}
@@ -600,7 +608,7 @@ export default function KYCPage() {
                   InputLabelProps={{ shrink: true }}
                   sx={{ 
                     flex: 1, 
-                    minWidth: '250px',
+                    minWidth: { xs: '100%', sm: '250px' },
                     '& .MuiInputBase-root': { 
                       height: '56px',
                       '& .MuiInputLabel-root': { 
@@ -615,7 +623,7 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('city', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment>,
                   }}
@@ -624,7 +632,7 @@ export default function KYCPage() {
 
               {/* Country and Gender */}
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <FormControl required disabled={!isEditing && existingKYC} sx={{ flex: 1, minWidth: '250px' }}>
+                <FormControl required disabled={!isEditing && existingKYC} sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}>
                   <InputLabel>Country</InputLabel>
                   <Select
                     value={kycData.country}
@@ -653,7 +661,7 @@ export default function KYCPage() {
                   </Select>
                 </FormControl>
 
-                <FormControl required disabled={!isEditing && existingKYC} sx={{ flex: 1, minWidth: '250px' }}>
+                <FormControl required disabled={!isEditing && existingKYC} sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}>
                   <InputLabel>Gender</InputLabel>
                   <Select
                     value={kycData.gender}
@@ -684,7 +692,7 @@ export default function KYCPage() {
                   required
                   disabled={!isEditing && existingKYC}
                   placeholder="00000-0000000-0"
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                 />
                 <TextField
                   label="CNIC Expiry Date"
@@ -696,7 +704,7 @@ export default function KYCPage() {
                   InputLabelProps={{ shrink: true }}
                   sx={{ 
                     flex: 1, 
-                    minWidth: '250px',
+                    minWidth: { xs: '100%', sm: '250px' },
                     '& .MuiInputBase-root': { 
                       height: '56px',
                       '& .MuiInputLabel-root': { 
@@ -717,7 +725,7 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('current_address', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment>,
                   }}
@@ -730,18 +738,18 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('permanent_address', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment>,
                   }}
                 />
               </Box>
 
-              <Divider sx={{ width: '100%', my: 3 }} />
+              <Divider sx={{ width: '100%', my: 2 }} />
 
               {/* Beneficiary Information */}
               <Box>
-                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
+                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                   Beneficiary Information
                 </Typography>
               </Box>
@@ -754,7 +762,7 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('beneficiary_name', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><Person /></InputAdornment>,
                   }}
@@ -765,7 +773,7 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('beneficiary_phone_mobile', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><Phone /></InputAdornment>,
                   }}
@@ -781,7 +789,7 @@ export default function KYCPage() {
                   required
                   disabled={!isEditing && existingKYC}
                   placeholder="e.g., Spouse, Child, Parent"
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                 />
               </Box>
 
@@ -795,7 +803,7 @@ export default function KYCPage() {
                   onChange={(e) => handleInputChange('beneficiary_address', e.target.value)}
                   required
                   disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: '250px' }}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment>,
                   }}
@@ -804,7 +812,7 @@ export default function KYCPage() {
 
               {/* ID Card Upload Section */}
               <Box>
-                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
+                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                   ID Card Documents
                 </Typography>
               </Box>
@@ -812,9 +820,9 @@ export default function KYCPage() {
               {/* ID Card Upload Fields */}
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 {/* ID Card Front */}
-                <Box sx={{ flex: 1, minWidth: '300px' }}>
+                <Box sx={{ flex: 1, minWidth: { xs: '100%', sm: '300px' } }}>
                   <Box sx={{ textAlign: 'center', p: 2, border: '2px dashed #e5e7eb', borderRadius: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                       ID Card Front
                     </Typography>
                     {kycData.id_card_front ? (
@@ -835,8 +843,8 @@ export default function KYCPage() {
                       </Box>
                     ) : (
                       <Box sx={{ mb: 2, color: 'text.secondary' }}>
-                        <PhotoCamera sx={{ fontSize: 48, mb: 1 }} />
-                        <Typography variant="body2">No image selected</Typography>
+                        <PhotoCamera sx={{ fontSize: { xs: 36, sm: 48 }, mb: 1 }} />
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>No image selected</Typography>
                       </Box>
                     )}
                     <input
@@ -852,7 +860,7 @@ export default function KYCPage() {
                         component="span"
                         variant="outlined"
                         disabled={!isEditing && existingKYC}
-                        sx={{ minWidth: 120 }}
+                        sx={{ minWidth: { xs: 100, sm: 120 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
                       >
                         {kycData.id_card_front ? 'Change Image' : 'Upload Image'}
                       </Button>
@@ -861,9 +869,9 @@ export default function KYCPage() {
                 </Box>
 
                 {/* ID Card Back */}
-                <Box sx={{ flex: 1, minWidth: '300px' }}>
+                <Box sx={{ flex: 1, minWidth: { xs: '100%', sm: '300px' } }}>
                   <Box sx={{ textAlign: 'center', p: 2, border: '2px dashed #e5e7eb', borderRadius: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                       ID Card Back
                     </Typography>
                     {kycData.id_card_back ? (
@@ -884,8 +892,8 @@ export default function KYCPage() {
                       </Box>
                     ) : (
                       <Box sx={{ mb: 2, color: 'text.secondary' }}>
-                        <PhotoCamera sx={{ fontSize: 48, mb: 1 }} />
-                        <Typography variant="body2">No image selected</Typography>
+                        <PhotoCamera sx={{ fontSize: { xs: 36, sm: 48 }, mb: 1 }} />
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>No image selected</Typography>
                       </Box>
                     )}
                     <input
@@ -901,7 +909,7 @@ export default function KYCPage() {
                         component="span"
                         variant="outlined"
                         disabled={!isEditing && existingKYC}
-                        sx={{ minWidth: 120 }}
+                        sx={{ minWidth: { xs: 100, sm: 120 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
                       >
                         {kycData.id_card_back ? 'Change Image' : 'Upload Image'}
                       </Button>
@@ -912,16 +920,16 @@ export default function KYCPage() {
 
               {/* Submit Button */}
               {(!existingKYC || isEditing) && (
-                <Box sx={{ mt: 3, textAlign: 'center' }}>
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
                   <Button
                     type="submit"
                     variant="contained"
                     size="large"
                     disabled={loading || uploadingImages}
                     sx={{
-                      px: 6,
+                      px: { xs: 4, sm: 6 },
                       py: 1.5,
-                      fontSize: '1.1rem',
+                      fontSize: { xs: '1rem', sm: '1.1rem' },
                       fontWeight: 'bold',
                       background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                       '&:hover': {
