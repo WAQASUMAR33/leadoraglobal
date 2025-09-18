@@ -141,18 +141,18 @@ export default function DownlistPage() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+    <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto' }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
         Downline List
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={12} md={6}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ padding: '12px 16px' }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -169,7 +169,7 @@ export default function DownlistPage() {
         </Grid>
         <Grid item xs={12} md={6}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ padding: '12px 16px' }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -187,8 +187,8 @@ export default function DownlistPage() {
       </Grid>
 
       {/* Search and Actions */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ padding: '12px 16px' }}>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={6}>
               <TextField
@@ -244,7 +244,7 @@ export default function DownlistPage() {
                 '& .MuiTableCell-root': {
                   whiteSpace: 'nowrap',
                   minWidth: { xs: '120px', sm: 'auto' },
-                  padding: '6px 8px'
+                  padding: '12px 16px'
                 }
               }}
             >
