@@ -119,18 +119,18 @@ export default function IndirectEarningsPage() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+    <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto' }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
         Indirect Earnings
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={12} md={4}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ padding: '12px 16px' }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -147,7 +147,7 @@ export default function IndirectEarningsPage() {
         </Grid>
         <Grid item xs={12} md={4}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ padding: '12px 16px' }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -164,7 +164,7 @@ export default function IndirectEarningsPage() {
         </Grid>
         <Grid item xs={12} md={4}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ padding: '12px 16px' }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -182,8 +182,8 @@ export default function IndirectEarningsPage() {
       </Grid>
 
       {/* Search and Filters */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ padding: '12px 16px' }}>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={8}>
               <TextField
@@ -218,36 +218,56 @@ export default function IndirectEarningsPage() {
       </Card>
 
       {/* Earnings Table */}
-      <Card>
-        <CardContent>
+      <Card sx={{ padding: 0 }}>
+        <CardContent sx={{ padding: '16px 16px 0 16px', '&:last-child': { paddingBottom: 0 } }}>
           <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <People />
             Indirect Earnings History ({filteredEarnings.length})
           </Typography>
-          <Divider sx={{ mb: 3 }} />
+          <Divider sx={{ mb: 2 }} />
 
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
               <CircularProgress />
             </Box>
           ) : filteredEarnings.length > 0 ? (
-            <TableContainer component={Paper} variant="outlined">
-              <Table>
+            <TableContainer 
+              component={Paper} 
+              sx={{ 
+                maxHeight: 600,
+                overflowX: 'auto',
+                padding: 0,
+                '& .MuiTableHead-root': {
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                  backgroundColor: 'background.paper'
+                },
+                '& .MuiTableCell-root': {
+                  whiteSpace: 'nowrap',
+                  minWidth: { xs: '120px', sm: 'auto' },
+                  padding: '12px 16px'
+                }
+              }}
+            >
+              <Table stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell><strong>Date</strong></TableCell>
-                    <TableCell><strong>Type</strong></TableCell>
-                    <TableCell><strong>From Referral</strong></TableCell>
-                    <TableCell><strong>Description</strong></TableCell>
-                    <TableCell align="right"><strong>Amount</strong></TableCell>
-                    <TableCell><strong>Status</strong></TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>From Referral</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }} align="right">Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredEarnings.map((earning) => (
                     <TableRow key={earning.id} hover>
                       <TableCell>
-                        {formatDate(earning.createdAt)}
+                        <Typography variant="body2" color="text.secondary">
+                          {formatDate(earning.createdAt)}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Chip 
@@ -258,20 +278,24 @@ export default function IndirectEarningsPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        {earning.fromUser || 'N/A'}
+                        <Typography variant="body2" color="text.secondary">
+                          {earning.fromUser || 'N/A'}
+                        </Typography>
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <div>{earning.description || 'Indirect commission'}</div>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                            {earning.description || 'Indirect commission'}
+                          </Typography>
                           {earning.packageName && (
-                            <div className="text-sm text-gray-500">
+                            <Typography variant="caption" color="text.secondary" display="block">
                               Package: {earning.packageName}
-                            </div>
+                            </Typography>
                           )}
-                        </div>
+                        </Box>
                       </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                           +{formatCurrency(earning.amount)}
                         </Typography>
                       </TableCell>
