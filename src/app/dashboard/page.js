@@ -17,9 +17,17 @@ export default function DashboardHome() {
     try {
       setLoading(true);
       console.log('Fetching dashboard data...');
+      
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch('/api/user/dashboard', {
-        credentials: 'include'
+        credentials: 'include',
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);
@@ -45,7 +53,11 @@ export default function DashboardHome() {
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      setError('Network error. Please try again.');
+      if (error.name === 'AbortError') {
+        setError('Request timeout. Please check your connection and try again.');
+      } else {
+        setError('Network error. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -56,6 +68,9 @@ export default function DashboardHome() {
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
         <span className="ml-3 text-gray-600">Loading dashboard...</span>
+        <div className="ml-4 text-sm text-gray-500">
+          <p>If this takes too long, check the browser console for errors.</p>
+        </div>
       </div>
     );
   }
