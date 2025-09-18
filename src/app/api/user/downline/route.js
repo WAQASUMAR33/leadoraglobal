@@ -69,11 +69,11 @@ async function getAllDownlineMembers(username) {
 
     calculateLevels(username, 1);
 
-    // Filter and format downline members
+    // Filter and format ALL tree members (including root user)
     const downlineMembers = [];
     allUsers.forEach(user => {
       const level = levels.get(user.username);
-      if (level && level > 1) { // Exclude the root user (level 1)
+      if (level) { // Include ALL levels including root user (level 1)
         downlineMembers.push({
           id: user.id,
           fullname: user.fullname,
