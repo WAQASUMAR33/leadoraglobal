@@ -312,6 +312,7 @@ export async function GET(request) {
         ordersCount: ordersCount,
         hasActivePackage,
         currentPackageId: user.currentPackageId,
+        packageId: user.currentPackageId, // Add packageId field for frontend compatibility
         packageExpiryDate: user.packageExpiryDate,
         memberSince: user.createdAt,
         rank: user.rank,

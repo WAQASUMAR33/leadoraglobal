@@ -16,22 +16,31 @@ export default function DashboardHome() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      console.log('Fetching dashboard data...');
       const response = await fetch('/api/user/dashboard', {
         credentials: 'include'
       });
       
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Dashboard API response:', data);
         if (data.success) {
+          console.log('Dashboard data received:', data.data);
           setDashboardData(data.data);
         } else {
+          console.error('API returned error:', data.error);
           setError(data.error || 'Failed to fetch dashboard data');
         }
       } else if (response.status === 401) {
+        console.log('Authentication required');
         setError('Authentication required. Please login again.');
         // Redirect to login
         window.location.href = '/login';
       } else {
+        console.error('Response not ok:', response.status);
         setError('Failed to fetch dashboard data');
       }
     } catch (error) {
