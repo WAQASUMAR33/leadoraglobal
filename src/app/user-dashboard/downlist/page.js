@@ -215,13 +215,13 @@ export default function DownlistPage() {
       </Card>
 
       {/* Members Display */}
-      <Card>
-        <CardContent>
+      <Card sx={{ padding: 0 }}>
+        <CardContent sx={{ padding: '16px 16px 0 16px', '&:last-child': { paddingBottom: 0 } }}>
           <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <People />
             Downline Members ({filteredMembers.length})
           </Typography>
-          <Divider sx={{ mb: 3 }} />
+          <Divider sx={{ mb: 2 }} />
 
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -234,6 +234,7 @@ export default function DownlistPage() {
               sx={{ 
                 maxHeight: 600,
                 overflowX: 'auto',
+                padding: 0,
                 '& .MuiTableHead-root': {
                   position: 'sticky',
                   top: 0,
@@ -242,7 +243,8 @@ export default function DownlistPage() {
                 },
                 '& .MuiTableCell-root': {
                   whiteSpace: 'nowrap',
-                  minWidth: { xs: '120px', sm: 'auto' }
+                  minWidth: { xs: '120px', sm: 'auto' },
+                  padding: '6px 8px'
                 }
               }}
             >
