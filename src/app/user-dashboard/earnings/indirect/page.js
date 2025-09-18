@@ -128,7 +128,7 @@ export default function IndirectEarningsPage() {
 
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <Card>
             <CardContent sx={{ padding: '12px 16px' }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -145,7 +145,7 @@ export default function IndirectEarningsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <Card>
             <CardContent sx={{ padding: '12px 16px' }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -158,23 +158,6 @@ export default function IndirectEarningsPage() {
                   </Typography>
                 </Box>
                 <TrendingUp sx={{ fontSize: 40, color: 'primary.main' }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent sx={{ padding: '12px 16px' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Average per Transaction
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
-                    {totalCount > 0 ? formatCurrency(totalEarnings / totalCount) : formatCurrency(0)}
-                  </Typography>
-                </Box>
-                <People sx={{ fontSize: 40, color: 'warning.main' }} />
               </Box>
             </CardContent>
           </Card>
