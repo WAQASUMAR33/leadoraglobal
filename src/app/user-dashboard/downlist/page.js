@@ -257,62 +257,95 @@ export default function DownlistPage() {
               <CircularProgress />
             </Box>
           ) : filteredMembers.length > 0 ? (
-            // Level-wise List View (Optimized)
-            <List>
-              {filteredMembers.map((member) => (
-                <ListItem key={member.id} divider>
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: getLevelColor(member.level) + '.main' }}>
-                      {member.fullname?.charAt(0).toUpperCase() || 'U'}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                          {member.fullname || 'Unknown'}
-                        </Typography>
-                        <Chip 
-                          label={`Level ${member.level}`} 
-                          color={getLevelColor(member.level)}
-                          size="small"
-                        />
-                        <Chip 
-                          label={member.status || 'Active'} 
-                          color={getStatusColor(member.status || 'active')}
-                          size="small"
-                        />
-                      </Box>
-                    }
-                    secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          @{member.username} • {member.email}
+            // Level-wise List View (Organized by Level)
+            <Box>
+              {Object.keys(membersByLevel)
+                .sort((a, b) => parseInt(a) - parseInt(b))
+                .map(level => (
+                  <Box key={level} sx={{ mb: 3 }}>
+                    {/* Level Header */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 2, 
+                      mb: 2, 
+                      p: 2, 
+                      bgcolor: getLevelColor(parseInt(level)) + '.50',
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: getLevelColor(parseInt(level)) + '.main'
+                    }}>
+                      <Avatar sx={{ 
+                        bgcolor: getLevelColor(parseInt(level)) + '.main',
+                        width: 40,
+                        height: 40
+                      }}>
+                        {level}
+                      </Avatar>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                          Level {level}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Joined: {formatDate(member.createdAt)} • Package: {member.package}
+                          {membersByLevel[level].length} member{membersByLevel[level].length !== 1 ? 's' : ''}
                         </Typography>
                       </Box>
-                    }
-                  />
-                  <ListItemSecondaryAction>
-                    <Box sx={{ textAlign: 'right', mr: 2 }}>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                        PKR {(member.totalEarnings || 0).toLocaleString()}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {member.points || 0} points
-                      </Typography>
                     </Box>
-                    <Tooltip title="View Details">
-                      <IconButton size="small" color="primary">
-                        <Visibility />
-                      </IconButton>
-                    </Tooltip>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
+
+                    {/* Members in this level */}
+                    <List sx={{ pl: 2 }}>
+                      {membersByLevel[level].map((member) => (
+                        <ListItem key={member.id} divider sx={{ pl: 2 }}>
+                          <ListItemAvatar>
+                            <Avatar sx={{ bgcolor: getLevelColor(parseInt(level)) + '.main' }}>
+                              {member.fullname?.charAt(0).toUpperCase() || 'U'}
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                  {member.fullname || 'Unknown'}
+                                </Typography>
+                                <Chip 
+                                  label={member.status || 'Active'} 
+                                  color={getStatusColor(member.status || 'active')}
+                                  size="small"
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                  @{member.username} • {member.email}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Joined: {formatDate(member.createdAt)} • Package: {member.package}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                          <ListItemSecondaryAction>
+                            <Box sx={{ textAlign: 'right', mr: 2 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                                PKR {(member.totalEarnings || 0).toLocaleString()}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {member.points || 0} points
+                              </Typography>
+                            </Box>
+                            <Tooltip title="View Details">
+                              <IconButton size="small" color="primary">
+                                <Visibility />
+                              </IconButton>
+                            </Tooltip>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                ))}
+            </Box>
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
