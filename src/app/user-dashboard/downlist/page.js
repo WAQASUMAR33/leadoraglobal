@@ -27,14 +27,9 @@ import {
 import {
   People,
   Search,
-  Download,
   Visibility,
   TrendingUp,
-  PersonAdd,
-  ExpandMore,
-  ExpandLess,
-  AccountTree,
-  Group
+  PersonAdd
 } from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
 
@@ -45,8 +40,7 @@ export default function DownlistPage() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [mounted, setMounted] = useState(false);
-  const [expandedLevels, setExpandedLevels] = useState({});
-  const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'list'
+  const [viewMode, setViewMode] = useState('list'); // Only 'list' mode now
 
   useEffect(() => {
     setMounted(true);
@@ -82,8 +76,6 @@ export default function DownlistPage() {
       if (response.ok) {
         const data = await response.json();
         setDownlineData(data);
-        // Initialize expanded levels for tree view
-        setExpandedLevels({ 1: true }); // Expand level 1 by default
       } else {
         setError('Failed to fetch downline members');
       }
@@ -129,13 +121,6 @@ export default function DownlistPage() {
     }
   };
 
-  // Toggle level expansion
-  const toggleLevel = (level) => {
-    setExpandedLevels(prev => ({
-      ...prev,
-      [level]: !prev[level]
-    }));
-  };
 
   // Filter members based on search
   const filteredMembers = downlineData?.members?.filter(member => 
@@ -249,25 +234,10 @@ export default function DownlistPage() {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={3}>
-              <Button
-                fullWidth
-                variant={viewMode === 'tree' ? 'contained' : 'outlined'}
-                startIcon={<AccountTree />}
-                onClick={() => setViewMode('tree')}
-              >
-                Tree View
-              </Button>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Button
-                fullWidth
-                variant={viewMode === 'list' ? 'contained' : 'outlined'}
-                startIcon={<Group />}
-                onClick={() => setViewMode('list')}
-              >
-                List View
-              </Button>
+            <Grid item xs={12} md={6}>
+              <Typography variant="body2" color="text.secondary">
+                Showing level-wise list view for faster loading
+              </Typography>
             </Grid>
           </Grid>
         </CardContent>
@@ -287,131 +257,24 @@ export default function DownlistPage() {
               <CircularProgress />
             </Box>
           ) : filteredMembers.length > 0 ? (
-            viewMode === 'tree' ? (
-              // Tree View
-              <Box>
-                {/* Root User */}
-                <Card sx={{ mb: 2, bgcolor: 'primary.50', border: '2px solid', borderColor: 'primary.main' }}>
-                  <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
-                        {downlineData?.user?.fullname?.charAt(0).toUpperCase() || 'U'}
-                      </Avatar>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                          {downlineData?.user?.fullname || 'You'}
+            // Level-wise List View (Optimized)
+            <List>
+              {filteredMembers.map((member) => (
+                <ListItem key={member.id} divider>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: getLevelColor(member.level) + '.main' }}>
+                      {member.fullname?.charAt(0).toUpperCase() || 'U'}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          {member.fullname || 'Unknown'}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          @{downlineData?.user?.username} • {downlineData?.user?.email}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                          <Chip label="Root" color="primary" size="small" />
-                          <Chip 
-                            label={downlineData?.user?.status || 'Active'} 
-                            color={getStatusColor(downlineData?.user?.status || 'active')}
-                            size="small"
-                          />
-                        </Box>
-                      </Box>
-                      <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                          PKR {(downlineData?.user?.totalEarnings || 0).toLocaleString()}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {downlineData?.user?.referralCount || 0} referrals
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-
-                {/* Downline Levels */}
-                {Object.keys(membersByLevel).sort((a, b) => parseInt(a) - parseInt(b)).map(level => (
-                  <Box key={level} sx={{ ml: parseInt(level) * 2 }}>
-                    <Button
-                      onClick={() => toggleLevel(parseInt(level))}
-                      startIcon={expandedLevels[parseInt(level)] ? <ExpandLess /> : <ExpandMore />}
-                      sx={{ mb: 1, textTransform: 'none' }}
-                    >
-                      <Typography variant="h6">
-                        Level {level} ({membersByLevel[level].length} members)
-                      </Typography>
-                    </Button>
-                    
-                    <Collapse in={expandedLevels[parseInt(level)]}>
-                      <List>
-                        {membersByLevel[level].map((member) => (
-                          <ListItem key={member.id} sx={{ pl: 4 }}>
-                            <ListItemAvatar>
-                              <Avatar sx={{ bgcolor: getLevelColor(parseInt(level)) + '.main' }}>
-                            {member.fullname?.charAt(0).toUpperCase() || 'U'}
-                          </Avatar>
-                            </ListItemAvatar>
-                            <ListItemText
-                              primary={
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                              {member.fullname || 'Unknown'}
-                                  </Typography>
-                                  <Chip 
-                                    label={member.status || 'Active'} 
-                                    color={getStatusColor(member.status || 'active')}
-                                    size="small"
-                                  />
-                                </Box>
-                              }
-                              secondary={
-                                <Box>
-                                  <Typography variant="body2" color="text.secondary">
-                                    @{member.username} • {member.email}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    Joined: {formatDate(member.createdAt)} • Package: {member.package}
-                                  </Typography>
-                                </Box>
-                              }
-                            />
-                            <ListItemSecondaryAction>
-                              <Box sx={{ textAlign: 'right', mr: 2 }}>
-                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                                  PKR {(member.totalEarnings || 0).toLocaleString()}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                  {member.points || 0} points
-                            </Typography>
-                          </Box>
-                              <Tooltip title="View Details">
-                                <IconButton size="small" color="primary">
-                                  <Visibility />
-                                </IconButton>
-                              </Tooltip>
-                            </ListItemSecondaryAction>
-                          </ListItem>
-                        ))}
-                      </List>
-                    </Collapse>
-                  </Box>
-                ))}
-                        </Box>
-            ) : (
-              // List View
-              <List>
-                {filteredMembers.map((member) => (
-                  <ListItem key={member.id} divider>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: getLevelColor(member.level) + '.main' }}>
-                        {member.fullname?.charAt(0).toUpperCase() || 'U'}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                            {member.fullname || 'Unknown'}
-                          </Typography>
                         <Chip 
-                            label={`Level ${member.level}`} 
-                            color={getLevelColor(member.level)}
+                          label={`Level ${member.level}`} 
+                          color={getLevelColor(member.level)}
                           size="small"
                         />
                         <Chip 
@@ -419,38 +282,37 @@ export default function DownlistPage() {
                           color={getStatusColor(member.status || 'active')}
                           size="small"
                         />
-                        </Box>
-                      }
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            @{member.username} • {member.email}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Joined: {formatDate(member.createdAt)} • Package: {member.package}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    <ListItemSecondaryAction>
-                      <Box sx={{ textAlign: 'right', mr: 2 }}>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                          PKR {(member.totalEarnings || 0).toLocaleString()}
+                      </Box>
+                    }
+                    secondary={
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          @{member.username} • {member.email}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {member.points || 0} points
+                          Joined: {formatDate(member.createdAt)} • Package: {member.package}
                         </Typography>
                       </Box>
-                        <Tooltip title="View Details">
-                          <IconButton size="small" color="primary">
-                            <Visibility />
-                          </IconButton>
-                        </Tooltip>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  ))}
-              </List>
-            )
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    <Box sx={{ textAlign: 'right', mr: 2 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                        PKR {(member.totalEarnings || 0).toLocaleString()}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {member.points || 0} points
+                      </Typography>
+                    </Box>
+                    <Tooltip title="View Details">
+                      <IconButton size="small" color="primary">
+                        <Visibility />
+                      </IconButton>
+                    </Tooltip>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />

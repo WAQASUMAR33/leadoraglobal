@@ -2,65 +2,102 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { verifyToken } from '../../../../lib/auth';
 
-// Recursive function to get all downline members
-async function getAllDownlineMembers(username, level = 1, maxLevel = 10) {
-  if (level > maxLevel) return [];
-
-  // Get all users referred by this username
-  const referrals = await prisma.user.findMany({
-    where: { referredBy: username },
-    select: {
-      id: true,
-      fullname: true,
-      username: true,
-      email: true,
-      phoneNumber: true,
-      status: true,
-      balance: true,
-      points: true,
-      totalEarnings: true,
-      createdAt: true,
-      currentPackage: {
-        select: {
-          package_name: true
+// Optimized function to get all downline members using single query
+async function getAllDownlineMembers(username) {
+  try {
+    // Get all users in a single query - much faster than recursive queries
+    const allUsers = await prisma.user.findMany({
+      select: {
+        id: true,
+        fullname: true,
+        username: true,
+        email: true,
+        phoneNumber: true,
+        status: true,
+        balance: true,
+        points: true,
+        totalEarnings: true,
+        createdAt: true,
+        referredBy: true,
+        currentPackage: {
+          select: {
+            package_name: true
+          }
+        },
+        rank: {
+          select: {
+            title: true
+          }
         }
       },
-      rank: {
-        select: {
-          title: true
-        }
+      orderBy: { createdAt: 'asc' }
+    });
+
+    // Build the tree structure in memory
+    const userMap = new Map();
+    allUsers.forEach(user => {
+      userMap.set(user.username, {
+        ...user,
+        children: []
+      });
+    });
+
+    // Build parent-child relationships
+    allUsers.forEach(user => {
+      if (user.referredBy && userMap.has(user.referredBy)) {
+        userMap.get(user.referredBy).children.push(user.username);
       }
-    },
-    orderBy: { createdAt: 'asc' }
-  });
+    });
 
-  const allMembers = [];
+    // Calculate levels for all users in the tree starting from the given username
+    const levels = new Map();
+    const visited = new Set();
 
-  for (const referral of referrals) {
-    const memberData = {
-      id: referral.id,
-      fullname: referral.fullname,
-      username: referral.username,
-      email: referral.email,
-      phoneNumber: referral.phoneNumber,
-      status: referral.status,
-      balance: parseFloat(referral.balance) || 0,
-      points: referral.points || 0,
-      totalEarnings: parseFloat(referral.totalEarnings) || 0,
-      createdAt: referral.createdAt,
-      package: referral.currentPackage?.package_name || 'No Package',
-      rank: referral.rank?.title || 'No Rank',
-      level: level
-    };
+    function calculateLevels(currentUsername, currentLevel) {
+      if (visited.has(currentUsername) || currentLevel > 10) return;
+      
+      visited.add(currentUsername);
+      levels.set(currentUsername, currentLevel);
+      
+      const user = userMap.get(currentUsername);
+      if (user) {
+        user.children.forEach(childUsername => {
+          calculateLevels(childUsername, currentLevel + 1);
+        });
+      }
+    }
 
-    allMembers.push(memberData);
+    calculateLevels(username, 1);
 
-    // Recursively get children
-    const children = await getAllDownlineMembers(referral.username, level + 1, maxLevel);
-    allMembers.push(...children);
+    // Filter and format downline members
+    const downlineMembers = [];
+    allUsers.forEach(user => {
+      const level = levels.get(user.username);
+      if (level && level > 1) { // Exclude the root user (level 1)
+        downlineMembers.push({
+          id: user.id,
+          fullname: user.fullname,
+          username: user.username,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          status: user.status,
+          balance: parseFloat(user.balance) || 0,
+          points: user.points || 0,
+          totalEarnings: parseFloat(user.totalEarnings) || 0,
+          createdAt: user.createdAt,
+          package: user.currentPackage?.package_name || 'No Package',
+          rank: user.rank?.title || 'No Rank',
+          level: level
+        });
+      }
+    });
+
+    return downlineMembers;
+
+  } catch (error) {
+    console.error('Error getting downline members:', error);
+    return [];
   }
-
-  return allMembers;
 }
 
 export async function GET(request) {
