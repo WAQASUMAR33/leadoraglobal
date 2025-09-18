@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { auth } from "../../lib/auth";
-import SessionManager from "../../components/SessionManager";
 import { UserProvider } from "../../lib/userContext";
 
 // Menu items for user dashboard
@@ -429,9 +428,6 @@ export default function UserDashboardLayout({ children }) {
 
               {/* Right side */}
               <div className="flex items-center space-x-4">
-                {/* Session Manager */}
-                <SessionManager />
-
                 {/* Notifications */}
                 <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg relative">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

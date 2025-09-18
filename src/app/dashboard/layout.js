@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { auth } from "../../lib/auth";
-import SessionManager from "../../components/SessionManager";
 
 // Menu items with icons and descriptions
 const menuItems = [
@@ -252,9 +251,6 @@ export default function DashboardLayout({ children }) {
 
               {/* Right side */}
               <div className="flex items-center space-x-4">
-                {/* Session Manager */}
-                <SessionManager />
-
                 {/* Notifications */}
                 <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg relative">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
