@@ -269,7 +269,7 @@ export default function Shop() {
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-6">
         {filteredProducts.map((product) => (
           <div key={product.id} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-gray-600 transition-all duration-200">
             {/* Product Image */}
@@ -291,16 +291,16 @@ export default function Shop() {
             </div>
 
             {/* Product Info */}
-            <div className="p-3 md:p-4">
-              <h3 className="text-white font-semibold mb-2 line-clamp-2 text-sm md:text-base">{product.title}</h3>
-              <p className="text-gray-400 text-xs md:text-sm mb-3 line-clamp-2">{product.description}</p>
+            <div className="p-2 md:p-4">
+              <h3 className="text-white font-semibold mb-1 md:mb-2 line-clamp-2 text-xs md:text-base">{product.title}</h3>
+              <p className="text-gray-400 text-xs md:text-sm mb-2 md:mb-3 line-clamp-2">{product.description}</p>
               
               {/* Price */}
-              <div className="mb-3 md:mb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+              <div className="mb-2 md:mb-4">
+                <div className="flex flex-col space-y-1">
                   {product.discount ? (
                     <>
-                      <span className="text-base md:text-lg font-bold text-white">
+                      <span className="text-sm md:text-lg font-bold text-white">
                         PKR {parseFloat(product.sale_price).toFixed(2)}
                       </span>
                       <span className="text-xs md:text-sm text-gray-400 line-through">
@@ -308,7 +308,7 @@ export default function Shop() {
                       </span>
                     </>
                   ) : (
-                    <span className="text-base md:text-lg font-bold text-white">
+                    <span className="text-sm md:text-lg font-bold text-white">
                       PKR {parseFloat(product.price).toFixed(2)}
                     </span>
                   )}
@@ -319,16 +319,16 @@ export default function Shop() {
               {!shoppingEligibility?.eligible ? (
                 <button
                   disabled
-                  className="w-full py-2 px-3 md:px-4 rounded-lg font-medium bg-gray-600 text-gray-400 cursor-not-allowed text-sm md:text-base"
+                  className="w-full py-1.5 md:py-2 px-2 md:px-4 rounded-lg font-medium bg-gray-600 text-gray-400 cursor-not-allowed text-xs md:text-base"
                 >
-                  {shoppingEligibility?.reason === 'no_active_package' ? 'Subscribe to Shop' : 
-                   shoppingEligibility?.reason === 'already_shopped' ? 'Already Shopped' : 
-                   'Not Available'}
+                  {shoppingEligibility?.reason === 'no_active_package' ? 'Subscribe' : 
+                   shoppingEligibility?.reason === 'already_shopped' ? 'Shopped' : 
+                   'Unavailable'}
                 </button>
               ) : (
                 <button
                   onClick={() => addToCart(product)}
-                  className="w-full py-2 px-3 md:px-4 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
+                  className="w-full py-1.5 md:py-2 px-2 md:px-4 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 text-xs md:text-base"
                 >
                   Add to Cart
                 </button>
