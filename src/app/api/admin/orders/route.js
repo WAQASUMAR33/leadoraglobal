@@ -32,7 +32,8 @@ export async function GET(request) {
             id: true,
             username: true,
             fullname: true,
-            email: true
+            email: true,
+            phoneNumber: true
           }
         },
         orderItems: {

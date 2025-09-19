@@ -45,13 +45,20 @@ import {
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
+  const [newPaymentStatus, setNewPaymentStatus] = useState('');
   const [updating, setUpdating] = useState(false);
+  
+  // Filter states
+  const [usernameFilter, setUsernameFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
 
   // Order status options
   const statusOptions = [
@@ -74,6 +81,10 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [orders, usernameFilter, statusFilter, paymentStatusFilter]);
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -95,6 +106,30 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const applyFilters = () => {
+    let filtered = [...orders];
+
+    // Filter by username
+    if (usernameFilter.trim()) {
+      filtered = filtered.filter(order => 
+        order.user?.username?.toLowerCase().includes(usernameFilter.toLowerCase()) ||
+        order.user?.fullname?.toLowerCase().includes(usernameFilter.toLowerCase())
+      );
+    }
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    // Filter by payment status
+    if (paymentStatusFilter !== 'all') {
+      filtered = filtered.filter(order => order.paymentStatus === paymentStatusFilter);
+    }
+
+    setFilteredOrders(filtered);
+  };
+
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
     setOrderDialogOpen(true);
@@ -103,6 +138,7 @@ export default function AdminOrdersPage() {
   const handleUpdateStatus = (order) => {
     setSelectedOrder(order);
     setNewStatus(order.status);
+    setNewPaymentStatus(order.paymentStatus);
     setStatusDialogOpen(true);
   };
 
@@ -118,21 +154,30 @@ export default function AdminOrdersPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          status: newStatus
+          status: newStatus,
+          paymentStatus: newPaymentStatus
         })
       });
 
       if (response.ok) {
+        const result = await response.json();
         // Update the order in the local state
         setOrders(orders.map(order => 
           order.id === selectedOrder.id 
-            ? { ...order, status: newStatus }
+            ? { ...order, status: newStatus, paymentStatus: newPaymentStatus }
             : order
         ));
         setStatusDialogOpen(false);
         setSelectedOrder(null);
+        
+        // Show success message if balance was added
+        if (result.message && result.message.includes('balance')) {
+          setError(null);
+          // You could add a success notification here
+        }
       } else {
-        setError('Failed to update order status');
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to update order status');
       }
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -175,13 +220,13 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3, color: 'text.primary' }}>
         Order Management
       </Typography>
 
       {/* New Logic Information */}
-      <Alert severity="info" sx={{ mb: 3 }}>
+      <Alert severity="info" sx={{ mb: 3, bgcolor: 'info.dark', color: 'info.contrastText' }}>
         <Typography variant="body2">
           <strong>New Shopping Logic:</strong> Users without active packages can shop and send payment proof. 
           When you approve their order (set status to &quot;Delivered&quot; and payment to &quot;Paid&quot;), 
@@ -190,59 +235,158 @@ export default function AdminOrdersPage() {
       </Alert>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 3, bgcolor: 'error.dark', color: 'error.contrastText' }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      <Card>
+      {/* Filters Section */}
+      <Card sx={{ mb: 3, bgcolor: 'background.paper' }}>
         <CardContent>
-          <TableContainer component={Paper} sx={{ maxHeight: '70vh' }}>
+          <Typography variant="h6" gutterBottom sx={{ color: 'text.primary', mb: 2 }}>
+            Filters
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Search by Username"
+                value={usernameFilter}
+                onChange={(e) => setUsernameFilter(e.target.value)}
+                variant="outlined"
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'background.default',
+                    '& fieldset': {
+                      borderColor: 'divider',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: 'text.secondary',
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel sx={{ color: 'text.secondary' }}>Order Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  label="Order Status"
+                  sx={{
+                    bgcolor: 'background.default',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'divider',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'primary.main',
+                    },
+                  }}
+                >
+                  <MenuItem value="all">All Statuses</MenuItem>
+                  {statusOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Chip
+                        label={option.label}
+                        color={option.color}
+                        size="small"
+                        sx={{ mr: 1 }}
+                      />
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel sx={{ color: 'text.secondary' }}>Payment Status</InputLabel>
+                <Select
+                  value={paymentStatusFilter}
+                  onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                  label="Payment Status"
+                  sx={{
+                    bgcolor: 'background.default',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'divider',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'primary.main',
+                    },
+                  }}
+                >
+                  <MenuItem value="all">All Payment Statuses</MenuItem>
+                  {paymentStatusOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Chip
+                        label={option.label}
+                        color={option.color}
+                        size="small"
+                        sx={{ mr: 1 }}
+                      />
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      <Card sx={{ bgcolor: 'background.paper' }}>
+        <CardContent>
+          <TableContainer sx={{ maxHeight: '70vh', bgcolor: 'background.default' }}>
             <Table stickyHeader>
               <TableHead>
-                <TableRow>
-                  <TableCell>Order #</TableCell>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Items</TableCell>
-                  <TableCell>Total</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Payment</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Actions</TableCell>
+                <TableRow sx={{ bgcolor: 'background.paper' }}>
+                  <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Order #</TableCell>
+                  <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Customer</TableCell>
+                  <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Items</TableCell>
+                  <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Total</TableCell>
+                  <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Status</TableCell>
+                  <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Payment</TableCell>
+                  <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Date</TableCell>
+                  <TableCell sx={{ color: 'text.primary', fontWeight: 'bold', bgcolor: 'background.paper' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id} hover>
-                    <TableCell>
+                {filteredOrders.map((order) => (
+                  <TableRow key={order.id} hover sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
+                    <TableCell sx={{ color: 'text.primary' }}>
                       <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                         {order.orderNumber}
                       </Typography>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ color: 'text.primary' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
                           <Person fontSize="small" />
                         </Avatar>
                         <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
                             {order.user?.fullname || 'Unknown User'}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            ID: {order.userId}
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            @{order.user?.username || 'N/A'} (ID: {order.userId})
                           </Typography>
                         </Box>
                       </Box>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ color: 'text.primary' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <ShoppingCart fontSize="small" color="action" />
-                        <Typography variant="body2">
+                        <ShoppingCart fontSize="small" sx={{ color: 'text.secondary' }} />
+                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
                           {order.orderItems?.length || 0} items
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ color: 'text.primary' }}>
                       <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                         {formatCurrency(order.totalAmount)}
                       </Typography>
@@ -263,10 +407,10 @@ export default function AdminOrdersPage() {
                         variant="outlined"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ color: 'text.primary' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CalendarToday fontSize="small" color="action" />
-                        <Typography variant="body2">
+                        <CalendarToday fontSize="small" sx={{ color: 'text.secondary' }} />
+                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
                           {formatDate(order.createdAt)}
                         </Typography>
                       </Box>
@@ -299,11 +443,16 @@ export default function AdminOrdersPage() {
             </Table>
           </TableContainer>
 
-          {orders.length === 0 && (
+          {filteredOrders.length === 0 && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="h6" color="text.secondary">
-                No orders found
+              <Typography variant="h6" sx={{ color: 'text.secondary' }}>
+                {orders.length === 0 ? 'No orders found' : 'No orders match your filters'}
               </Typography>
+              {orders.length > 0 && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                  Try adjusting your search criteria
+                </Typography>
+              )}
             </Box>
           )}
         </CardContent>
@@ -465,19 +614,35 @@ export default function AdminOrdersPage() {
         onClose={() => setStatusDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: { bgcolor: 'background.paper' }
+        }}
       >
-        <DialogTitle>Update Order Status</DialogTitle>
+        <DialogTitle sx={{ color: 'text.primary' }}>Update Order Status</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }} gutterBottom>
               Order: {selectedOrder?.orderNumber}
             </Typography>
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Status</InputLabel>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }} gutterBottom>
+              Customer: {selectedOrder?.user?.fullname} (@{selectedOrder?.user?.username})
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }} gutterBottom>
+              Amount: {formatCurrency(selectedOrder?.totalAmount)}
+            </Typography>
+            
+            <FormControl fullWidth sx={{ mt: 3 }}>
+              <InputLabel sx={{ color: 'text.secondary' }}>Order Status</InputLabel>
               <Select
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
-                label="Status"
+                label="Order Status"
+                sx={{
+                  bgcolor: 'background.default',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'divider',
+                  },
+                }}
               >
                 {statusOptions.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
@@ -492,10 +657,47 @@ export default function AdminOrdersPage() {
                 ))}
               </Select>
             </FormControl>
+
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel sx={{ color: 'text.secondary' }}>Payment Status</InputLabel>
+              <Select
+                value={newPaymentStatus}
+                onChange={(e) => setNewPaymentStatus(e.target.value)}
+                label="Payment Status"
+                sx={{
+                  bgcolor: 'background.default',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'divider',
+                  },
+                }}
+              >
+                {paymentStatusOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    <Chip
+                      label={option.label}
+                      color={option.color}
+                      size="small"
+                      sx={{ mr: 1 }}
+                    />
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Balance Addition Notice */}
+            {newStatus === 'delivered' && newPaymentStatus === 'paid' && (
+              <Alert severity="info" sx={{ mt: 2, bgcolor: 'info.dark', color: 'info.contrastText' }}>
+                <Typography variant="body2">
+                  <strong>Note:</strong> If the customer doesn&apos;t have an active package, 
+                  the order amount will be automatically added to their account balance.
+                </Typography>
+              </Alert>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusDialogOpen(false)}>
+          <Button onClick={() => setStatusDialogOpen(false)} sx={{ color: 'text.secondary' }}>
             Cancel
           </Button>
           <Button

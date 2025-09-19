@@ -139,8 +139,12 @@ export async function PUT(request, { params }) {
       }
     });
 
-    // NEW LOGIC: If order is approved and user has no active package, add amount to user's balance
-    if (status === 'delivered' && paymentStatus === 'paid') {
+    // NEW LOGIC: If order status changes from pending to any other status and user has no active package, add amount to user's balance
+    const wasPending = existingOrder.status === 'pending';
+    const isNowApproved = status && status !== 'pending' && status !== 'cancelled';
+    const isPaymentApproved = paymentStatus === 'paid';
+    
+    if (wasPending && isNowApproved && isPaymentApproved) {
       const user = updatedOrder.user;
       
       // Get user's package expiry date to check if they have an active package
@@ -171,6 +175,12 @@ export async function PUT(request, { params }) {
         });
 
         console.log(`Added PKR ${orderAmount} to user ${user.username}'s account. New balance: PKR ${newBalance}`);
+        
+        return NextResponse.json({
+          success: true,
+          message: `Order updated successfully. Added PKR ${orderAmount} to user's balance.`,
+          order: updatedOrder
+        });
       }
     }
 
