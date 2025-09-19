@@ -129,16 +129,16 @@ export default function WithdrawalsHistoryPage() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+    <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto' }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 2, fontSize: { xs: '1.5rem', md: '2rem' } }}>
         Withdrawal History
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       {/* Filters and Search */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
+      <Card sx={{ mb: 2, p: { xs: 1, md: 2 } }}>
+        <CardContent sx={{ p: { xs: 1, md: 2 } }}>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={6}>
               <TextField
@@ -146,13 +146,15 @@ export default function WithdrawalsHistoryPage() {
                 placeholder="Search by reference or payment method..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Search />
+                      <Search sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                     </InputAdornment>
                   ),
                 }}
+                sx={{ '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', md: '1rem' } } }}
               />
             </Grid>
             <Grid item xs={12} md={4}>
@@ -162,9 +164,11 @@ export default function WithdrawalsHistoryPage() {
                 label="Filter by Status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
+                size="small"
                 SelectProps={{
                   native: true,
                 }}
+                sx={{ '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', md: '1rem' } } }}
               >
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -177,11 +181,13 @@ export default function WithdrawalsHistoryPage() {
               <Button
                 fullWidth
                 variant="outlined"
-                startIcon={<Download />}
+                startIcon={<Download sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />}
+                size="small"
                 onClick={() => {
                   // TODO: Implement export functionality
                   console.log('Export functionality to be implemented');
                 }}
+                sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}
               >
                 Export
               </Button>
@@ -191,13 +197,13 @@ export default function WithdrawalsHistoryPage() {
       </Card>
 
       {/* Withdrawal History */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <History />
+      <Card sx={{ p: { xs: 1, md: 2 } }}>
+        <CardContent sx={{ p: { xs: 1, md: 2 } }}>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+            <History sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
             All Withdrawals ({filteredWithdrawals.length})
           </Typography>
-          <Divider sx={{ mb: 3 }} />
+          <Divider sx={{ mb: 2 }} />
 
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -206,17 +212,17 @@ export default function WithdrawalsHistoryPage() {
           ) : filteredWithdrawals.length > 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {filteredWithdrawals.map((withdrawal) => (
-                <Card key={withdrawal.id} variant="outlined" sx={{ p: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Card key={withdrawal.id} variant="outlined" sx={{ p: { xs: 1, md: 2 } }}>
+                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 2, gap: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: statusOptions[withdrawal.status]?.color + '.light' }}>
+                      <Avatar sx={{ bgcolor: statusOptions[withdrawal.status]?.color + '.light', width: { xs: 32, md: 40 }, height: { xs: 32, md: 40 } }}>
                         {statusOptions[withdrawal.status]?.icon}
                       </Avatar>
                       <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: { xs: '1rem', md: '1.25rem' } }}>
                           {formatCurrency(withdrawal.amount)}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           Reference: {withdrawal.withdrawalRef}
                         </Typography>
                       </Box>
@@ -225,31 +231,32 @@ export default function WithdrawalsHistoryPage() {
                       label={statusOptions[withdrawal.status]?.label}
                       color={statusOptions[withdrawal.status]?.color}
                       variant="outlined"
+                      size="small"
                     />
                   </Box>
 
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ p: 2, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
-                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white' }}>
+                      <Box sx={{ p: { xs: 1, md: 2 }, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
+                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           Amount Breakdown
                         </Typography>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" sx={{ color: 'grey.300' }}>Requested Amount:</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white' }}>
+                          <Typography variant="body2" sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Requested:</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                             {formatCurrency(withdrawal.amount)}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" sx={{ color: 'error.light' }}>Processing Fee (10%):</Typography>
-                          <Typography variant="body2" sx={{ color: 'error.light', fontWeight: 'bold' }}>
+                          <Typography variant="body2" sx={{ color: 'error.light', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Fee (10%):</Typography>
+                          <Typography variant="body2" sx={{ color: 'error.light', fontWeight: 'bold', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                             -{formatCurrency(withdrawal.feeAmount || 0)}
                           </Typography>
                         </Box>
                         <Divider sx={{ my: 1, borderColor: 'grey.600' }} />
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white' }}>Net Amount:</Typography>
-                          <Typography variant="body2" sx={{ color: 'success.light', fontWeight: 'bold' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Net Amount:</Typography>
+                          <Typography variant="body2" sx={{ color: 'success.light', fontWeight: 'bold', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                             {formatCurrency(withdrawal.netAmount || 0)}
                           </Typography>
                         </Box>
@@ -257,18 +264,18 @@ export default function WithdrawalsHistoryPage() {
                     </Grid>
                     
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ p: 2, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
-                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white' }}>
+                      <Box sx={{ p: { xs: 1, md: 2 }, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
+                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           Payment Details
                         </Typography>
-                        <Typography variant="body2" gutterBottom sx={{ color: 'grey.300' }}>
+                        <Typography variant="body2" gutterBottom sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           <strong style={{ color: 'white' }}>Method:</strong> {withdrawal.paymentMethod}
                         </Typography>
-                        <Typography variant="body2" gutterBottom sx={{ color: 'grey.300' }}>
+                        <Typography variant="body2" gutterBottom sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           <strong style={{ color: 'white' }}>Account:</strong> {withdrawal.accountDetails}
                         </Typography>
                         {withdrawal.notes && (
-                          <Typography variant="body2" gutterBottom sx={{ color: 'grey.300' }}>
+                          <Typography variant="body2" gutterBottom sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                             <strong style={{ color: 'white' }}>Notes:</strong> {withdrawal.notes}
                           </Typography>
                         )}
@@ -276,23 +283,23 @@ export default function WithdrawalsHistoryPage() {
                     </Grid>
                   </Grid>
 
-                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
                       Requested: {formatDate(withdrawal.createdAt)}
                     </Typography>
                     {withdrawal.processedAt && (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
                         Processed: {formatDate(withdrawal.processedAt)}
                       </Typography>
                     )}
                   </Box>
 
                   {withdrawal.adminNotes && (
-                    <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-                      <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    <Box sx={{ mt: 2, p: { xs: 1, md: 2 }, bgcolor: 'info.light', borderRadius: 1 }}>
+                      <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         Admin Notes:
                       </Typography>
-                      <Typography variant="body2">
+                      <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         {withdrawal.adminNotes}
                       </Typography>
                     </Box>
@@ -302,11 +309,11 @@ export default function WithdrawalsHistoryPage() {
             </Box>
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <History sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
+              <History sx={{ fontSize: { xs: 36, md: 48 }, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
                 No Withdrawal History
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>
                 {searchTerm || statusFilter !== 'all' 
                   ? 'No withdrawals match your current filters.'
                   : "You haven't made any withdrawal requests yet."
