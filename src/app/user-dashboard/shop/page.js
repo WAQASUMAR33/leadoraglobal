@@ -92,33 +92,8 @@ export default function Shop() {
   };
 
   const addToCart = (product) => {
-    // Check shopping eligibility
-    if (!shoppingEligibility?.eligible) {
-      if (shoppingEligibility?.reason === 'no_active_package') {
-        alert('You need an active package to shop. Please subscribe to a package first.');
-        return;
-      } else if (shoppingEligibility?.reason === 'already_shopped') {
-        alert('You have already used your shopping benefit. You can only shop once per package.');
-        return;
-      } else {
-        alert('You are not eligible to shop at this time.');
-        return;
-      }
-    }
-
-    // Check if adding this product would exceed shopping limit
-    const currentCartTotal = cart.reduce((total, item) => {
-      const price = parseFloat(item.sale_price || item.price);
-      return total + (price * item.quantity);
-    }, 0);
-
-    const productPrice = parseFloat(product.sale_price || product.price);
-    const newTotal = currentCartTotal + productPrice;
-
-    if (newTotal > shoppingEligibility.package.shoppingAmount) {
-      alert(`Adding this product would exceed your shopping limit of PKR ${shoppingEligibility.package.shoppingAmount.toFixed(2)}. Current cart total: PKR ${currentCartTotal.toFixed(2)}`);
-      return;
-    }
+    // REMOVED ALL RESTRICTIONS - Everyone can shop now
+    // No eligibility checks, no limit checks - just add to cart
 
     try {
       const existingItem = cart.find(item => item.id === product.id);
@@ -188,48 +163,45 @@ export default function Shop() {
             <h1 className="text-xl md:text-2xl font-bold text-white">Shop Products</h1>
             <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base">Browse and purchase products from our catalog</p>
             
-            {/* Shopping Eligibility Info */}
+            {/* Shopping Status Info */}
             {eligibilityLoading ? (
               <div className="mt-2 md:mt-3 flex items-center space-x-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                <span className="text-xs md:text-sm text-gray-400">Checking shopping eligibility...</span>
+                <span className="text-xs md:text-sm text-gray-400">Loading shop...</span>
               </div>
             ) : shoppingEligibility ? (
               <div className="mt-2 md:mt-3">
-                {shoppingEligibility.eligible ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-xs md:text-sm text-green-400">Shopping Enabled</span>
-                    </div>
-                    <div className="text-xs md:text-sm text-gray-400">
-                      Package: <span className="text-white font-medium">{shoppingEligibility.package.name}</span>
-                    </div>
-                    <div className="text-xs md:text-sm text-gray-400">
-                      Limit: <span className="text-white font-medium">PKR {shoppingEligibility.package.shoppingAmount.toFixed(2)}</span>
-                    </div>
-                    {getCartTotal() > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-xs md:text-sm text-green-400">Shopping Available</span>
+                  </div>
+                  
+                  {/* Show package info if user has package */}
+                  {shoppingEligibility.package && (
+                    <>
                       <div className="text-xs md:text-sm text-gray-400">
-                        Cart: <span className="text-yellow-400 font-medium">PKR {getCartTotal().toFixed(2)}</span>
+                        Package: <span className="text-white font-medium">{shoppingEligibility.package.name}</span>
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-1 sm:space-y-0">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      <span className="text-xs md:text-sm text-red-400">{shoppingEligibility.message}</span>
+                      <div className="text-xs md:text-sm text-gray-400">
+                        Benefits: <span className="text-white font-medium">PKR {shoppingEligibility.package.shoppingAmount.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Show payment proof info for users without packages */}
+                  {!shoppingEligibility.package && (
+                    <div className="text-xs md:text-sm text-gray-400">
+                      <span className="text-white font-medium">Payment Proof Required</span> - Amount added after approval
                     </div>
-                    {shoppingEligibility.reason === 'no_active_package' && (
-                      <Link
-                        href="/user-dashboard/subscribe"
-                        className="text-xs md:text-sm text-blue-400 hover:text-blue-300 underline"
-                      >
-                        Subscribe to Package
-                      </Link>
-                    )}
-                  </div>
-                )}
+                  )}
+                  
+                  {getCartTotal() > 0 && (
+                    <div className="text-xs md:text-sm text-gray-400">
+                      Cart: <span className="text-yellow-400 font-medium">PKR {getCartTotal().toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : null}
           </div>
@@ -315,24 +287,13 @@ export default function Shop() {
                 </div>
               </div>
 
-              {/* Action Button */}
-              {!shoppingEligibility?.eligible ? (
-                <button
-                  disabled
-                  className="w-full py-1.5 md:py-2 px-2 md:px-4 rounded-lg font-medium bg-gray-600 text-gray-400 cursor-not-allowed text-xs md:text-base"
-                >
-                  {shoppingEligibility?.reason === 'no_active_package' ? 'Subscribe' : 
-                   shoppingEligibility?.reason === 'already_shopped' ? 'Shopped' : 
-                   'Unavailable'}
-                </button>
-              ) : (
-                <button
-                  onClick={() => addToCart(product)}
-                  className="w-full py-1.5 md:py-2 px-2 md:px-4 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 text-xs md:text-base"
-                >
-                  Add to Cart
-                </button>
-              )}
+              {/* Action Button - No Restrictions */}
+              <button
+                onClick={() => addToCart(product)}
+                className="w-full py-1.5 md:py-2 px-2 md:px-4 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 text-xs md:text-base"
+              >
+                {shoppingEligibility?.shopping?.shoppingType === 'payment_proof_required' ? 'Add to Cart (Payment Proof)' : 'Add to Cart'}
+              </button>
             </div>
           </div>
         ))}

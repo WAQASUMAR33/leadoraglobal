@@ -64,7 +64,7 @@ export default function AdminOrdersPage() {
 
   // Payment status options
   const paymentStatusOptions = [
-    { value: 'pending', label: 'Pending', color: 'warning' },
+    { value: 'pending', label: 'Pending Payment Proof', color: 'warning' },
     { value: 'paid', label: 'Paid', color: 'success' },
     { value: 'failed', label: 'Failed', color: 'error' },
     { value: 'refunded', label: 'Refunded', color: 'info' }
@@ -179,6 +179,15 @@ export default function AdminOrdersPage() {
       <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
         Order Management
       </Typography>
+
+      {/* New Logic Information */}
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>New Shopping Logic:</strong> Users without active packages can shop and send payment proof. 
+          When you approve their order (set status to "Delivered" and payment to "Paid"), 
+          the order amount will be automatically added to their account balance.
+        </Typography>
+      </Alert>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>

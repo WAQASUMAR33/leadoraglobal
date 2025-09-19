@@ -287,37 +287,37 @@ export default function FreeAccountsPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredMembers.map((member) => (
-                    <TableRow key={member.id} hover>
+                    {filteredMembers.map((member) => (
+                      <TableRow key={member.id} hover>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                          {member.name || 'Unknown'}
-                        </Typography>
+                                {member.name || 'Unknown'}
+                            </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" color="text.secondary">
                           @{member.username}
-                        </Typography>
+                            </Typography>
                       </TableCell>
                       <TableCell>
                         <Chip 
-                          label={`Level ${member.level}`}
-                          color={getLevelColor(member.level)}
+                            label={`Level ${member.level}`} 
+                            color={getLevelColor(member.level)}
                           size="small"
                           variant="outlined"
                         />
                       </TableCell>
                       <TableCell>
                         <Chip 
-                          label={member.packageStatus} 
-                          color={getPackageStatusColor(member.packageStatus)}
+                            label={member.packageStatus} 
+                            color={getPackageStatusColor(member.packageStatus)}
                           size="small"
                         />
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
                           {formatDate(member.createdAt)}
-                        </Typography>
+                          </Typography>
                       </TableCell>
                     </TableRow>
                   ))}

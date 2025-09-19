@@ -118,7 +118,9 @@ export async function PUT(request, { params }) {
             id: true,
             username: true,
             fullname: true,
-            email: true
+            email: true,
+            balance: true,
+            currentPackageId: true
           }
         },
         orderItems: {
@@ -136,6 +138,41 @@ export async function PUT(request, { params }) {
         }
       }
     });
+
+    // NEW LOGIC: If order is approved and user has no active package, add amount to user's balance
+    if (status === 'delivered' && paymentStatus === 'paid') {
+      const user = updatedOrder.user;
+      
+      // Get user's package expiry date to check if they have an active package
+      const userWithPackage = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          currentPackageId: true,
+          packageExpiryDate: true
+        }
+      });
+      
+      // Check if user has no active package (shopping without package)
+      const hasActivePackage = userWithPackage.currentPackageId && 
+                              userWithPackage.packageExpiryDate && 
+                              new Date(userWithPackage.packageExpiryDate) > new Date();
+
+      if (!hasActivePackage) {
+        // Add order amount to user's balance
+        const orderAmount = parseFloat(updatedOrder.totalAmount);
+        const newBalance = parseFloat(user.balance) + orderAmount;
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            balance: newBalance,
+            updatedAt: new Date()
+          }
+        });
+
+        console.log(`Added PKR ${orderAmount} to user ${user.username}'s account. New balance: PKR ${newBalance}`);
+      }
+    }
 
     return NextResponse.json({
       success: true,

@@ -46,53 +46,66 @@ export async function GET(request) {
                             user.packageExpiryDate && 
                             new Date(user.packageExpiryDate) > new Date();
 
-    if (!hasActivePackage) {
-      return NextResponse.json({
-        success: true,
-        eligible: false,
-        reason: 'no_active_package',
-        message: 'You need an active package to shop',
-        user: {
-          id: user.id,
-          fullname: user.fullname,
-          username: user.username
-        }
-      });
-    }
-
-    // Check if user has already shopped (has any orders)
+    // Get existing orders to check shopping history
     const existingOrders = await prisma.order.findMany({
       where: { userId: parseInt(userId) },
-      select: { id: true, totalAmount: true, createdAt: true }
+      select: { id: true, totalAmount: true, createdAt: true, status: true, paymentStatus: true }
     });
 
     const hasShopped = existingOrders.length > 0;
     const totalSpent = existingOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
-    const remainingAmount = parseFloat(user.currentPackage.shopping_amount) - totalSpent;
 
-    return NextResponse.json({
-      success: true,
-      eligible: !hasShopped,
-      reason: hasShopped ? 'already_shopped' : 'eligible',
-      message: hasShopped ? 'You have already used your shopping benefit' : 'You are eligible to shop',
-      user: {
-        id: user.id,
-        fullname: user.fullname,
-        username: user.username
-      },
-      package: {
-        id: user.currentPackage.id,
-        name: user.currentPackage.package_name,
-        shoppingAmount: parseFloat(user.currentPackage.shopping_amount),
-        packageAmount: parseFloat(user.currentPackage.package_amount)
-      },
-      shopping: {
-        hasShopped,
-        totalSpent,
-        remainingAmount: Math.max(0, remainingAmount),
-        orderCount: existingOrders.length
-      }
-    });
+    // NEW LOGIC: Different behavior based on package status
+    if (!hasActivePackage) {
+      // User without active package can shop and send payment proof
+      return NextResponse.json({
+        success: true,
+        eligible: true,
+        reason: 'no_package_shopping',
+        message: 'You can shop and send payment proof. Amount will be added to your account after approval.',
+        user: {
+          id: user.id,
+          fullname: user.fullname,
+          username: user.username
+        },
+        package: null,
+        shopping: {
+          hasShopped,
+          totalSpent,
+          remainingAmount: null, // No limit for users without packages
+          orderCount: existingOrders.length,
+          shoppingType: 'payment_proof_required'
+        }
+      });
+    } else {
+      // User with active package - show package info but allow unlimited shopping
+      const remainingAmount = parseFloat(user.currentPackage.shopping_amount) - totalSpent;
+
+      return NextResponse.json({
+        success: true,
+        eligible: true, // Always allow shopping
+        reason: 'package_shopping',
+        message: 'You can shop with your package benefits',
+        user: {
+          id: user.id,
+          fullname: user.fullname,
+          username: user.username
+        },
+        package: {
+          id: user.currentPackage.id,
+          name: user.currentPackage.package_name,
+          shoppingAmount: parseFloat(user.currentPackage.shopping_amount),
+          packageAmount: parseFloat(user.currentPackage.package_amount)
+        },
+        shopping: {
+          hasShopped,
+          totalSpent,
+          remainingAmount: Math.max(0, remainingAmount),
+          orderCount: existingOrders.length,
+          shoppingType: 'package_benefits'
+        }
+      });
+    }
 
   } catch (error) {
     console.error('Shopping eligibility API error:', error);

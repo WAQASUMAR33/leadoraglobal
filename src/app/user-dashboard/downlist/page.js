@@ -264,8 +264,8 @@ export default function DownlistPage() {
                     <TableRow key={member.id} hover>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                          {member.fullname || 'Unknown'}
-                        </Typography>
+                                  {member.fullname || 'Unknown'}
+                                </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
@@ -281,21 +281,21 @@ export default function DownlistPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          label={member.status || 'Active'} 
-                          color={getStatusColor(member.status || 'active')}
-                          size="small"
-                        />
+                                <Chip 
+                                  label={member.status || 'Active'} 
+                                  color={getStatusColor(member.status || 'active')}
+                                  size="small"
+                                />
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary">
                           {member.package || 'No Package'}
-                        </Typography>
+                                </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary">
                           {formatDate(member.createdAt)}
-                        </Typography>
+                                </Typography>
                       </TableCell>
                     </TableRow>
                   ))}
