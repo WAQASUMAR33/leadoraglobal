@@ -1,63 +1,63 @@
-import prisma from '../../../../lib/prisma';
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { verifyAdminToken } from '../../../../lib/adminAuth';
 
+const prisma = new PrismaClient();
+
+// GET - Fetch orphan accounts list
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'all';
-    const limit = parseInt(searchParams.get('limit')) || 100;
-    const offset = parseInt(searchParams.get('offset')) || 0;
+    const admin = verifyAdminToken(request);
+    if (!admin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    console.log('📋 Fetching orphan accounts list...', { type, limit, offset });
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type') || 'referrals';
+    const format = searchParams.get('format') || 'json';
 
     let result = {};
 
-    if (type === 'all' || type === 'referrals') {
-      result.referrals = await getOrphanReferralAccounts(limit, offset);
+    if (type === 'referrals') {
+      result = await getOrphanAccounts();
+    } else if (type === 'package_requests') {
+      result = await getOrphanPackageRequests();
+    } else if (type === 'earnings') {
+      result = await getOrphanEarnings();
+    } else {
+      return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });
     }
 
-    if (type === 'all' || type === 'package_requests') {
-      result.packageRequests = await getOrphanPackageRequests(limit, offset);
-    }
-
-    if (type === 'all' || type === 'earnings') {
-      result.earnings = await getOrphanEarnings(limit, offset);
-    }
-
-    // Get summary statistics
-    const summary = await getOrphanSummary();
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Orphan accounts list retrieved successfully',
-        summary,
-        data: result,
-        pagination: {
-          limit,
-          offset,
-          type
+    if (format === 'csv') {
+      const csv = convertToCSV(result, type);
+      return new NextResponse(csv, {
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': `attachment; filename="orphan-${type}-${new Date().toISOString().split('T')[0]}.csv"`
         }
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      ...result
+    });
 
   } catch (error) {
     console.error('Error fetching orphan accounts list:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: 'Failed to fetch orphan accounts list',
-        error: error.message
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }
 
-// Get orphan referral accounts
-async function getOrphanReferralAccounts(limit = 100, offset = 0) {
+// Get orphan accounts (users with invalid referrals)
+async function getOrphanAccounts() {
   try {
-    // Find users with referrals
+    console.log('🔍 Starting orphan accounts check...');
+    
+    // Find users with referrals that don't exist
     const usersWithReferrals = await prisma.user.findMany({
       where: {
         referredBy: {
@@ -68,63 +68,29 @@ async function getOrphanReferralAccounts(limit = 100, offset = 0) {
         id: true,
         username: true,
         fullname: true,
-        referredBy: true,
         email: true,
         phoneNumber: true,
         status: true,
         balance: true,
         points: true,
         totalEarnings: true,
-        createdAt: true,
-        updatedAt: true
-      },
-      skip: offset,
-      take: limit,
-      orderBy: {
-        createdAt: 'desc'
+        referredBy: true,
+        createdAt: true
       }
     });
 
+    console.log(`Found ${usersWithReferrals.length} users with referrals`);
+
     const orphanAccounts = [];
     const validReferrals = [];
-    const circularReferrals = [];
-    const selfReferrals = [];
-    const missingReferrers = new Map();
+    const referralStats = {};
 
-    // Check each user's referral
     for (const user of usersWithReferrals) {
       if (user.referredBy) {
-        // Check for self-referral
-        if (user.referredBy === user.username) {
-          selfReferrals.push({
-            id: user.id,
-            username: user.username,
-            fullname: user.fullname,
-            email: user.email,
-            phoneNumber: user.phoneNumber,
-            status: user.status,
-            balance: user.balance,
-            points: user.points,
-            totalEarnings: user.totalEarnings,
-            referredBy: user.referredBy,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-            issue: 'Self-referral detected',
-            severity: 'medium'
-          });
-          continue;
-        }
-
-        // Check if referrer exists
+        // Check if the referrer exists
         const referrer = await prisma.user.findUnique({
           where: { username: user.referredBy },
-          select: { 
-            id: true, 
-            username: true, 
-            fullname: true, 
-            status: true,
-            createdAt: true
-          }
+          select: { id: true, username: true, fullname: true, status: true }
         });
 
         if (!referrer) {
@@ -141,20 +107,15 @@ async function getOrphanReferralAccounts(limit = 100, offset = 0) {
             totalEarnings: user.totalEarnings,
             referredBy: user.referredBy,
             createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
             issue: 'Referrer not found',
             severity: 'high'
           });
-
-          // Track missing referrer
-          if (!missingReferrers.has(user.referredBy)) {
-            missingReferrers.set(user.referredBy, []);
+          
+          // Track referral stats
+          if (!referralStats[user.referredBy]) {
+            referralStats[user.referredBy] = 0;
           }
-          missingReferrers.get(user.referredBy).push({
-            id: user.id,
-            username: user.username,
-            fullname: user.fullname
-          });
+          referralStats[user.referredBy]++;
         } else if (referrer.status !== 'active') {
           // Referrer exists but is inactive
           orphanAccounts.push({
@@ -169,91 +130,130 @@ async function getOrphanReferralAccounts(limit = 100, offset = 0) {
             totalEarnings: user.totalEarnings,
             referredBy: user.referredBy,
             createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
             referrerStatus: referrer.status,
-            referrerCreatedAt: referrer.createdAt,
             issue: 'Referrer is inactive',
             severity: 'medium'
           });
         } else {
-          // Check for circular referral
-          if (referrer.referredBy === user.username) {
-            circularReferrals.push({
-              user1: {
-                id: user.id,
-                username: user.username,
-                fullname: user.fullname,
-                email: user.email,
-                status: user.status,
-                createdAt: user.createdAt
-              },
-              user2: {
-                id: referrer.id,
-                username: referrer.username,
-                fullname: referrer.fullname,
-                status: referrer.status,
-                createdAt: referrer.createdAt
-              },
-              issue: 'Circular referral detected',
-              severity: 'high'
-            });
-          } else {
-            // Valid referral
-            validReferrals.push({
-              id: user.id,
-              username: user.username,
-              fullname: user.fullname,
-              email: user.email,
-              status: user.status,
-              referredBy: user.referredBy,
-              referrerExists: true,
-              referrerStatus: referrer.status,
-              createdAt: user.createdAt
-            });
-          }
+          // Valid referral
+          validReferrals.push({
+            id: user.id,
+            username: user.username,
+            referredBy: user.referredBy,
+            referrerExists: true,
+            referrerStatus: referrer.status
+          });
         }
       }
     }
 
-    // Convert missing referrers map to array
-    const missingReferrersArray = Array.from(missingReferrers.entries()).map(([username, users]) => ({
-      username,
-      referredUsersCount: users.length,
-      referredUsers: users
-    }));
+    // Check for circular referrals
+    const circularReferrals = [];
+    for (const user of usersWithReferrals) {
+      if (user.referredBy) {
+        const referrer = await prisma.user.findUnique({
+          where: { username: user.referredBy },
+          select: { referredBy: true, username: true }
+        });
+        
+        if (referrer && referrer.referredBy === user.username) {
+          circularReferrals.push({
+            user1: {
+              id: user.id,
+              username: user.username,
+              fullname: user.fullname
+            },
+            user2: {
+              username: referrer.username
+            },
+            issue: 'Circular referral detected'
+          });
+        }
+      }
+    }
+
+    // Check for self-referrals
+    const selfReferrals = usersWithReferrals.filter(user => 
+      user.referredBy === user.username
+    );
+
+    // Find users who are referrers but don't exist
+    const allReferrers = [...new Set(usersWithReferrals.map(u => u.referredBy).filter(Boolean))];
+    const missingReferrers = [];
+    
+    for (const referrerUsername of allReferrers) {
+      const referrer = await prisma.user.findUnique({
+        where: { username: referrerUsername }
+      });
+      
+      if (!referrer) {
+        const referredUsers = usersWithReferrals.filter(u => u.referredBy === referrerUsername);
+        missingReferrers.push({
+          username: referrerUsername,
+          referredUsersCount: referredUsers.length,
+          referredUsers: referredUsers.map(u => ({
+            id: u.id,
+            username: u.username,
+            fullname: u.fullname
+          }))
+        });
+      }
+    }
+
+    // Generate statistics
+    const stats = {
+      totalUsersWithReferrals: usersWithReferrals.length,
+      orphanAccountsCount: orphanAccounts.length,
+      validReferralsCount: validReferrals.length,
+      circularReferralsCount: circularReferrals.length,
+      selfReferralsCount: selfReferrals.length,
+      missingReferrersCount: missingReferrers.length,
+      highSeverityIssues: orphanAccounts.filter(o => o.severity === 'high').length,
+      mediumSeverityIssues: orphanAccounts.filter(o => o.severity === 'medium').length
+    };
+
+    console.log('Orphan accounts check completed:', {
+      totalUsers: stats.totalUsersWithReferrals,
+      orphanAccounts: stats.orphanAccountsCount,
+      issues: stats.orphanAccountsCount + circularReferrals.length + selfReferrals.length
+    });
 
     return {
       orphanAccounts,
       validReferrals,
       circularReferrals,
       selfReferrals,
-      missingReferrers: missingReferrersArray,
-      statistics: {
-        totalUsersWithReferrals: usersWithReferrals.length,
-        orphanAccountsCount: orphanAccounts.length,
-        validReferralsCount: validReferrals.length,
-        circularReferralsCount: circularReferrals.length,
-        selfReferralsCount: selfReferrals.length,
-        missingReferrersCount: missingReferrersArray.length,
-        highSeverityIssues: orphanAccounts.filter(o => o.severity === 'high').length,
-        mediumSeverityIssues: orphanAccounts.filter(o => o.severity === 'medium').length
-      }
+      missingReferrers,
+      referralStats,
+      statistics: stats
     };
 
   } catch (error) {
-    console.error('Error getting orphan referral accounts:', error);
+    console.error('Error getting orphan accounts:', error);
     throw error;
   }
 }
 
 // Get orphan package requests
-async function getOrphanPackageRequests(limit = 100, offset = 0) {
+async function getOrphanPackageRequests() {
   try {
     const orphanPackageRequests = await prisma.packageRequest.findMany({
       where: {
-        user: null
+        user: {
+          referredBy: {
+            not: null
+          }
+        }
       },
       include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            fullname: true,
+            referredBy: true
+          }
+        },
         package: {
           select: {
             id: true,
@@ -261,18 +261,28 @@ async function getOrphanPackageRequests(limit = 100, offset = 0) {
             package_amount: true
           }
         }
-      },
-      skip: offset,
-      take: limit,
-      orderBy: {
-        createdAt: 'desc'
       }
     });
 
+    // Filter for orphan requests (where referrer doesn't exist)
+    const orphanRequests = [];
+    for (const request of orphanPackageRequests) {
+      if (request.user.referredBy) {
+        const referrer = await prisma.user.findUnique({
+          where: { username: request.user.referredBy }
+        });
+        
+        if (!referrer) {
+          orphanRequests.push(request);
+        }
+      }
+    }
+
     return {
-      orphanPackageRequests,
+      orphanPackageRequests: orphanRequests,
       statistics: {
-        orphanPackageRequestsCount: orphanPackageRequests.length
+        totalOrphanRequests: orphanRequests.length,
+        totalPackageRequests: orphanPackageRequests.length
       }
     };
 
@@ -283,159 +293,59 @@ async function getOrphanPackageRequests(limit = 100, offset = 0) {
 }
 
 // Get orphan earnings
-async function getOrphanEarnings(limit = 100, offset = 0) {
+async function getOrphanEarnings() {
   try {
     const orphanEarnings = await prisma.earnings.findMany({
       where: {
-        user: null
-      },
-      include: {
-        packageRequest: {
-          select: {
-            id: true,
-            transactionId: true,
-            status: true
+        user: {
+          referredBy: {
+            not: null
           }
         }
       },
-      skip: offset,
-      take: limit,
-      orderBy: {
-        createdAt: 'desc'
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            fullname: true,
+            referredBy: true
+          }
+        },
+        packageRequest: {
+          select: {
+            id: true,
+            transactionId: true
+          }
+        }
       }
     });
 
+    // Filter for orphan earnings (where referrer doesn't exist)
+    const orphanEarningsList = [];
+    for (const earning of orphanEarnings) {
+      if (earning.user.referredBy) {
+        const referrer = await prisma.user.findUnique({
+          where: { username: earning.user.referredBy }
+        });
+        
+        if (!referrer) {
+          orphanEarningsList.push(earning);
+        }
+      }
+    }
+
     return {
-      orphanEarnings,
+      orphanEarnings: orphanEarningsList,
       statistics: {
-        orphanEarningsCount: orphanEarnings.length
+        totalOrphanEarnings: orphanEarningsList.length,
+        totalEarnings: orphanEarnings.length
       }
     };
 
   } catch (error) {
     console.error('Error getting orphan earnings:', error);
     throw error;
-  }
-}
-
-// Get summary statistics
-async function getOrphanSummary() {
-  try {
-    // Count users with referrals
-    const usersWithReferralsCount = await prisma.user.count({
-      where: {
-        referredBy: {
-          not: null
-        }
-      }
-    });
-
-    // Count orphan package requests
-    const orphanPackageRequestsCount = await prisma.packageRequest.count({
-      where: {
-        user: null
-      }
-    });
-
-    // Count orphan earnings
-    const orphanEarningsCount = await prisma.earnings.count({
-      where: {
-        user: null
-      }
-    });
-
-    // Count total users
-    const totalUsersCount = await prisma.user.count();
-
-    // Count total package requests
-    const totalPackageRequestsCount = await prisma.packageRequest.count();
-
-    // Count total earnings
-    const totalEarningsCount = await prisma.earnings.count();
-
-    return {
-      totalUsers: totalUsersCount,
-      totalPackageRequests: totalPackageRequestsCount,
-      totalEarnings: totalEarningsCount,
-      usersWithReferrals: usersWithReferralsCount,
-      orphanPackageRequests: orphanPackageRequestsCount,
-      orphanEarnings: orphanEarningsCount,
-      orphanPercentage: {
-        packageRequests: totalPackageRequestsCount > 0 ? 
-          ((orphanPackageRequestsCount / totalPackageRequestsCount) * 100).toFixed(2) : 0,
-        earnings: totalEarningsCount > 0 ? 
-          ((orphanEarningsCount / totalEarningsCount) * 100).toFixed(2) : 0
-      }
-    };
-
-  } catch (error) {
-    console.error('Error getting orphan summary:', error);
-    throw error;
-  }
-}
-
-// POST endpoint to export orphan accounts list
-export async function POST(request) {
-  try {
-    const body = await request.json();
-    const { exportType, format } = body;
-
-    console.log('📤 Exporting orphan accounts...', { exportType, format });
-
-    let data;
-    
-    if (exportType === 'referrals') {
-      data = await getOrphanReferralAccounts(1000, 0); // Get more for export
-    } else if (exportType === 'package_requests') {
-      data = await getOrphanPackageRequests(1000, 0);
-    } else if (exportType === 'earnings') {
-      data = await getOrphanEarnings(1000, 0);
-    } else {
-      data = {
-        referrals: await getOrphanReferralAccounts(1000, 0),
-        packageRequests: await getOrphanPackageRequests(1000, 0),
-        earnings: await getOrphanEarnings(1000, 0)
-      };
-    }
-
-    const summary = await getOrphanSummary();
-
-    if (format === 'csv') {
-      // Convert to CSV format
-      const csvData = convertToCSV(data, exportType);
-      
-      return new Response(csvData, {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/csv',
-          'Content-Disposition': `attachment; filename="orphan_accounts_${new Date().toISOString().split('T')[0]}.csv"`
-        }
-      });
-    } else {
-      // Return JSON format
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Orphan accounts exported successfully',
-          summary,
-          data,
-          exportedAt: new Date(),
-          format: 'json'
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-  } catch (error) {
-    console.error('Error exporting orphan accounts:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: 'Failed to export orphan accounts',
-        error: error.message
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
   }
 }
 
@@ -457,7 +367,14 @@ function convertToCSV(data, type) {
     
     // CSV rows
     data.orphanPackageRequests.forEach(request => {
-      csv += `${request.id},"${request.package?.package_name || 'N/A'}","${request.package?.package_amount || 'N/A"}","${request.transactionId}","${request.status}","${request.adminNotes || ''}","${request.createdAt}"\n`;
+      const packageName = request.package?.package_name || 'N/A';
+      const packageAmount = request.package?.package_amount || 'N/A';
+      const transactionId = request.transactionId || '';
+      const status = request.status || '';
+      const adminNotes = request.adminNotes || '';
+      const createdAt = request.createdAt || '';
+      
+      csv += `${request.id},"${packageName}","${packageAmount}","${transactionId}","${status}","${adminNotes}","${createdAt}"\n`;
     });
   } else if (type === 'earnings' && data.orphanEarnings) {
     // CSV header for orphan earnings
@@ -471,5 +388,3 @@ function convertToCSV(data, type) {
   
   return csv;
 }
-
-

@@ -184,7 +184,7 @@ export default function AdminOrdersPage() {
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
           <strong>New Shopping Logic:</strong> Users without active packages can shop and send payment proof. 
-          When you approve their order (set status to "Delivered" and payment to "Paid"), 
+          When you approve their order (set status to &quot;Delivered&quot; and payment to &quot;Paid&quot;), 
           the order amount will be automatically added to their account balance.
         </Typography>
       </Alert>
