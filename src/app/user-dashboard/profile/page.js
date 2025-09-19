@@ -153,11 +153,11 @@ export default function UserProfile() {
 
   if (!user) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-400 text-lg">Please log in to view your profile.</p>
+      <div className="text-center py-8 md:py-12 p-1">
+        <p className="text-gray-400 text-base md:text-lg">Please log in to view your profile.</p>
         <button 
           onClick={() => window.location.href = '/login'} 
-          className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
+          className="mt-4 px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
         >
           Go to Login
         </button>
@@ -166,17 +166,17 @@ export default function UserProfile() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2 p-1">
       {/* Header */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between">
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">My Profile</h1>
-            <p className="text-gray-400 mt-2">Manage your account information and settings</p>
+            <h1 className="text-xl md:text-2xl font-bold text-white">My Profile</h1>
+            <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base">Manage your account information and settings</p>
           </div>
           <button
             onClick={() => setEditing(!editing)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
+            className={`px-3 md:px-4 py-2 rounded-lg font-medium transition-colors duration-200 text-sm md:text-base ${
               editing
                 ? 'bg-gray-600 text-white hover:bg-gray-700'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -189,7 +189,7 @@ export default function UserProfile() {
 
       {/* Message Display */}
       {message.text && (
-        <div className={`rounded-lg p-4 ${
+        <div className={`rounded-lg p-3 md:p-4 text-sm md:text-base ${
           message.type === 'success' 
             ? 'bg-green-900 border border-green-700 text-green-100' 
             : 'bg-red-900 border border-red-700 text-red-100'
@@ -199,13 +199,13 @@ export default function UserProfile() {
       )}
 
              {/* Profile Information */}
-       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-         <h2 className="text-xl font-bold text-white mb-6">Personal Information</h2>
+       <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+         <h2 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">Personal Information</h2>
         
-        <form onSubmit={handleProfileUpdate} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleProfileUpdate} className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
                 Full Name
               </label>
               <input
@@ -214,7 +214,7 @@ export default function UserProfile() {
                 value={formData.fullname}
                 onChange={handleInputChange}
                 disabled={!editing}
-                className={`w-full px-4 py-3 rounded-lg border ${
+                className={`w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border text-sm md:text-base ${
                   editing
                     ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
                     : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
@@ -224,7 +224,7 @@ export default function UserProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
                 Username
               </label>
               <input
@@ -233,13 +233,13 @@ export default function UserProfile() {
                 value={formData.username}
                 onChange={handleInputChange}
                 disabled={true}
-                className="w-full px-4 py-3 rounded-lg border bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"
+                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed text-sm md:text-base"
                 placeholder="Username cannot be changed"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
                 Email
               </label>
               <input
@@ -248,7 +248,7 @@ export default function UserProfile() {
                 value={formData.email}
                 onChange={handleInputChange}
                 disabled={!editing}
-                className={`w-full px-4 py-3 rounded-lg border ${
+                className={`w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border text-sm md:text-base ${
                   editing
                     ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
                     : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
@@ -257,7 +257,7 @@ export default function UserProfile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
                 Phone Number
               </label>
               <input
@@ -266,7 +266,7 @@ export default function UserProfile() {
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
                 disabled={!editing}
-                className={`w-full px-4 py-3 rounded-lg border ${
+                className={`w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border text-sm md:text-base ${
                   editing
                     ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
                     : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
@@ -277,17 +277,17 @@ export default function UserProfile() {
           </div>
 
           {editing && (
-            <div className="flex justify-end space-x-4">
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4">
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="px-6 py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors duration-200"
+                className="px-4 md:px-6 py-2 md:py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors duration-200 text-sm md:text-base"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
+                className="px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
               >
                 Save Changes
               </button>
@@ -297,13 +297,13 @@ export default function UserProfile() {
       </div>
 
       {/* Change Password */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-6">Change Password</h2>
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+        <h2 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">Change Password</h2>
         
-        <form onSubmit={handlePasswordUpdate} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <form onSubmit={handlePasswordUpdate} className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
                 Current Password
               </label>
               <input
@@ -311,13 +311,13 @@ export default function UserProfile() {
                 name="currentPassword"
                 value={passwordData.currentPassword}
                 onChange={handlePasswordChange}
-                className="w-full px-4 py-3 rounded-lg border bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm md:text-base"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
                 New Password
               </label>
               <input
@@ -325,14 +325,14 @@ export default function UserProfile() {
                 name="newPassword"
                 value={passwordData.newPassword}
                 onChange={handlePasswordChange}
-                className="w-full px-4 py-3 rounded-lg border bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm md:text-base"
                 required
                 minLength={6}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
                 Confirm New Password
               </label>
               <input
@@ -340,7 +340,7 @@ export default function UserProfile() {
                 name="confirmPassword"
                 value={passwordData.confirmPassword}
                 onChange={handlePasswordChange}
-                className="w-full px-4 py-3 rounded-lg border bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm md:text-base"
                 required
                 minLength={6}
               />
@@ -350,7 +350,7 @@ export default function UserProfile() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors duration-200"
+              className="px-4 md:px-6 py-2 md:py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors duration-200 text-sm md:text-base"
             >
               Change Password
             </button>
@@ -359,32 +359,32 @@ export default function UserProfile() {
       </div>
 
       {/* Account Stats */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-6">Account Information</h2>
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+        <h2 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">Account Information</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-400">{user.username || 'N/A'}</div>
-            <p className="text-gray-400 text-sm">Username</p>
+            <div className="text-lg md:text-2xl font-bold text-blue-400 truncate">{user.username || 'N/A'}</div>
+            <p className="text-gray-400 text-xs md:text-sm">Username</p>
           </div>
           
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">{user.referralCount || 0}</div>
-            <p className="text-gray-400 text-sm">Total Referrals</p>
+            <div className="text-lg md:text-2xl font-bold text-green-400">{user.referralCount || 0}</div>
+            <p className="text-gray-400 text-xs md:text-sm">Total Referrals</p>
           </div>
           
           <div className="text-center">
-            <div className="text-2xl font-bold text-purple-400">
+            <div className="text-lg md:text-2xl font-bold text-purple-400">
               ${parseFloat(user.totalEarnings || 0).toFixed(2)}
             </div>
-            <p className="text-gray-400 text-sm">Total Earnings</p>
+            <p className="text-gray-400 text-xs md:text-sm">Total Earnings</p>
           </div>
           
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-400">
+            <div className="text-lg md:text-2xl font-bold text-yellow-400">
               {user.packageId ? 'Active' : 'None'}
             </div>
-            <p className="text-sm">Package Status</p>
+            <p className="text-gray-400 text-xs md:text-sm">Package Status</p>
           </div>
         </div>
       </div>
