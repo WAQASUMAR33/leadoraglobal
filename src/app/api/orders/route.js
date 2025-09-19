@@ -7,7 +7,9 @@ export async function POST(request) {
       userId, 
       items, 
       shippingInfo, 
-      totalAmount 
+      totalAmount,
+      paymentProof,
+      shoppingType
     } = body;
 
     if (!userId || !items || !shippingInfo || !totalAmount) {
@@ -20,11 +22,39 @@ export async function POST(request) {
       );
     }
 
+    // Check if user has active package
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId) },
+      select: {
+        currentPackageId: true,
+        packageExpiryDate: true
+      }
+    });
+
+    const hasActivePackage = user.currentPackageId && 
+                            user.packageExpiryDate && 
+                            new Date(user.packageExpiryDate) > new Date();
+
+    // Validate payment proof for users without active packages
+    if (!hasActivePackage && !paymentProof) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Payment proof is required for users without active packages' 
+        }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Generate unique order number
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
     // Create shipping address string
     const shippingAddress = JSON.stringify(shippingInfo);
+
+    // Determine payment method and status based on package status
+    const paymentMethod = hasActivePackage ? 'package_benefits' : 'payment_proof';
+    const paymentStatus = hasActivePackage ? 'paid' : 'pending';
 
     // Create order
     const order = await prisma.order.create({
@@ -34,8 +64,9 @@ export async function POST(request) {
         totalAmount: parseFloat(totalAmount),
         status: 'pending',
         shippingAddress,
-        paymentMethod: 'direct_order',
-        paymentStatus: 'pending'
+        paymentMethod,
+        paymentStatus,
+        paymentProof: paymentProof || null // Store payment proof if provided
       }
     });
 

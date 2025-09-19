@@ -10,6 +10,9 @@ export default function Checkout() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [shoppingEligibility, setShoppingEligibility] = useState(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(true);
+  const [paymentProof, setPaymentProof] = useState(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -36,9 +39,44 @@ export default function Checkout() {
       } catch (error) {
         console.error('Error loading cart:', error);
       }
+      
+      // Fetch shopping eligibility
+      fetchShoppingEligibility();
       setLoading(false);
     }
   }, [mounted]);
+
+  const fetchShoppingEligibility = async () => {
+    try {
+      setEligibilityLoading(true);
+      const response = await fetch('/api/user/shopping-eligibility', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setShoppingEligibility(data);
+      } else {
+        console.error('Failed to fetch shopping eligibility');
+        setShoppingEligibility({
+          success: false,
+          eligible: false,
+          reason: 'error',
+          message: 'Unable to check shopping eligibility'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching shopping eligibility:', error);
+      setShoppingEligibility({
+        success: false,
+        eligible: false,
+        reason: 'error',
+        message: 'Unable to check shopping eligibility'
+      });
+    } finally {
+      setEligibilityLoading(false);
+    }
+  };
 
   const getSubtotal = () => {
     return cart.reduce((total, item) => {
@@ -58,6 +96,18 @@ export default function Checkout() {
     }));
   };
 
+  const handlePaymentProofUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Convert file to base64 for upload
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPaymentProof(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -66,6 +116,12 @@ export default function Checkout() {
         !formData.phone || !formData.address || !formData.city || 
         !formData.country || !formData.zipCode) {
       alert('Please fill in all required fields');
+      return;
+    }
+
+    // Check if payment proof is required
+    if (shoppingEligibility?.shopping?.shoppingType === 'payment_proof_required' && !paymentProof) {
+      alert('Payment proof is required for users without active packages. Please upload your payment proof.');
       return;
     }
 
@@ -82,7 +138,9 @@ export default function Checkout() {
         userId,
         items: cart,
         shippingInfo: formData,
-        totalAmount: getTotal()
+        totalAmount: getTotal(),
+        paymentProof: paymentProof, // Include payment proof if provided
+        shoppingType: shoppingEligibility?.shopping?.shoppingType || 'standard'
       };
 
       // Send order to backend
@@ -304,6 +362,46 @@ export default function Checkout() {
             </div>
           </div>
 
+          {/* Payment Proof Section - Only show for users without active packages */}
+          {shoppingEligibility?.shopping?.shoppingType === 'payment_proof_required' && (
+            <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+              <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">Payment Proof Required</h2>
+              <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 md:p-4 mb-4">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-yellow-400 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <div>
+                    <p className="text-yellow-200 text-sm md:text-base font-medium mb-1">Payment Proof Required</p>
+                    <p className="text-yellow-100 text-xs md:text-sm">
+                      Since you don&apos;t have an active package, please upload your payment proof. 
+                      The order amount will be added to your account balance after admin approval.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                  Upload Payment Proof *
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handlePaymentProofUpload}
+                  className="w-full px-2 md:px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm md:text-base file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                />
+                {paymentProof && (
+                  <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded-lg">
+                    <p className="text-green-200 text-xs md:text-sm">✓ Payment proof uploaded successfully</p>
+                  </div>
+                )}
+                <p className="text-gray-400 text-xs mt-1">
+                  Accepted formats: JPG, PNG, PDF. Max size: 5MB
+                </p>
+              </div>
+            </div>
+          )}
 
         </div>
 
@@ -369,9 +467,15 @@ export default function Checkout() {
             </button>
 
             <div className="mt-3 md:mt-4 text-center">
-              <p className="text-xs md:text-sm text-gray-400">
-                Order will be processed after confirmation
-              </p>
+              {shoppingEligibility?.shopping?.shoppingType === 'payment_proof_required' ? (
+                <p className="text-xs md:text-sm text-yellow-400">
+                  Order will be processed after payment proof approval
+                </p>
+              ) : (
+                <p className="text-xs md:text-sm text-gray-400">
+                  Order will be processed after confirmation
+                </p>
+              )}
             </div>
           </div>
         </div>
