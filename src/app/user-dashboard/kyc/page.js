@@ -232,29 +232,37 @@ export default function KYCPage() {
   };
 
   // Helper function to get proper image URL
-  const getImageUrl = (imageUrl) => {
+  const getImageUrl = (imageUrl, imageType = '') => {
     if (!imageUrl) return '';
+    
+    console.log(`Processing ${imageType} image URL:`, imageUrl);
     
     // If it's already a full URL (starts with http), return as is
     if (imageUrl.startsWith('http')) {
+      console.log(`Using full URL for ${imageType}:`, imageUrl);
       return imageUrl;
     }
     
     // If it's a relative path (starts with /), return as is
     if (imageUrl.startsWith('/')) {
+      console.log(`Using relative path for ${imageType}:`, imageUrl);
       return imageUrl;
     }
     
     // If it's a base64 data URL, return as is
     if (imageUrl.startsWith('data:image/')) {
+      console.log(`Using base64 data URL for ${imageType}`);
       return imageUrl;
     }
     
     // If it's just a filename, assume it's in the uploads folder
     if (imageUrl && !imageUrl.includes('/')) {
-      return `/uploads/${imageUrl}`;
+      const fullUrl = `/uploads/${imageUrl}`;
+      console.log(`Constructing uploads path for ${imageType}:`, fullUrl);
+      return fullUrl;
     }
     
+    console.log(`Returning original URL for ${imageType}:`, imageUrl);
     return imageUrl;
   };
 
@@ -547,14 +555,21 @@ export default function KYCPage() {
               <Box sx={{ textAlign: 'center', mb: 2 }}>
                 <Box sx={{ position: 'relative', display: 'inline-block' }}>
                   <Avatar
-                    src={getImageUrl(kycData.profile_image)}
+                    src={getImageUrl(kycData.profile_image, 'profile')}
+                    onError={(e) => {
+                      console.error('Profile image failed to load:', e);
+                      console.log('Profile image URL that failed:', getImageUrl(kycData.profile_image, 'profile'));
+                    }}
                     sx={{ 
                       width: { xs: 80, sm: 100, md: 120 }, 
                       height: { xs: 80, sm: 100, md: 120 }, 
                       border: '4px solid #e5e7eb',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+                      backgroundColor: 'primary.main'
                     }}
-                  />
+                  >
+                    {!kycData.profile_image && <Person sx={{ fontSize: 40 }} />}
+                  </Avatar>
                   <input
                     accept="image/*"
                     style={{ display: 'none' }}
@@ -874,10 +889,14 @@ export default function KYCPage() {
                     {kycData.id_card_front ? (
                       <Box sx={{ mb: 2 }}>
                         <Image 
-                          src={getImageUrl(kycData.id_card_front)} 
+                          src={getImageUrl(kycData.id_card_front, 'ID card front')} 
                           alt="ID Card Front" 
                           width={300}
                           height={200}
+                          onError={(e) => {
+                            console.error('ID card front image failed to load:', e);
+                            console.log('ID card front URL that failed:', getImageUrl(kycData.id_card_front, 'ID card front'));
+                          }}
                           style={{ 
                             maxWidth: '100%', 
                             maxHeight: '200px', 
@@ -923,10 +942,14 @@ export default function KYCPage() {
                     {kycData.id_card_back ? (
                       <Box sx={{ mb: 2 }}>
                         <Image 
-                          src={getImageUrl(kycData.id_card_back)} 
+                          src={getImageUrl(kycData.id_card_back, 'ID card back')} 
                           alt="ID Card Back" 
                           width={300}
                           height={200}
+                          onError={(e) => {
+                            console.error('ID card back image failed to load:', e);
+                            console.log('ID card back URL that failed:', getImageUrl(kycData.id_card_back, 'ID card back'));
+                          }}
                           style={{ 
                             maxWidth: '100%', 
                             maxHeight: '200px', 
