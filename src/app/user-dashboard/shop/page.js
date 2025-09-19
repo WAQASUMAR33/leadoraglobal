@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { UserContext } from '../../../lib/userContext';
 
 export default function Shop() {
@@ -179,48 +180,50 @@ export default function Shop() {
   }
 
   return (
-    <div key={mounted ? 'mounted' : 'loading'} className="space-y-6">
+    <div key={mounted ? 'mounted' : 'loading'} className="space-y-2 p-1">
       {/* Header */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between">
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Shop Products</h1>
-            <p className="text-gray-400 mt-2">Browse and purchase products from our catalog</p>
+            <h1 className="text-xl md:text-2xl font-bold text-white">Shop Products</h1>
+            <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base">Browse and purchase products from our catalog</p>
             
             {/* Shopping Eligibility Info */}
             {eligibilityLoading ? (
-              <div className="mt-3 flex items-center space-x-2">
+              <div className="mt-2 md:mt-3 flex items-center space-x-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                <span className="text-sm text-gray-400">Checking shopping eligibility...</span>
+                <span className="text-xs md:text-sm text-gray-400">Checking shopping eligibility...</span>
               </div>
             ) : shoppingEligibility ? (
-              <div className="mt-3">
+              <div className="mt-2 md:mt-3">
                 {shoppingEligibility.eligible ? (
-                  <div className="flex items-center space-x-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-green-400">Shopping Enabled</span>
+                      <span className="text-xs md:text-sm text-green-400">Shopping Enabled</span>
                     </div>
-                    <div className="text-sm text-gray-400">
+                    <div className="text-xs md:text-sm text-gray-400">
                       Package: <span className="text-white font-medium">{shoppingEligibility.package.name}</span>
                     </div>
-                    <div className="text-sm text-gray-400">
-                      Shopping Limit: <span className="text-white font-medium">PKR {shoppingEligibility.package.shoppingAmount.toFixed(2)}</span>
+                    <div className="text-xs md:text-sm text-gray-400">
+                      Limit: <span className="text-white font-medium">PKR {shoppingEligibility.package.shoppingAmount.toFixed(2)}</span>
                     </div>
                     {getCartTotal() > 0 && (
-                      <div className="text-sm text-gray-400">
-                        Cart Total: <span className="text-yellow-400 font-medium">PKR {getCartTotal().toFixed(2)}</span>
+                      <div className="text-xs md:text-sm text-gray-400">
+                        Cart: <span className="text-yellow-400 font-medium">PKR {getCartTotal().toFixed(2)}</span>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-sm text-red-400">{shoppingEligibility.message}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-1 sm:space-y-0">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <span className="text-xs md:text-sm text-red-400">{shoppingEligibility.message}</span>
+                    </div>
                     {shoppingEligibility.reason === 'no_active_package' && (
                       <Link
                         href="/user-dashboard/subscribe"
-                        className="text-sm text-blue-400 hover:text-blue-300 underline"
+                        className="text-xs md:text-sm text-blue-400 hover:text-blue-300 underline"
                       >
                         Subscribe to Package
                       </Link>
@@ -230,20 +233,20 @@ export default function Shop() {
               </div>
             ) : null}
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
             <Link
               href="/user-dashboard/orders"
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+              className="px-3 md:px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 text-sm md:text-base text-center"
             >
               My Orders
             </Link>
             <Link
               href="/user-dashboard/cart"
-              className="relative px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              className="relative px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base text-center"
             >
               Cart
               {mounted && getCartCount() > 0 && (
-                <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 w-5 h-5 md:w-6 md:h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                   {getCartCount()}
                 </span>
               )}
@@ -253,28 +256,29 @@ export default function Shop() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
         <div className="flex-1">
           <input
             type="text"
             placeholder="Search products..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+            className="w-full px-3 md:px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-sm md:text-base"
           />
         </div>
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-6">
         {filteredProducts.map((product) => (
           <div key={product.id} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-gray-600 transition-all duration-200">
             {/* Product Image */}
-            <div className="relative h-48 bg-gray-700">
-              <img
+            <div className="relative h-40 sm:h-48 bg-gray-700">
+              <Image
                 src={product.image}
                 alt={product.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
                 onError={(e) => {
                   e.target.src = '/placeholder-product.jpg';
                 }}
@@ -287,24 +291,24 @@ export default function Shop() {
             </div>
 
             {/* Product Info */}
-            <div className="p-4">
-              <h3 className="text-white font-semibold mb-2 line-clamp-2">{product.title}</h3>
-              <p className="text-gray-400 text-sm mb-3 line-clamp-2">{product.description}</p>
+            <div className="p-3 md:p-4">
+              <h3 className="text-white font-semibold mb-2 line-clamp-2 text-sm md:text-base">{product.title}</h3>
+              <p className="text-gray-400 text-xs md:text-sm mb-3 line-clamp-2">{product.description}</p>
               
               {/* Price */}
-              <div className="mb-4">
-                <div className="flex items-center space-x-2">
+              <div className="mb-3 md:mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
                   {product.discount ? (
                     <>
-                      <span className="text-lg font-bold text-white">
+                      <span className="text-base md:text-lg font-bold text-white">
                         PKR {parseFloat(product.sale_price).toFixed(2)}
                       </span>
-                      <span className="text-sm text-gray-400 line-through">
+                      <span className="text-xs md:text-sm text-gray-400 line-through">
                         PKR {parseFloat(product.price).toFixed(2)}
                       </span>
                     </>
                   ) : (
-                    <span className="text-lg font-bold text-white">
+                    <span className="text-base md:text-lg font-bold text-white">
                       PKR {parseFloat(product.price).toFixed(2)}
                     </span>
                   )}
@@ -315,7 +319,7 @@ export default function Shop() {
               {!shoppingEligibility?.eligible ? (
                 <button
                   disabled
-                  className="w-full py-2 px-4 rounded-lg font-medium bg-gray-600 text-gray-400 cursor-not-allowed"
+                  className="w-full py-2 px-3 md:px-4 rounded-lg font-medium bg-gray-600 text-gray-400 cursor-not-allowed text-sm md:text-base"
                 >
                   {shoppingEligibility?.reason === 'no_active_package' ? 'Subscribe to Shop' : 
                    shoppingEligibility?.reason === 'already_shopped' ? 'Already Shopped' : 
@@ -324,7 +328,7 @@ export default function Shop() {
               ) : (
                 <button
                   onClick={() => addToCart(product)}
-                  className="w-full py-2 px-4 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
+                  className="w-full py-2 px-3 md:px-4 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
                 >
                   Add to Cart
                 </button>
@@ -336,54 +340,54 @@ export default function Shop() {
 
       {/* Empty State */}
       {filteredProducts.length === 0 && (
-        <div className="bg-gray-800 rounded-xl p-12 border border-gray-700 text-center">
-          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-gray-800 rounded-xl p-6 md:p-12 border border-gray-700 text-center">
+          <svg className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <h3 className="text-xl font-semibold text-white mb-2">No products found</h3>
-          <p className="text-gray-400">Try adjusting your search or filter criteria</p>
+          <h3 className="text-lg md:text-xl font-semibold text-white mb-2">No products found</h3>
+          <p className="text-gray-400 text-sm md:text-base">Try adjusting your search or filter criteria</p>
         </div>
       )}
 
       
 
       {/* Shopping Benefits */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-6">Why Shop With Us?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+        <h2 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">Why Shop With Us?</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           <div className="flex items-center">
-            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-4">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3 md:mr-4">
+              <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <div>
-              <h3 className="text-white font-semibold">Quality Products</h3>
-              <p className="text-gray-400 text-sm">Premium quality products at competitive prices</p>
+              <h3 className="text-white font-semibold text-sm md:text-base">Quality Products</h3>
+              <p className="text-gray-400 text-xs md:text-sm">Premium quality products at competitive prices</p>
             </div>
           </div>
           
           <div className="flex items-center">
-            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-4">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3 md:mr-4">
+              <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-white font-semibold">Fast Delivery</h3>
-              <p className="text-gray-400 text-sm">Quick and reliable shipping to your doorstep</p>
+              <h3 className="text-white font-semibold text-sm md:text-base">Fast Delivery</h3>
+              <p className="text-gray-400 text-xs md:text-sm">Quick and reliable shipping to your doorstep</p>
             </div>
           </div>
           
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-4">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center sm:col-span-2 lg:col-span-1">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-3 md:mr-4">
+              <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-white font-semibold">Secure Shopping</h3>
-              <p className="text-gray-400 text-sm">Safe and secure payment processing</p>
+              <h3 className="text-white font-semibold text-sm md:text-base">Secure Shopping</h3>
+              <p className="text-gray-400 text-xs md:text-sm">Safe and secure payment processing</p>
             </div>
           </div>
         </div>
