@@ -25,7 +25,6 @@ import {
   MenuItem,
   TextField,
   Grid,
-  Avatar,
   IconButton,
   Tooltip,
   Alert,
@@ -37,7 +36,6 @@ import {
   Edit,
   LocalShipping,
   Payment,
-  Person,
   ShoppingCart,
   CalendarToday,
   AttachMoney
@@ -364,18 +362,13 @@ export default function AdminOrdersPage() {
                       </Typography>
                     </TableCell>
                     <TableCell sx={{ color: '#333' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: '#1976d2' }}>
-                          <Person fontSize="small" />
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#333' }}>
-                            {order.user?.fullname || 'Unknown User'}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#666' }}>
-                            @{order.user?.username || 'N/A'} (ID: {order.userId})
-                          </Typography>
-                        </Box>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#333' }}>
+                          {order.user?.fullname || 'Unknown User'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#666' }}>
+                          @{order.user?.username || 'N/A'} (ID: {order.userId})
+                        </Typography>
                       </Box>
                     </TableCell>
                     <TableCell sx={{ color: '#333' }}>
@@ -480,7 +473,6 @@ export default function AdminOrdersPage() {
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
-                        <Person sx={{ mr: 1, verticalAlign: 'middle' }} />
                         Customer Information
                       </Typography>
                       <Typography variant="body2">
@@ -548,20 +540,13 @@ export default function AdminOrdersPage() {
                     {selectedOrder.orderItems?.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Avatar
-                              src={item.product?.image}
-                              variant="rounded"
-                              sx={{ width: 40, height: 40 }}
-                            />
-                            <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                {item.product?.title}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                ID: {item.productId}
-                              </Typography>
-                            </Box>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                              {item.product?.title}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              ID: {item.productId}
+                            </Typography>
                           </Box>
                         </TableCell>
                         <TableCell>
