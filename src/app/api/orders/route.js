@@ -9,6 +9,7 @@ export async function POST(request) {
       shippingInfo, 
       totalAmount,
       paymentProof,
+      paymentData,
       shoppingType
     } = body;
 
@@ -36,14 +37,34 @@ export async function POST(request) {
                             new Date(user.packageExpiryDate) > new Date();
 
     // Validate payment proof for users without active packages
-    if (!hasActivePackage && !paymentProof) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Payment proof is required for users without active packages' 
-        }), 
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!hasActivePackage) {
+      if (!paymentProof) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: 'Payment proof image is required for users without active packages' 
+          }), 
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!paymentData || !paymentData.transactionId) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: 'Transaction ID is required for users without active packages' 
+          }), 
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!paymentData.paymentMethod) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: 'Payment method is required for users without active packages' 
+          }), 
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Generate unique order number
@@ -53,8 +74,15 @@ export async function POST(request) {
     const shippingAddress = JSON.stringify(shippingInfo);
 
     // Determine payment method and status based on package status
-    const paymentMethod = hasActivePackage ? 'package_benefits' : 'payment_proof';
+    const paymentMethod = hasActivePackage ? 'package_benefits' : (paymentData?.paymentMethod || 'payment_proof');
     const paymentStatus = hasActivePackage ? 'paid' : 'pending';
+
+    // Prepare payment details JSON
+    const paymentDetails = paymentData ? JSON.stringify({
+      transactionId: paymentData.transactionId,
+      paymentMethod: paymentData.paymentMethod,
+      image: paymentData.image ? 'uploaded' : null
+    }) : null;
 
     // Create order
     const order = await prisma.order.create({
@@ -66,7 +94,9 @@ export async function POST(request) {
         shippingAddress,
         paymentMethod,
         paymentStatus,
-        paymentProof: paymentProof || null // Store payment proof if provided
+        paymentProof: paymentProof || null, // Store payment proof if provided
+        transactionId: paymentData?.transactionId || null,
+        paymentDetails: paymentDetails
       }
     });
 

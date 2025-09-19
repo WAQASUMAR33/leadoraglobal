@@ -83,6 +83,11 @@ async function testCheckoutPaymentProof() {
       },
       totalAmount: 100.00,
       paymentProof: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
+      paymentData: {
+        transactionId: 'TXN123456789',
+        paymentMethod: 'easypaisa',
+        image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k='
+      },
       shoppingType: 'payment_proof_required'
     };
 
@@ -132,6 +137,8 @@ async function testCheckoutPaymentProof() {
       console.log(`   Payment Method: ${latestOrder.paymentMethod}`);
       console.log(`   Payment Status: ${latestOrder.paymentStatus}`);
       console.log(`   Has Payment Proof: ${latestOrder.paymentProof ? 'Yes' : 'No'}`);
+      console.log(`   Transaction ID: ${latestOrder.transactionId || 'N/A'}`);
+      console.log(`   Payment Details: ${latestOrder.paymentDetails ? 'Yes' : 'No'}`);
       console.log(`   Order Items Count: ${latestOrder.orderItems.length}`);
     } else {
       console.log('❌ No orders found in database');
@@ -197,11 +204,13 @@ async function testCheckoutPaymentProof() {
     console.log('\n📝 Summary of Changes:');
     console.log('   1. ✅ Checkout page now checks user package status');
     console.log('   2. ✅ Payment proof upload required for users without packages');
-    console.log('   3. ✅ Orders API validates payment proof for non-package users');
-    console.log('   4. ✅ Database schema updated with paymentProof field');
-    console.log('   5. ✅ Admin approval adds amount to user balance for non-package users');
-    console.log('   6. ✅ Different payment methods based on package status');
-    console.log('   7. ✅ Proper validation and error handling');
+    console.log('   3. ✅ Transaction ID field added to payment proof form');
+    console.log('   4. ✅ Payment method selection added to payment proof form');
+    console.log('   5. ✅ Orders API validates all payment fields for non-package users');
+    console.log('   6. ✅ Database schema updated with transactionId and paymentDetails fields');
+    console.log('   7. ✅ Admin approval adds amount to user balance for non-package users');
+    console.log('   8. ✅ Different payment methods based on package status');
+    console.log('   9. ✅ Proper validation and error handling for all payment fields');
 
   } catch (error) {
     console.error('❌ Test failed:', error);

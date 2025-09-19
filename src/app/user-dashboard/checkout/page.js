@@ -13,6 +13,11 @@ export default function Checkout() {
   const [shoppingEligibility, setShoppingEligibility] = useState(null);
   const [eligibilityLoading, setEligibilityLoading] = useState(true);
   const [paymentProof, setPaymentProof] = useState(null);
+  const [paymentData, setPaymentData] = useState({
+    transactionId: "",
+    paymentMethod: "",
+    image: null
+  });
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -103,9 +108,20 @@ export default function Checkout() {
       const reader = new FileReader();
       reader.onload = (event) => {
         setPaymentProof(event.target.result);
+        setPaymentData(prev => ({
+          ...prev,
+          image: event.target.result
+        }));
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handlePaymentDataChange = (field, value) => {
+    setPaymentData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -120,9 +136,19 @@ export default function Checkout() {
     }
 
     // Check if payment proof is required
-    if (shoppingEligibility?.shopping?.shoppingType === 'payment_proof_required' && !paymentProof) {
-      alert('Payment proof is required for users without active packages. Please upload your payment proof.');
-      return;
+    if (shoppingEligibility?.shopping?.shoppingType === 'payment_proof_required') {
+      if (!paymentProof) {
+        alert('Payment proof image is required for users without active packages. Please upload your payment proof.');
+        return;
+      }
+      if (!paymentData.transactionId) {
+        alert('Transaction ID is required. Please enter your transaction ID.');
+        return;
+      }
+      if (!paymentData.paymentMethod) {
+        alert('Payment method is required. Please select your payment method.');
+        return;
+      }
     }
 
     try {
@@ -140,6 +166,7 @@ export default function Checkout() {
         shippingInfo: formData,
         totalAmount: getTotal(),
         paymentProof: paymentProof, // Include payment proof if provided
+        paymentData: paymentData, // Include payment details
         shoppingType: shoppingEligibility?.shopping?.shoppingType || 'standard'
       };
 
@@ -381,24 +408,63 @@ export default function Checkout() {
                 </div>
               </div>
               
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
-                  Upload Payment Proof *
-                </label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={handlePaymentProofUpload}
-                  className="w-full px-2 md:px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm md:text-base file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-                />
-                {paymentProof && (
-                  <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded-lg">
-                    <p className="text-green-200 text-xs md:text-sm">✓ Payment proof uploaded successfully</p>
-                  </div>
-                )}
-                <p className="text-gray-400 text-xs mt-1">
-                  Accepted formats: JPG, PNG, PDF. Max size: 5MB
-                </p>
+              <div className="space-y-3 md:space-y-4">
+                {/* Transaction ID */}
+                <div>
+                  <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                    Transaction ID *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={paymentData.transactionId}
+                    onChange={(e) => handlePaymentDataChange('transactionId', e.target.value)}
+                    placeholder="Enter your transaction ID"
+                    className="w-full px-2 md:px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-sm md:text-base"
+                  />
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                    Payment Method *
+                  </label>
+                  <select
+                    required
+                    value={paymentData.paymentMethod}
+                    onChange={(e) => handlePaymentDataChange('paymentMethod', e.target.value)}
+                    className="w-full px-2 md:px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 text-sm md:text-base"
+                  >
+                    <option value="">Select Payment Method</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="easypaisa">EasyPaisa</option>
+                    <option value="jazzcash">JazzCash</option>
+                    <option value="upaisa">UPaisa</option>
+                    <option value="cash_deposit">Cash Deposit</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                {/* Payment Proof Image */}
+                <div>
+                  <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                    Upload Payment Proof *
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handlePaymentProofUpload}
+                    className="w-full px-2 md:px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm md:text-base file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                  />
+                  {paymentProof && (
+                    <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded-lg">
+                      <p className="text-green-200 text-xs md:text-sm">✓ Payment proof uploaded successfully</p>
+                    </div>
+                  )}
+                  <p className="text-gray-400 text-xs mt-1">
+                    Accepted formats: JPG, PNG, PDF. Max size: 5MB
+                  </p>
+                </div>
               </div>
             </div>
           )}
