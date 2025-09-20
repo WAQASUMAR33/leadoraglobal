@@ -46,6 +46,32 @@ export async function GET(request) {
                             user.packageExpiryDate && 
                             new Date(user.packageExpiryDate) > new Date();
 
+    // Check if user paid from balance (shopping amount should be 0)
+    let effectiveShoppingAmount = parseFloat(user.currentPackage?.shopping_amount || 0);
+    
+    if (hasActivePackage) {
+      // Get the most recent approved package request to check payment method
+      const recentPackageRequest = await prisma.packageRequest.findFirst({
+        where: {
+          userId: parseInt(userId),
+          packageId: user.currentPackageId,
+          status: 'approved'
+        },
+        orderBy: {
+          updatedAt: 'desc'
+        }
+      });
+      
+      // If the package was paid from balance, shopping amount should be 0
+      if (recentPackageRequest && 
+          recentPackageRequest.transactionId && 
+          recentPackageRequest.transactionId.startsWith('BAL_') && 
+          recentPackageRequest.transactionReceipt === 'Paid from user balance') {
+        effectiveShoppingAmount = 0;
+        console.log(`Shopping eligibility: User ${user.username} paid from balance - effective shopping amount is 0`);
+      }
+    }
+
     // Get existing orders to check shopping history
     const existingOrders = await prisma.order.findMany({
       where: { userId: parseInt(userId) },
@@ -79,13 +105,15 @@ export async function GET(request) {
       });
     } else {
       // User with active package - show package info but allow unlimited shopping
-      const remainingAmount = parseFloat(user.currentPackage.shopping_amount) - totalSpent;
+      const remainingAmount = effectiveShoppingAmount - totalSpent;
 
       return NextResponse.json({
         success: true,
         eligible: true, // Always allow shopping
         reason: 'package_shopping',
-        message: 'You can shop with your package benefits',
+        message: effectiveShoppingAmount === 0 ? 
+                'You subscribed from balance - no shopping amount available' : 
+                'You can shop with your package benefits',
         user: {
           id: user.id,
           fullname: user.fullname,
@@ -94,7 +122,7 @@ export async function GET(request) {
         package: {
           id: user.currentPackage.id,
           name: user.currentPackage.package_name,
-          shoppingAmount: parseFloat(user.currentPackage.shopping_amount),
+          shoppingAmount: effectiveShoppingAmount, // Use effective shopping amount
           packageAmount: parseFloat(user.currentPackage.package_amount)
         },
         shopping: {
@@ -102,7 +130,7 @@ export async function GET(request) {
           totalSpent,
           remainingAmount: Math.max(0, remainingAmount),
           orderCount: existingOrders.length,
-          shoppingType: 'package_benefits'
+          shoppingType: effectiveShoppingAmount === 0 ? 'payment_proof_required' : 'package_benefits'
         }
       });
     }

@@ -76,6 +76,30 @@ export async function GET(request) {
       expiryDate: user.packageExpiryDate
     };
 
+    // Check if user paid from balance (shopping amount should be 0)
+    let effectiveShoppingAmount = parseFloat(user.currentPackage.shopping_amount);
+    
+    // Get the most recent approved package request to check payment method
+    const recentPackageRequest = await prisma.packageRequest.findFirst({
+      where: {
+        userId: user.id,
+        packageId: user.currentPackageId,
+        status: 'approved'
+      },
+      orderBy: {
+        updatedAt: 'desc'
+      }
+    });
+    
+    // If the package was paid from balance, shopping amount should be 0
+    if (recentPackageRequest && 
+        recentPackageRequest.transactionId && 
+        recentPackageRequest.transactionId.startsWith('BAL_') && 
+        recentPackageRequest.transactionReceipt === 'Paid from user balance') {
+      effectiveShoppingAmount = 0;
+      console.log(`User ${user.username} paid from balance - setting shopping amount to 0`);
+    }
+
     // Create packageDetails object
     const packageDetails = {
       id: user.currentPackage.id,
@@ -83,7 +107,7 @@ export async function GET(request) {
       package_amount: user.currentPackage.package_amount,
       package_direct_commission: user.currentPackage.package_direct_commission,
       package_indirect_commission: user.currentPackage.package_indirect_commission,
-      shopping_amount: user.currentPackage.shopping_amount,
+      shopping_amount: effectiveShoppingAmount, // Use effective shopping amount
       rank: user.currentPackage.rank
     };
 

@@ -487,6 +487,18 @@ export async function updateUserPackageAndRankInTransaction(packageRequestId, tx
   const packageExpiryDate = new Date();
   packageExpiryDate.setFullYear(packageExpiryDate.getFullYear() + 1); // 1 year expiry
 
+  // Check if this is a balance payment (shopping amount should be 0)
+  const isBalancePayment = packageRequest.transactionId && 
+                          packageRequest.transactionId.startsWith('BAL_') && 
+                          packageRequest.transactionReceipt === 'Paid from user balance';
+  
+  // For balance payments, set shopping amount to 0 since user already "paid" from their balance
+  const effectiveShoppingAmount = isBalancePayment ? 0 : parseFloat(packageData.shopping_amount);
+  
+  console.log(`Package activation for user ${user.username}: ${packageData.package_name}`);
+  console.log(`Payment method: ${isBalancePayment ? 'Balance Payment' : 'Regular Payment'}`);
+  console.log(`Shopping amount: ${effectiveShoppingAmount} (original: ${packageData.shopping_amount})`);
+
   // Update user's package (allow renewals and upgrades)
   await tx.user.update({
     where: { id: user.id },
@@ -509,7 +521,11 @@ export async function updateUserPackageAndRankInTransaction(packageRequestId, tx
   }
 
   console.log(`Updated user ${user.username} with package ${packageData.package_name}`);
-  return { success: true };
+  return { 
+    success: true, 
+    isBalancePayment: isBalancePayment,
+    effectiveShoppingAmount: effectiveShoppingAmount
+  };
 }
 
 /**
