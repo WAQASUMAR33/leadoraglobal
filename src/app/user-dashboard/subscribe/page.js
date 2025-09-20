@@ -20,6 +20,12 @@ export default function SubscribePackage() {
     fetchPackages();
     if (user && isAuthenticated) {
       fetchUserBalance();
+      
+      // Also check if balance is available in user context
+      if (user.balance !== undefined) {
+        console.log('🔍 Subscribe page - Balance from user context:', user.balance);
+        setUserBalance(parseFloat(user.balance || 0));
+      }
     }
   }, [user, isAuthenticated]);
 
@@ -43,15 +49,31 @@ export default function SubscribePackage() {
 
   const fetchUserBalance = async () => {
     try {
-      const response = await fetch(`/api/user/profile?userId=${user.id}`, {
+      console.log('🔍 Subscribe page - Fetching user balance for user:', user.id);
+      const response = await fetch('/api/user/profile', {
         credentials: 'include'
       });
+      console.log('🔍 Subscribe page - Balance API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setUserBalance(parseFloat(data.balance) || 0);
+        console.log('🔍 Subscribe page - Balance API response data:', data);
+        
+        if (data.success && data.user && data.user.balance !== undefined) {
+          const balance = parseFloat(data.user.balance || 0);
+          console.log('🔍 Subscribe page - Parsed balance:', balance);
+          setUserBalance(balance);
+        } else {
+          console.log('🔍 Subscribe page - No balance data found in response:', data);
+          setUserBalance(0);
+        }
+      } else {
+        console.error('🔍 Subscribe page - Failed to fetch user balance:', response.status);
+        setUserBalance(0);
       }
     } catch (error) {
-      console.error('Error fetching user balance:', error);
+      console.error('🔍 Subscribe page - Error fetching user balance:', error);
+      setUserBalance(0);
     }
   };
 
