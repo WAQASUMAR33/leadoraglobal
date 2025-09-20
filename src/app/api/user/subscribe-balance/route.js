@@ -94,12 +94,13 @@ export async function POST(request) {
         data: {
           userId: parseInt(userId),
           packageId: parseInt(packageId),
-          amount: packageAmount,
+          transactionId: `BAL_${Date.now()}_${userId}`, // Generate unique transaction ID for balance payment
+          transactionReceipt: 'Paid from user balance',
           status: 'approved',
-          paymentMethod: 'balance',
-          paymentProof: 'Paid from user balance',
-          approvedAt: new Date(),
-          approvedBy: 'system'
+          notes: `Package subscription paid from user balance. Amount: PKR ${packageAmount}`,
+          adminNotes: 'Auto-approved balance payment',
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
       });
 
