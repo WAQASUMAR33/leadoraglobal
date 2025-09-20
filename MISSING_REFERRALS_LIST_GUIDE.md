@@ -251,3 +251,4 @@ FOREIGN KEY (referredBy) REFERENCES users(username) ON DELETE SET NULL;
 This will automatically set `referredBy` to NULL when a referrer is deleted, preventing orphan referrals.
 
 
+

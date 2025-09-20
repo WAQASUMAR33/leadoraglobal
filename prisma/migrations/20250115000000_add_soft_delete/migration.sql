@@ -13,3 +13,4 @@ CREATE INDEX `users_deleted_at_idx` ON `users`(`deletedAt`);
 CREATE INDEX `admins_deleted_at_idx` ON `admins`(`deletedAt`);
 
 
+

@@ -320,3 +320,4 @@ WHERE referred_by IS NULL;
 This system will help you identify and analyze all accounts that don't have referrals, which is useful for understanding your user acquisition patterns and business growth!
 
 
+

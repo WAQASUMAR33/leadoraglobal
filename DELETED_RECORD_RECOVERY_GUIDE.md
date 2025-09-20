@@ -296,3 +296,4 @@ FOREIGN KEY (userId) REFERENCES users(id) ON DELETE RESTRICT;
 | Create backup | `node scripts/database-backup-recovery.js --backup` | Emergency backup |
 
 
+

@@ -10,12 +10,14 @@ export default function MyPackage() {
   const [loading, setLoading] = useState(true);
   const [packageDetails, setPackageDetails] = useState(null);
   const [packageRequests, setPackageRequests] = useState([]);
+  const [userBalance, setUserBalance] = useState(0);
 
   useEffect(() => {
     if (user && isAuthenticated) {
       console.log('🔄 useEffect triggered - fetching data for user');
       fetchUserPackage(user.id);
       fetchPackageRequests(user.id);
+      fetchUserBalance(user.id);
     } else {
       console.log('🔄 useEffect - user or auth not ready:', { user: !!user, isAuthenticated });
     }
@@ -83,6 +85,32 @@ export default function MyPackage() {
     }
   };
 
+  const fetchUserBalance = async (userId) => {
+    try {
+      console.log('Fetching user balance for user:', userId);
+      const response = await fetch('/api/user/profile', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user && data.user.balance) {
+          console.log('User balance fetched:', data.user.balance);
+          setUserBalance(parseFloat(data.user.balance));
+        } else {
+          console.log('No balance data found in response:', data);
+          setUserBalance(0);
+        }
+      } else {
+        console.error('Failed to fetch user balance:', response.status);
+        setUserBalance(0);
+      }
+    } catch (error) {
+      console.error('Error fetching user balance:', error);
+      setUserBalance(0);
+    }
+  };
+
 
 
   const getStatusColor = (status) => {
@@ -129,6 +157,22 @@ export default function MyPackage() {
             >
               Subscribe to Package
             </Link>
+          </div>
+        </div>
+
+        {/* Account Balance */}
+        <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold mb-2">Account Balance</h2>
+              <p className="text-green-100">Your available wallet balance</p>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold mb-1">
+                PKR {userBalance.toFixed(2)}
+              </div>
+              <p className="text-green-100 text-sm">Available Balance</p>
+            </div>
           </div>
         </div>
         
@@ -315,6 +359,22 @@ export default function MyPackage() {
           >
             Change Package
           </Link>
+        </div>
+      </div>
+
+      {/* Account Balance */}
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold mb-2">Account Balance</h2>
+            <p className="text-green-100">Your available wallet balance</p>
+          </div>
+          <div className="text-right">
+            <div className="text-3xl font-bold mb-1">
+              PKR {userBalance.toFixed(2)}
+            </div>
+            <p className="text-green-100 text-sm">Available Balance</p>
+          </div>
         </div>
       </div>
 
