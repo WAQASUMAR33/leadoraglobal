@@ -44,9 +44,17 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Convert Decimal fields to numbers for proper JSON serialization
+    const userResponse = {
+      ...user,
+      balance: parseFloat(user.balance || 0),
+      totalEarnings: parseFloat(user.totalEarnings || 0),
+      points: user.points || 0
+    };
+
     return NextResponse.json({
       success: true,
-      user: user
+      user: userResponse
     });
   } catch (error) {
     console.error('Error fetching user profile:', error);

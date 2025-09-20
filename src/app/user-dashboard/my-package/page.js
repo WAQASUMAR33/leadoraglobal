@@ -15,9 +15,16 @@ export default function MyPackage() {
   useEffect(() => {
     if (user && isAuthenticated) {
       console.log('🔄 useEffect triggered - fetching data for user');
+      console.log('🔄 User context data:', user);
       fetchUserPackage(user.id);
       fetchPackageRequests(user.id);
       fetchUserBalance(user.id);
+      
+      // Also check if balance is available in user context
+      if (user.balance !== undefined) {
+        console.log('🔄 Balance from user context:', user.balance);
+        setUserBalance(parseFloat(user.balance || 0));
+      }
     } else {
       console.log('🔄 useEffect - user or auth not ready:', { user: !!user, isAuthenticated });
     }
@@ -87,26 +94,37 @@ export default function MyPackage() {
 
   const fetchUserBalance = async (userId) => {
     try {
-      console.log('Fetching user balance for user:', userId);
+      console.log('🔍 Fetching user balance for user:', userId);
       const response = await fetch('/api/user/profile', {
         credentials: 'include'
       });
       
+      console.log('🔍 Balance API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.user && data.user.balance) {
-          console.log('User balance fetched:', data.user.balance);
-          setUserBalance(parseFloat(data.user.balance));
+        console.log('🔍 Balance API response data:', data);
+        
+        if (data.success && data.user) {
+          const balance = data.user.balance;
+          console.log('🔍 Raw balance from API:', balance, 'Type:', typeof balance);
+          
+          const parsedBalance = parseFloat(balance || 0);
+          console.log('🔍 Parsed balance:', parsedBalance);
+          
+          setUserBalance(parsedBalance);
         } else {
-          console.log('No balance data found in response:', data);
+          console.log('🔍 No balance data found in response:', data);
           setUserBalance(0);
         }
       } else {
-        console.error('Failed to fetch user balance:', response.status);
+        console.error('🔍 Failed to fetch user balance:', response.status);
+        const errorData = await response.text();
+        console.error('🔍 Error response:', errorData);
         setUserBalance(0);
       }
     } catch (error) {
-      console.error('Error fetching user balance:', error);
+      console.error('🔍 Error fetching user balance:', error);
       setUserBalance(0);
     }
   };
