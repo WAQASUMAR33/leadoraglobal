@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { calculateMLMCommissions, updateUserPackageAndRank } from '../../../../lib/commissionSystem';
+import { approvePackageRequest } from '../../../../lib/packageApproval';
 
 const prisma = new PrismaClient();
 
@@ -66,37 +66,26 @@ export async function POST(request) {
 
     // Start transaction for package subscription
     const result = await prisma.$transaction(async (tx) => {
-      // Deduct package amount from user balance
+      // Deduct package amount from user balance first
       const newBalance = userBalance - packageAmount;
       
-      // Update user's package, rank, and balance
-      const updatedUser = await tx.user.update({
+      // Update user's balance immediately
+      await tx.user.update({
         where: { id: parseInt(userId) },
         data: {
-          packageId: parseInt(packageId),
-          rankId: existingPackage.rankId,
-          currentPackageId: parseInt(packageId),
-          packageExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
           balance: newBalance,
           updatedAt: new Date()
-        },
-        include: {
-          currentPackage: {
-            include: {
-              rank: true
-            }
-          }
         }
       });
 
-      // Create a package request record for tracking (marked as approved)
+      // Create a package request record for tracking (status: pending initially)
       const packageRequest = await tx.packageRequest.create({
         data: {
           userId: parseInt(userId),
           packageId: parseInt(packageId),
           transactionId: `BAL_${Date.now()}_${userId}`, // Generate unique transaction ID for balance payment
           transactionReceipt: 'Paid from user balance',
-          status: 'approved',
+          status: 'pending', // Start as pending, will be approved using same algorithm
           notes: `Package subscription paid from user balance. Amount: PKR ${packageAmount}`,
           adminNotes: 'Auto-approved balance payment',
           createdAt: new Date(),
@@ -104,38 +93,26 @@ export async function POST(request) {
         }
       });
 
-      // Apply MLM commission system if user has a referrer
-      if (existingUser.referredBy) {
-        try {
-          await calculateMLMCommissions(
-            parseInt(userId),
-            parseInt(packageId),
-            packageRequest.id,
-            tx
-          );
-        } catch (commissionError) {
-          console.error('Error applying MLM commissions:', commissionError);
-          // Don't fail the transaction for commission errors
-        }
-      }
-
       return {
-        user: updatedUser,
-        packageRequest: packageRequest,
+        packageRequestId: packageRequest.id,
         newBalance: newBalance
       };
     });
 
+    // Now use the same approval algorithm as admin to handle package assignment, rank updates, and MLM commissions
+    console.log(`🚀 Using admin approval algorithm for balance payment package request ${result.packageRequestId}`);
+    const approvalResult = await approvePackageRequest(result.packageRequestId);
+
     return NextResponse.json({ 
       success: true,
-      message: 'Package subscribed successfully using balance',
+      message: 'Package subscribed successfully using balance with full MLM commission distribution',
       data: {
         packageId: parseInt(packageId),
         packageName: existingPackage.package_name,
         amount: packageAmount,
         newBalance: result.newBalance,
-        expiryDate: result.user.packageExpiryDate,
-        rank: existingPackage.rank?.title || 'No Rank'
+        approvalResult: approvalResult,
+        packageRequestId: result.packageRequestId
       }
     });
 
