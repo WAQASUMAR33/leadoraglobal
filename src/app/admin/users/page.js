@@ -77,6 +77,12 @@ export default function UserManagement() {
     role: 'all',
     status: 'all'
   });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 0
+  });
   const [formData, setFormData] = useState({
     firstname: '',
     lastname: '',
@@ -91,9 +97,22 @@ export default function UserManagement() {
   const [ranks, setRanks] = useState([]);
 
   useEffect(() => {
+    console.log('Component mounted, initial pagination state:', pagination);
     fetchUsers();
     fetchRanks();
   }, []);
+
+  useEffect(() => {
+    console.log('Pagination state changed:', pagination);
+  }, [pagination]);
+
+  useEffect(() => {
+    // Only trigger fetch if we have initial data loaded
+    if (pagination.totalCount > 0) {
+      console.log('Pagination changed, fetching users...');
+      fetchUsers(pagination.page, pagination.pageSize);
+    }
+  }, [pagination.page, pagination.pageSize]);
 
   useEffect(() => {
     applyFilters();
@@ -132,12 +151,45 @@ export default function UserManagement() {
     });
   };
 
-  const fetchUsers = async () => {
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+    fetchUsers(newPage, pagination.pageSize);
+  };
+
+  const handlePageSizeChange = (newPageSize) => {
+    console.log('handlePageSizeChange called with:', newPageSize);
+    const pageSizeValue = newPageSize === 'all' ? 'all' : parseInt(newPageSize);
+    console.log('Setting page size to:', pageSizeValue);
+    
+    setPagination(prev => ({ 
+      ...prev, 
+      pageSize: pageSizeValue,
+      page: 1 // Reset to first page when changing page size
+    }));
+    
+    console.log('Calling fetchUsers with page 1 and pageSize:', newPageSize);
+    fetchUsers(1, newPageSize);
+  };
+
+  const fetchUsers = async (page = pagination.page, pageSize = pagination.pageSize) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/users', {
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: pageSize.toString()
+      });
+      
+      // Add status filter if not 'all'
+      if (filters.status !== 'all') {
+        params.append('status', filters.status);
+      }
+      
+      const response = await fetch(`/api/admin/users?${params}`, {
         credentials: 'include'
       });
+      
       if (response.ok) {
         const data = await response.json();
         console.log('API response data:', data);
@@ -151,20 +203,8 @@ export default function UserManagement() {
             role: 'user' // Default role since it's not in the schema
           }));
           setUsers(transformedUsers);
-          console.log(`Loaded ${transformedUsers.length} users from API`);
-          
-          // Show sample user data for debugging
-          if (transformedUsers.length > 0) {
-            const sampleUser = transformedUsers[0];
-            console.log('Sample user data:', {
-              id: sampleUser.id,
-              fullname: sampleUser.fullname,
-              balance: sampleUser.balance,
-              points: sampleUser.points,
-              rankId: sampleUser.rankId,
-              rank: sampleUser.rank
-            });
-          }
+          setPagination(data.pagination);
+          console.log(`Loaded ${transformedUsers.length} users from API (Page ${data.pagination.page}/${data.pagination.totalPages})`);
         } else {
           console.error('No users data received');
           setUsers([]);
@@ -458,11 +498,15 @@ export default function UserManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
-          <p className="text-gray-600 mt-2">Manage user accounts and permissions - Showing all {users.length} users</p>
+          <p className="text-gray-600 mt-2">
+            Manage user accounts and permissions - 
+            Showing {users.length} of {pagination.totalCount} users
+            {pagination.pageSize !== 'all' && ` (Page ${pagination.page} of ${pagination.totalPages})`}
+          </p>
         </div>
         <div className="flex space-x-3">
           <button
-            onClick={fetchUsers}
+            onClick={() => fetchUsers(pagination.page, pagination.pageSize)}
             disabled={loading}
             className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
           >
@@ -528,6 +572,27 @@ export default function UserManagement() {
             </select>
           </div>
 
+          {/* Page Size Selector */}
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              📊 Records per Page
+            </label>
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => {
+                console.log('Page size changed to:', e.target.value);
+                handlePageSizeChange(e.target.value);
+              }}
+              className="w-full px-4 py-2 border-2 border-blue-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-blue-50"
+            >
+              <option value={10}>10 per page</option>
+              <option value={20}>20 per page</option>
+              <option value={50}>50 per page</option>
+              <option value={100}>100 per page</option>
+              <option value="all">Show All Records</option>
+            </select>
+          </div>
+
           {/* Clear Filters */}
           <div>
             <button
@@ -541,12 +606,43 @@ export default function UserManagement() {
 
         {/* Results Count */}
         <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredUsers.length} of {users.length} users
-          {filteredUsers.length !== users.length && (
-            <span className="ml-2 text-blue-600 font-medium">
-              ({users.length - filteredUsers.length} filtered out)
+          {pagination.pageSize === 'all' ? (
+            <span>Showing all {pagination.totalCount} users</span>
+          ) : (
+            <span>
+              Showing {((pagination.page - 1) * pagination.pageSize) + 1} to {Math.min(pagination.page * pagination.pageSize, pagination.totalCount)} of {pagination.totalCount} users
             </span>
           )}
+        </div>
+      </div>
+
+      {/* Page Size Control - Prominent Display */}
+      <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-blue-800">📊 Records Display</h3>
+            <p className="text-sm text-blue-600">Choose how many users to show per page</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <label className="text-sm font-medium text-blue-800">Records per page:</label>
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => {
+                console.log('Prominent page size changed to:', e.target.value);
+                handlePageSizeChange(e.target.value);
+              }}
+              className="px-4 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-blue-800 font-medium"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value="all">All ({pagination.totalCount})</option>
+            </select>
+            <div className="text-sm text-blue-600">
+              Current: {pagination.pageSize === 'all' ? 'All records' : `${pagination.pageSize} per page`}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -684,6 +780,67 @@ export default function UserManagement() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {pagination.pageSize !== 'all' && pagination.totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                Page {pagination.page} of {pagination.totalPages}
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                {/* Previous Button */}
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={!pagination.hasPrevPage}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                
+                {/* Page Numbers */}
+                <div className="flex space-x-1">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (pagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (pagination.page <= 3) {
+                      pageNum = i + 1;
+                    } else if (pagination.page >= pagination.totalPages - 2) {
+                      pageNum = pagination.totalPages - 4 + i;
+                    } else {
+                      pageNum = pagination.page - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                          pageNum === pagination.page
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                {/* Next Button */}
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={!pagination.hasNextPage}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add User Modal */}

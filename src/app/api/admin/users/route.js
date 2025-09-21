@@ -13,6 +13,8 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = searchParams.get('limit');
     const status = searchParams.get('status');
 
     // Build where clause
@@ -21,7 +23,14 @@ export async function GET(request) {
       where.status = status;
     }
 
-    // Fetch all users without pagination
+    // Calculate pagination
+    const skip = limit && limit !== 'all' ? (page - 1) * parseInt(limit) : 0;
+    const take = limit && limit !== 'all' ? parseInt(limit) : undefined;
+
+    // Get total count first
+    const totalCount = await prisma.user.count({ where });
+
+    // Fetch users with pagination
     const users = await prisma.user.findMany({
       where,
       select: {
@@ -49,7 +58,9 @@ export async function GET(request) {
       },
       orderBy: {
         createdAt: 'desc'
-      }
+      },
+      skip,
+      take
     });
 
     // Convert Decimal fields to numbers for proper JSON serialization
@@ -59,13 +70,21 @@ export async function GET(request) {
       totalEarnings: parseFloat(user.totalEarnings || 0)
     }));
 
-    // Get total count
-    const totalCount = usersWithNumbers.length;
+    // Calculate pagination info
+    const pageSize = limit && limit !== 'all' ? parseInt(limit) : totalCount;
+    const totalPages = limit && limit !== 'all' ? Math.ceil(totalCount / parseInt(limit)) : 1;
 
     return NextResponse.json({
       success: true,
       users: usersWithNumbers,
-      total: totalCount
+      pagination: {
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
     });
 
   } catch (error) {
