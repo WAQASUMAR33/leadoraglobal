@@ -140,6 +140,8 @@ export default function UserManagement() {
       });
       if (response.ok) {
         const data = await response.json();
+        console.log('API response data:', data);
+        
         if (data.success && data.users) {
           // Transform the data to match the expected format
           const transformedUsers = data.users.map(user => ({
@@ -150,6 +152,19 @@ export default function UserManagement() {
           }));
           setUsers(transformedUsers);
           console.log(`Loaded ${transformedUsers.length} users from API`);
+          
+          // Show sample user data for debugging
+          if (transformedUsers.length > 0) {
+            const sampleUser = transformedUsers[0];
+            console.log('Sample user data:', {
+              id: sampleUser.id,
+              fullname: sampleUser.fullname,
+              balance: sampleUser.balance,
+              points: sampleUser.points,
+              rankId: sampleUser.rankId,
+              rank: sampleUser.rank
+            });
+          }
         } else {
           console.error('No users data received');
           setUsers([]);
@@ -178,6 +193,7 @@ export default function UserManagement() {
       if (response.ok) {
         const data = await response.json();
         setRanks(data.ranks || []);
+        console.log('Loaded ranks:', data.ranks);
       } else {
         console.error('Failed to fetch ranks:', response.status);
         setRanks([]);
@@ -246,6 +262,8 @@ export default function UserManagement() {
       });
 
       const data = await response.json();
+      console.log('Update response:', data);
+      
       if (response.ok) {
         setShowEditModal(false);
         setEditingUser(null);
@@ -260,7 +278,10 @@ export default function UserManagement() {
           points: 0,
           rankId: null
         });
-        fetchUsers();
+        
+        console.log('Calling fetchUsers to refresh the list...');
+        await fetchUsers();
+        console.log('fetchUsers completed');
         
         // Show detailed success message
         const updatedFields = [];
@@ -343,6 +364,11 @@ export default function UserManagement() {
     
     setFormData(formDataToSet);
     setShowEditModal(true);
+    
+    // Force a re-render to ensure modal shows
+    setTimeout(() => {
+      console.log('Modal should be open now. Current formData:', formData);
+    }, 100);
   };
 
   const openProfileModal = async (user) => {
@@ -763,8 +789,8 @@ export default function UserManagement() {
 
       {/* Edit User Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-semibold text-gray-800">Edit User</h3>
               <button
@@ -842,8 +868,11 @@ export default function UserManagement() {
                 </select>
               </div>
               {/* Financial Information Section */}
-              <div className="border-t pt-4 mt-4">
-                <h4 className="text-lg font-semibold text-gray-800 mb-3">💰 Financial Information</h4>
+              <div className="border-t-2 border-gray-200 pt-6 mt-6 bg-gray-50 -mx-6 px-6 py-4 rounded-lg">
+                <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                  💰 Financial Information
+                  <span className="ml-2 text-sm font-normal text-gray-600">(Update user's financial data)</span>
+                </h4>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -887,11 +916,15 @@ export default function UserManagement() {
                   onChange={(e) => setFormData({...formData, rankId: e.target.value ? parseInt(e.target.value) : null})}
                 >
                   <option value="">No Rank</option>
-                  {ranks.map((rank) => (
-                    <option key={rank.id} value={rank.id}>
-                      {rank.title} ({rank.required_points} points)
-                    </option>
-                  ))}
+                  {ranks.length > 0 ? (
+                    ranks.map((rank) => (
+                      <option key={rank.id} value={rank.id}>
+                        {rank.title} ({rank.required_points} points)
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>Loading ranks...</option>
+                  )}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   Current: {editingUser?.rank?.title || 'No Rank'}

@@ -52,12 +52,19 @@ export async function GET(request) {
       }
     });
 
+    // Convert Decimal fields to numbers for proper JSON serialization
+    const usersWithNumbers = users.map(user => ({
+      ...user,
+      balance: parseFloat(user.balance || 0),
+      totalEarnings: parseFloat(user.totalEarnings || 0)
+    }));
+
     // Get total count
-    const totalCount = users.length;
+    const totalCount = usersWithNumbers.length;
 
     return NextResponse.json({
       success: true,
-      users,
+      users: usersWithNumbers,
       total: totalCount
     });
 

@@ -159,10 +159,16 @@ export async function PUT(request, { params }) {
       }
     });
 
+    // Convert Decimal fields to numbers
+    const userWithNumbers = {
+      ...user,
+      balance: parseFloat(user.balance || 0)
+    };
+
     return NextResponse.json({
       success: true,
       message: 'User updated successfully',
-      user
+      user: userWithNumbers
     });
 
   } catch (error) {
