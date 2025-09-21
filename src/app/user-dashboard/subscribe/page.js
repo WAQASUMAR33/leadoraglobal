@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import Link from "next/link";
 import { UserContext } from "../../../lib/userContext";
 
@@ -27,7 +27,7 @@ export default function SubscribePackage() {
         setUserBalance(parseFloat(user.balance || 0));
       }
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, fetchUserBalance]);
 
   const fetchPackages = async () => {
     try {
@@ -47,7 +47,7 @@ export default function SubscribePackage() {
     }
   };
 
-  const fetchUserBalance = async () => {
+  const fetchUserBalance = useCallback(async () => {
     try {
       console.log('🔍 Subscribe page - Fetching user balance for user:', user.id);
       const response = await fetch('/api/user/profile', {
@@ -75,7 +75,7 @@ export default function SubscribePackage() {
       console.error('🔍 Subscribe page - Error fetching user balance:', error);
       setUserBalance(0);
     }
-  };
+  }, [user]);
 
   const handleBalancePayment = async (packageId) => {
     if (!user) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -44,6 +44,28 @@ export default function WithdrawalsHistoryPage() {
     setMounted(true);
   }, []);
 
+  // Define fetchWithdrawalHistory before conditional return
+  const fetchWithdrawalHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/user/withdrawals', {
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setWithdrawalHistory(data.withdrawals || []);
+      } else {
+        setError('Failed to fetch withdrawal history');
+      }
+    } catch (error) {
+      console.error('Error fetching withdrawal history:', error);
+      setError('Error loading withdrawal history');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user) {
       fetchWithdrawalHistory();
@@ -52,7 +74,7 @@ export default function WithdrawalsHistoryPage() {
         context.refreshUserData();
       }
     }
-  }, [mounted, context?.isAuthenticated, context?.user]);
+  }, [mounted, context?.isAuthenticated, context?.user, context?.refreshUserData, fetchWithdrawalHistory]);
   
   // Safety check for context
   if (!context) {
@@ -74,27 +96,6 @@ export default function WithdrawalsHistoryPage() {
     approved: { label: 'Approved', color: 'success', icon: <CheckCircle /> },
     rejected: { label: 'Rejected', color: 'error', icon: <Cancel /> },
     processing: { label: 'Processing', color: 'info', icon: <Pending /> }
-  };
-
-  const fetchWithdrawalHistory = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/user/withdrawals', {
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setWithdrawalHistory(data.withdrawals || []);
-      } else {
-        setError('Failed to fetch withdrawal history');
-      }
-    } catch (error) {
-      console.error('Error fetching withdrawal history:', error);
-      setError('Error loading withdrawal history');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const formatCurrency = (amount) => {

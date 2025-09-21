@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -48,31 +48,13 @@ export default function UpgradePackagePage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted && context?.isAuthenticated && context?.user) {
-      fetchPackageData();
-    }
-  }, [mounted, context?.isAuthenticated, context?.user]);
-  
-  // Safety check for context
-  if (!context) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading...
-        </Typography>
-      </Box>
-    );
-  }
-  
-  const { user, isAuthenticated } = context;
-
-  const fetchPackageData = async () => {
+  // Define fetchPackageData before conditional return
+  const fetchPackageData = useCallback(async () => {
+    if (!context?.user) return;
     try {
       setLoading(true);
       const [currentResponse, availableResponse] = await Promise.all([
-        fetch(`/api/user/package?userId=${user.id}`, { credentials: 'include' }),
+        fetch(`/api/user/package?userId=${context.user.id}`, { credentials: 'include' }),
         fetch('/api/packages', { credentials: 'include' })
       ]);
 
@@ -115,7 +97,27 @@ export default function UpgradePackagePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [context?.user]);
+
+  useEffect(() => {
+    if (mounted && context?.isAuthenticated && context?.user) {
+      fetchPackageData();
+    }
+  }, [mounted, context?.isAuthenticated, context?.user, fetchPackageData]);
+  
+  // Safety check for context
+  if (!context) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Loading...
+        </Typography>
+      </Box>
+    );
+  }
+  
+  const { user, isAuthenticated } = context;
 
   const handleUpgrade = (pkg) => {
     setSelectedPackage(pkg);

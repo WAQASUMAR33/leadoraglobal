@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -70,7 +70,7 @@ export default function TransferToOthersPage() {
   });
 
   // Fetch transfers
-  const fetchTransfers = async () => {
+  const fetchTransfers = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -96,13 +96,13 @@ export default function TransferToOthersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, filters.type]);
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchTransfers();
     }
-  }, [pagination.page, filters.type, isAuthenticated]);
+  }, [pagination.page, filters.type, isAuthenticated, fetchTransfers]);
 
   // Handle transfer form submission
   const handleTransferSubmit = async (e) => {

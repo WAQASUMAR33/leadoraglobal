@@ -112,7 +112,7 @@ export default function UserManagement() {
       console.log('Pagination changed, fetching users...');
       fetchUsers(pagination.page, pagination.pageSize);
     }
-  }, [pagination.page, pagination.pageSize]);
+  }, [pagination.page, pagination.pageSize, pagination.totalCount, fetchUsers]);
 
   useEffect(() => {
     applyFilters();
@@ -171,7 +171,7 @@ export default function UserManagement() {
     fetchUsers(1, newPageSize);
   };
 
-  const fetchUsers = async (page = pagination.page, pageSize = pagination.pageSize) => {
+  const fetchUsers = useCallback(async (page = pagination.page, pageSize = pagination.pageSize) => {
     try {
       setLoading(true);
       
@@ -223,7 +223,7 @@ export default function UserManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   const fetchRanks = async () => {
     try {
@@ -515,15 +515,15 @@ export default function UserManagement() {
             </svg>
             <span>{loading ? 'Loading...' : 'Refresh'}</span>
           </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            <span>Add User</span>
-          </button>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span>Add User</span>
+        </button>
         </div>
       </div>
 
@@ -1028,7 +1028,7 @@ export default function UserManagement() {
               <div className="border-t-2 border-gray-200 pt-6 mt-6 bg-gray-50 -mx-6 px-6 py-4 rounded-lg">
                 <h4 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
                   💰 Financial Information
-                  <span className="ml-2 text-sm font-normal text-gray-600">(Update user's financial data)</span>
+                  <span className="ml-2 text-sm font-normal text-gray-600">(Update user&apos;s financial data)</span>
                 </h4>
               </div>
               <div>
@@ -1075,9 +1075,9 @@ export default function UserManagement() {
                   <option value="">No Rank</option>
                   {ranks.length > 0 ? (
                     ranks.map((rank) => (
-                      <option key={rank.id} value={rank.id}>
-                        {rank.title} ({rank.required_points} points)
-                      </option>
+                    <option key={rank.id} value={rank.id}>
+                      {rank.title} ({rank.required_points} points)
+                    </option>
                     ))
                   ) : (
                     <option value="" disabled>Loading ranks...</option>
