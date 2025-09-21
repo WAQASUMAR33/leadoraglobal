@@ -141,7 +141,15 @@ export default function UserManagement() {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.users) {
-          setUsers(data.users);
+          // Transform the data to match the expected format
+          const transformedUsers = data.users.map(user => ({
+            ...user,
+            firstname: user.fullname?.split(' ')[0] || user.fullname || 'Unknown',
+            lastname: user.fullname?.split(' ').slice(1).join(' ') || '',
+            role: 'user' // Default role since it's not in the schema
+          }));
+          setUsers(transformedUsers);
+          console.log(`Loaded ${transformedUsers.length} users from API`);
         } else {
           console.error('No users data received');
           setUsers([]);
@@ -227,6 +235,7 @@ export default function UserManagement() {
     e.preventDefault();
     setEditLoading(true);
     try {
+      console.log('Updating user with data:', formData);
       const response = await fetch(`/api/admin/users/${editingUser.id}`, {
         method: 'PUT',
         headers: {
@@ -252,7 +261,17 @@ export default function UserManagement() {
           rankId: null
         });
         fetchUsers();
-        alert('User updated successfully!');
+        
+        // Show detailed success message
+        const updatedFields = [];
+        if (formData.balance !== undefined) updatedFields.push(`Balance: PKR ${formData.balance}`);
+        if (formData.points !== undefined) updatedFields.push(`Points: ${formData.points}`);
+        if (formData.rankId !== undefined) {
+          const selectedRank = ranks.find(r => r.id === formData.rankId);
+          updatedFields.push(`Rank: ${selectedRank?.title || 'No Rank'}`);
+        }
+        
+        alert(`✅ User updated successfully!\n\nUpdated fields:\n${updatedFields.join('\n')}`);
       } else if (response.status === 401) {
         window.location.href = '/admin/login';
         return;
@@ -301,17 +320,28 @@ export default function UserManagement() {
 
   const openEditModal = (user) => {
     setEditingUser(user);
-    setFormData({
-      firstname: user.firstname || '',
-      lastname: user.lastname || '',
+    
+    // Parse fullname into firstname and lastname
+    const nameParts = (user.fullname || user.firstname || '').split(' ');
+    const firstname = nameParts[0] || '';
+    const lastname = nameParts.slice(1).join(' ') || '';
+    
+    const formDataToSet = {
+      firstname: firstname,
+      lastname: lastname,
       username: user.username || '',
       password: '',
       role: user.role || 'user',
       status: user.status || 'active',
-      balance: user.balance || 0,
-      points: user.points || 0,
+      balance: parseFloat(user.balance) || 0,
+      points: parseInt(user.points) || 0,
       rankId: user.rankId || null
-    });
+    };
+    
+    console.log('Opening edit modal for user:', user);
+    console.log('Setting form data:', formDataToSet);
+    
+    setFormData(formDataToSet);
     setShowEditModal(true);
   };
 
@@ -402,17 +432,29 @@ export default function UserManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
-          <p className="text-gray-600 mt-2">Manage user accounts and permissions</p>
+          <p className="text-gray-600 mt-2">Manage user accounts and permissions - Showing all {users.length} users</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          <span>Add User</span>
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={fetchUsers}
+            disabled={loading}
+            className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+          >
+            <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>{loading ? 'Loading...' : 'Refresh'}</span>
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Add User</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -474,6 +516,11 @@ export default function UserManagement() {
         {/* Results Count */}
         <div className="mt-4 text-sm text-gray-600">
           Showing {filteredUsers.length} of {users.length} users
+          {filteredUsers.length !== users.length && (
+            <span className="ml-2 text-blue-600 font-medium">
+              ({users.length - filteredUsers.length} filtered out)
+            </span>
+          )}
         </div>
       </div>
 
@@ -794,29 +841,46 @@ export default function UserManagement() {
                   <option value="suspended">Suspended</option>
                 </select>
               </div>
+              {/* Financial Information Section */}
+              <div className="border-t pt-4 mt-4">
+                <h4 className="text-lg font-semibold text-gray-800 mb-3">💰 Financial Information</h4>
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Balance (PKR)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Wallet Balance (PKR) 
+                  <span className="text-green-600 font-semibold">*</span>
+                </label>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
+                  placeholder="Enter wallet amount"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800"
                   value={formData.balance}
                   onChange={(e) => setFormData({...formData, balance: parseFloat(e.target.value) || 0})}
                 />
+                <p className="text-xs text-gray-500 mt-1">Current: PKR {editingUser?.balance || 0}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Points</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Points 
+                  <span className="text-blue-600 font-semibold">*</span>
+                </label>
                 <input
                   type="number"
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
+                  placeholder="Enter points"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
                   value={formData.points}
                   onChange={(e) => setFormData({...formData, points: parseInt(e.target.value) || 0})}
                 />
+                <p className="text-xs text-gray-500 mt-1">Current: {editingUser?.points || 0} points</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rank</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Rank 
+                  <span className="text-purple-600 font-semibold">*</span>
+                </label>
                 <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                   value={formData.rankId || ''}
@@ -829,6 +893,10 @@ export default function UserManagement() {
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Current: {editingUser?.rank?.title || 'No Rank'}
+                  {editingUser?.rank && ` (${editingUser.rank.required_points} points)`}
+                </p>
               </div>
               <div className="flex space-x-3 pt-4">
                 <button

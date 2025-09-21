@@ -13,9 +13,6 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page')) || 1;
-    const limit = parseInt(searchParams.get('limit')) || 50;
-    const skip = (page - 1) * limit;
     const status = searchParams.get('status');
 
     // Build where clause
@@ -24,6 +21,7 @@ export async function GET(request) {
       where.status = status;
     }
 
+    // Fetch all users without pagination
     const users = await prisma.user.findMany({
       where,
       select: {
@@ -51,23 +49,16 @@ export async function GET(request) {
       },
       orderBy: {
         createdAt: 'desc'
-      },
-      skip,
-      take: limit
+      }
     });
 
-    // Get total count for pagination
-    const totalCount = await prisma.user.count({ where });
+    // Get total count
+    const totalCount = users.length;
 
     return NextResponse.json({
       success: true,
       users,
-      pagination: {
-        page,
-        limit,
-        total: totalCount,
-        pages: Math.ceil(totalCount / limit)
-      }
+      total: totalCount
     });
 
   } catch (error) {
