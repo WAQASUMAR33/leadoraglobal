@@ -32,6 +32,15 @@ export async function GET(request, { params }) {
         role: true,
         status: true,
         balance: true,
+        points: true,
+        rankId: true,
+        rank: {
+          select: {
+            id: true,
+            title: true,
+            required_points: true
+          }
+        },
         createdAt: true,
         updatedAt: true
       }
@@ -72,7 +81,7 @@ export async function PUT(request, { params }) {
     }
 
     const body = await request.json();
-    const { firstname, lastname, username, password, role, status } = body;
+    const { firstname, lastname, username, password, role, status, balance, points, rankId } = body;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -103,6 +112,11 @@ export async function PUT(request, { params }) {
     if (username) updateData.username = username;
     if (role) updateData.role = role;
     if (status) updateData.status = status;
+    
+    // Add balance, points, and rank updates
+    if (balance !== undefined) updateData.balance = parseFloat(balance);
+    if (points !== undefined) updateData.points = parseInt(points);
+    if (rankId !== undefined) updateData.rankId = rankId ? parseInt(rankId) : null;
 
     // Update fullname if firstname or lastname changed
     if (firstname || lastname !== undefined) {
@@ -131,6 +145,15 @@ export async function PUT(request, { params }) {
         role: true,
         status: true,
         balance: true,
+        points: true,
+        rankId: true,
+        rank: {
+          select: {
+            id: true,
+            title: true,
+            required_points: true
+          }
+        },
         createdAt: true,
         updatedAt: true
       }

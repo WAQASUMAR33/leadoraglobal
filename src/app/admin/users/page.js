@@ -83,11 +83,16 @@ export default function UserManagement() {
     username: '',
     password: '',
     role: 'user',
-    status: 'active'
+    status: 'active',
+    balance: 0,
+    points: 0,
+    rankId: null
   });
+  const [ranks, setRanks] = useState([]);
 
   useEffect(() => {
     fetchUsers();
+    fetchRanks();
   }, []);
 
   useEffect(() => {
@@ -157,6 +162,24 @@ export default function UserManagement() {
     }
   };
 
+  const fetchRanks = async () => {
+    try {
+      const response = await fetch('/api/admin/ranks', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRanks(data.ranks || []);
+      } else {
+        console.error('Failed to fetch ranks:', response.status);
+        setRanks([]);
+      }
+    } catch (error) {
+      console.error('Error fetching ranks:', error);
+      setRanks([]);
+    }
+  };
+
   const handleAddUser = async (e) => {
     e.preventDefault();
     setAddLoading(true);
@@ -179,7 +202,10 @@ export default function UserManagement() {
           username: '',
           password: '',
           role: 'user',
-          status: 'active'
+          status: 'active',
+          balance: 0,
+          points: 0,
+          rankId: null
         });
         fetchUsers();
         alert('User created successfully!');
@@ -220,7 +246,10 @@ export default function UserManagement() {
           username: '',
           password: '',
           role: 'user',
-          status: 'active'
+          status: 'active',
+          balance: 0,
+          points: 0,
+          rankId: null
         });
         fetchUsers();
         alert('User updated successfully!');
@@ -278,7 +307,10 @@ export default function UserManagement() {
       username: user.username || '',
       password: '',
       role: user.role || 'user',
-      status: user.status || 'active'
+      status: user.status || 'active',
+      balance: user.balance || 0,
+      points: user.points || 0,
+      rankId: user.rankId || null
     });
     setShowEditModal(true);
   };
@@ -467,6 +499,15 @@ export default function UserManagement() {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Balance
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Points
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Rank
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -508,6 +549,23 @@ export default function UserManagement() {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.status)}`}>
                       {user.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    PKR {parseFloat(user.balance || 0).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                    {user.points || 0}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {user.rank ? (
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                        {user.rank.title}
+                      </span>
+                    ) : (
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                        No Rank
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
@@ -736,6 +794,42 @@ export default function UserManagement() {
                   <option value="suspended">Suspended</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Balance (PKR)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
+                  value={formData.balance}
+                  onChange={(e) => setFormData({...formData, balance: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Points</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
+                  value={formData.points}
+                  onChange={(e) => setFormData({...formData, points: parseInt(e.target.value) || 0})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rank</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
+                  value={formData.rankId || ''}
+                  onChange={(e) => setFormData({...formData, rankId: e.target.value ? parseInt(e.target.value) : null})}
+                >
+                  <option value="">No Rank</option>
+                  {ranks.map((rank) => (
+                    <option key={rank.id} value={rank.id}>
+                      {rank.title} ({rank.required_points} points)
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="flex space-x-3 pt-4">
                 <button
                   type="button"
@@ -862,31 +956,37 @@ export default function UserManagement() {
                   </div>
 
                   {/* Financial Information */}
-                  {memberTreeData && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h4 className="font-semibold text-gray-800 mb-3">Financial Information</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">
-                            PKR {memberTreeData.user?.balance?.toLocaleString() || '0'}
-                          </div>
-                          <div className="text-sm text-gray-600">Current Balance</div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-800 mb-3">Financial Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          PKR {parseFloat(selectedUser.balance || 0).toLocaleString()}
                         </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">
-                            PKR {memberTreeData.user?.totalEarnings?.toLocaleString() || '0'}
-                          </div>
-                          <div className="text-sm text-gray-600">Total Earnings</div>
+                        <div className="text-sm text-gray-600">Current Balance</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          PKR {parseFloat(selectedUser.totalEarnings || 0).toLocaleString()}
                         </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-600">
-                            {memberTreeData.user?.points || '0'}
-                          </div>
-                          <div className="text-sm text-gray-600">Points</div>
+                        <div className="text-sm text-gray-600">Total Earnings</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {selectedUser.points || '0'}
+                        </div>
+                        <div className="text-sm text-gray-600">Points</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-indigo-600">
+                          {selectedUser.rank?.title || 'No Rank'}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {selectedUser.rank ? `(${selectedUser.rank.required_points} pts)` : 'Current Rank'}
                         </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
 

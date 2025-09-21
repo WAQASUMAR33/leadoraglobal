@@ -35,6 +35,14 @@ export async function GET(request) {
         status: true,
         balance: true,
         points: true,
+        rankId: true,
+        rank: {
+          select: {
+            id: true,
+            title: true,
+            required_points: true
+          }
+        },
         referredBy: true,
         referralCount: true,
         totalEarnings: true,
