@@ -98,6 +98,7 @@ export default function UserManagement() {
 
   useEffect(() => {
     console.log('Component mounted, initial pagination state:', pagination);
+    console.log('Admin Users page loaded - checking pagination controls...');
     fetchUsers();
     fetchRanks();
   }, []);
@@ -617,11 +618,13 @@ export default function UserManagement() {
       </div>
 
       {/* Page Size Control - Prominent Display */}
-      <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+      <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
+        <div className="text-xs text-blue-400 mb-2">🔍 DEBUG: Page Size Control Panel</div>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-blue-800">📊 Records Display</h3>
             <p className="text-sm text-blue-600">Choose how many users to show per page</p>
+            <p className="text-xs text-blue-500">Debug: Current pageSize = {pagination.pageSize}</p>
           </div>
           <div className="flex items-center space-x-4">
             <label className="text-sm font-medium text-blue-800">Records per page:</label>
