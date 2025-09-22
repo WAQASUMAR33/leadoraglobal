@@ -27,7 +27,8 @@ import {
   People,
   Search,
   TrendingUp,
-  PersonAdd
+  PersonAdd,
+  Star
 } from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
 
@@ -220,6 +221,23 @@ export default function DownlistPage() {
             </CardContent>
           </Card>
         </Grid>
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent sx={{ padding: '12px 16px' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Total Points
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+                    {filteredMembers.reduce((total, member) => total + (member.points || 0), 0)}
+                  </Typography>
+                </Box>
+                <Star sx={{ fontSize: 40, color: 'info.main' }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
       {/* Level Breakdown */}
@@ -369,6 +387,7 @@ export default function DownlistPage() {
                       <TableCell sx={{ fontWeight: 'bold' }}>Level</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Package</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Points</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Joined</TableCell>
                     </TableRow>
                   </TableHead>
@@ -403,6 +422,11 @@ export default function DownlistPage() {
                         <TableCell>
                                   <Typography variant="body2" color="text.secondary">
                             {member.package || 'No Package'}
+                                  </Typography>
+                        </TableCell>
+                        <TableCell>
+                                  <Typography variant="body2" sx={{ fontWeight: 'medium', color: 'primary.main' }}>
+                            {member.points || 0}
                                   </Typography>
                         </TableCell>
                         <TableCell>
@@ -472,6 +496,12 @@ export default function DownlistPage() {
                               label={member.status || 'Active'} 
                               color={getStatusColor(member.status || 'active')}
                               size="small"
+                            />
+                            <Chip 
+                              label={`${member.points || 0} Points`}
+                              color="primary"
+                              size="small"
+                              variant="filled"
                             />
                           </Box>
                         </Grid>
