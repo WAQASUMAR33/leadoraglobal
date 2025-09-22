@@ -23,13 +23,10 @@ export async function GET(request, { params }) {
       where: { id: userId },
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
         fullname: true,
         username: true,
         email: true,
         phoneNumber: true,
-        role: true,
         status: true,
         balance: true,
         points: true,
@@ -81,7 +78,7 @@ export async function PUT(request, { params }) {
     }
 
     const body = await request.json();
-    const { firstname, lastname, username, password, role, status, balance, points, rankId } = body;
+    const { fullname, username, password, status, balance, points, rankId } = body;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -107,23 +104,14 @@ export async function PUT(request, { params }) {
 
     // Prepare update data
     const updateData = {};
-    if (firstname) updateData.firstname = firstname;
-    if (lastname !== undefined) updateData.lastname = lastname;
+    if (fullname) updateData.fullname = fullname;
     if (username) updateData.username = username;
-    if (role) updateData.role = role;
     if (status) updateData.status = status;
     
     // Add balance, points, and rank updates
     if (balance !== undefined) updateData.balance = parseFloat(balance);
     if (points !== undefined) updateData.points = parseInt(points);
     if (rankId !== undefined) updateData.rankId = rankId ? parseInt(rankId) : null;
-
-    // Update fullname if firstname or lastname changed
-    if (firstname || lastname !== undefined) {
-      const newFirstname = firstname || existingUser.firstname;
-      const newLastname = lastname !== undefined ? lastname : existingUser.lastname;
-      updateData.fullname = `${newFirstname} ${newLastname}`.trim();
-    }
 
     // Hash password if provided
     if (password) {
@@ -136,13 +124,10 @@ export async function PUT(request, { params }) {
       data: updateData,
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
         fullname: true,
         username: true,
         email: true,
         phoneNumber: true,
-        role: true,
         status: true,
         balance: true,
         points: true,
