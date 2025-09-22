@@ -33,19 +33,26 @@ async function getAllDownlineMembers(username) {
       orderBy: { createdAt: 'asc' }
     });
 
-    // Build the tree structure in memory
+    // Build the tree structure in memory with case-insensitive lookup
     const userMap = new Map();
+    const usernameToActualUsername = new Map(); // Map lowercase to actual case
+    
     allUsers.forEach(user => {
-      userMap.set(user.username, {
+      const lowerUsername = user.username.toLowerCase();
+      userMap.set(lowerUsername, {
         ...user,
         children: []
       });
+      usernameToActualUsername.set(lowerUsername, user.username);
     });
 
-    // Build parent-child relationships
+    // Build parent-child relationships with case-insensitive lookup
     allUsers.forEach(user => {
-      if (user.referredBy && userMap.has(user.referredBy)) {
-        userMap.get(user.referredBy).children.push(user.username);
+      if (user.referredBy) {
+        const lowerReferredBy = user.referredBy.toLowerCase();
+        if (userMap.has(lowerReferredBy)) {
+          userMap.get(lowerReferredBy).children.push(user.username);
+        }
       }
     });
 
@@ -54,12 +61,13 @@ async function getAllDownlineMembers(username) {
     const visited = new Set();
 
     function calculateLevels(currentUsername, currentLevel) {
-      if (visited.has(currentUsername) || currentLevel > 10) return;
+      const lowerUsername = currentUsername.toLowerCase();
+      if (visited.has(lowerUsername) || currentLevel > 10) return;
       
-      visited.add(currentUsername);
+      visited.add(lowerUsername);
       levels.set(currentUsername, currentLevel);
       
-      const user = userMap.get(currentUsername);
+      const user = userMap.get(lowerUsername);
       if (user) {
         user.children.forEach(childUsername => {
           calculateLevels(childUsername, currentLevel + 1);
