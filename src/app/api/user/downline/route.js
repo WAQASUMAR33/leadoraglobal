@@ -67,13 +67,14 @@ async function getAllDownlineMembers(username) {
       }
     }
 
-    calculateLevels(username, 1);
+    // Start from level 0 for the root user, so direct referrals are level 1
+    calculateLevels(username, 0);
 
-    // Filter and format ALL tree members (including root user)
+    // Filter and format ONLY downline members (exclude root user)
     const downlineMembers = [];
     allUsers.forEach(user => {
       const level = levels.get(user.username);
-      if (level) { // Include ALL levels including root user (level 1)
+      if (level && level > 0) { // Exclude root user (level 0), only include downline
         downlineMembers.push({
           id: user.id,
           fullname: user.fullname,
@@ -139,14 +140,22 @@ export async function GET(request) {
     // Get all downline members
     const downlineMembers = await getAllDownlineMembers(user.username);
 
-    // Calculate statistics
+    // Calculate statistics for all levels
     const stats = {
       totalMembers: downlineMembers.length,
       activeMembers: downlineMembers.filter(m => m.status === 'active').length,
       totalEarnings: downlineMembers.reduce((sum, member) => sum + member.totalEarnings, 0),
       level1Members: downlineMembers.filter(m => m.level === 1).length,
       level2Members: downlineMembers.filter(m => m.level === 2).length,
-      level3Members: downlineMembers.filter(m => m.level === 3).length
+      level3Members: downlineMembers.filter(m => m.level === 3).length,
+      level4Members: downlineMembers.filter(m => m.level === 4).length,
+      level5Members: downlineMembers.filter(m => m.level === 5).length,
+      level6Members: downlineMembers.filter(m => m.level === 6).length,
+      level7Members: downlineMembers.filter(m => m.level === 7).length,
+      level8Members: downlineMembers.filter(m => m.level === 8).length,
+      level9Members: downlineMembers.filter(m => m.level === 9).length,
+      level10Members: downlineMembers.filter(m => m.level === 10).length,
+      maxLevel: downlineMembers.length > 0 ? Math.max(...downlineMembers.map(m => m.level)) : 0
     };
 
     return NextResponse.json({
