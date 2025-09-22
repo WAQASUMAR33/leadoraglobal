@@ -587,23 +587,9 @@ export async function calculateMLMCommissionsInTransaction(packageRequestId, tx)
  * Transaction-based version of distributePointsToTree
  */
 async function distributePointsToTreeInTransaction(username, points, tx) {
-  // Get all users first to reduce database queries
-  const allUsers = await tx.user.findMany({
-    select: {
-      id: true,
-      username: true,
-      referredBy: true,
-      points: true
-    }
-  });
-
-  // Create a lookup map for faster access
-  const userMap = new Map();
-  allUsers.forEach(user => {
-    userMap.set(user.username, user);
-  });
-
-  // Build the referral chain
+  console.log(`🌳 Starting points distribution for ${username} with ${points} points`);
+  
+  // Build the referral chain by fetching users one by one (more efficient for large trees)
   const usersToUpdate = [];
   let currentUsername = username;
   const processedUsers = new Set();
@@ -611,7 +597,16 @@ async function distributePointsToTreeInTransaction(username, points, tx) {
   const maxLevels = 10; // Prevent infinite loops
 
   while (currentUsername && level < maxLevels) {
-    const user = userMap.get(currentUsername);
+    // Fetch only the current user to avoid loading all users
+    const user = await tx.user.findUnique({
+      where: { username: currentUsername },
+      select: {
+        id: true,
+        username: true,
+        referredBy: true,
+        points: true
+      }
+    });
 
     if (!user || processedUsers.has(user.id)) {
       break; // Prevent infinite loops
@@ -621,6 +616,13 @@ async function distributePointsToTreeInTransaction(username, points, tx) {
     processedUsers.add(user.id);
     currentUsername = user.referredBy;
     level++;
+  }
+
+  console.log(`📊 Found ${usersToUpdate.length} users in the referral tree`);
+
+  if (usersToUpdate.length === 0) {
+    console.log(`⚠️ No users found in referral tree for ${username}`);
+    return;
   }
 
   // Batch update all users at once using Promise.all for better performance

@@ -416,46 +416,102 @@ export async function approvePackageRequest(packageRequestId) {
     }
 
     // Use database transaction to ensure all operations succeed or fail together
-    // Increase timeout to 30 seconds for complex MLM calculations
-    const result = await prisma.$transaction(async (tx) => {
-    // Step 1: Update user's package and rank
-      console.log(`📝 Step 1: Updating user package and rank...`);
-      await updateUserPackageAndRankInTransaction(requestId, tx);
-    console.log(`✅ Updated user ${user.username} with package and rank`);
+    // Increase timeout to 60 seconds for complex MLM calculations
+    let result;
+    try {
+      result = await prisma.$transaction(async (tx) => {
+        // Step 1: Update user's package and rank
+        console.log(`📝 Step 1: Updating user package and rank...`);
+        await updateUserPackageAndRankInTransaction(requestId, tx);
+        console.log(`✅ Updated user ${user.username} with package and rank`);
 
-    // Step 2: Calculate and distribute MLM commissions
-      console.log(`💰 Step 2: Distributing MLM commissions...`);
-      await calculateMLMCommissionsInTransaction(requestId, tx);
-      console.log(`✅ MLM commissions distributed successfully`);
+        // Step 2: Calculate and distribute MLM commissions
+        console.log(`💰 Step 2: Distributing MLM commissions...`);
+        await calculateMLMCommissionsInTransaction(requestId, tx);
+        console.log(`✅ MLM commissions distributed successfully`);
 
-    // Step 3: Update package request status
-      console.log(`📋 Step 3: Updating package request status...`);
-      await tx.packageRequest.update({
-      where: { id: requestId },
-      data: {
-        status: 'approved',
-        updatedAt: new Date()
+        // Step 3: Update package request status
+        console.log(`📋 Step 3: Updating package request status...`);
+        await tx.packageRequest.update({
+          where: { id: requestId },
+          data: {
+            status: 'approved',
+            updatedAt: new Date()
+          }
+        });
+        console.log(`✅ Package request status updated to approved`);
+
+        return {
+          success: true,
+          message: 'Package approved successfully with MLM commission distribution',
+          user: user.username,
+          package: packageData.package_name,
+          packageAmount: packageData.package_amount,
+          packagePoints: packageData.package_points,
+          isRenewal: user.currentPackageId === packageData.id,
+          isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id
+        };
+      }, { 
+        timeout: 60000, // 60 second timeout for complex MLM calculations
+        maxWait: 10000, // 10 second max wait for transaction to start
+        isolationLevel: 'ReadCommitted' // Use ReadCommitted isolation level for better performance
+      });
+    } catch (transactionError) {
+      console.error('❌ Transaction failed, attempting fallback approach:', transactionError);
+      
+      // Fallback: Try to complete the operation without transaction
+      console.log(`🔄 Attempting fallback approach for user ${user.username}...`);
+      
+      try {
+        // Step 1: Update user's package and rank (without transaction)
+        console.log(`📝 Fallback Step 1: Updating user package and rank...`);
+        await updateUserPackageAndRank(requestId);
+        console.log(`✅ Fallback: Updated user ${user.username} with package and rank`);
+
+        // Step 2: Calculate and distribute MLM commissions (without transaction)
+        console.log(`💰 Fallback Step 2: Distributing MLM commissions...`);
+        await calculateMLMCommissions(requestId);
+        console.log(`✅ Fallback: MLM commissions distributed successfully`);
+
+        // Step 3: Update package request status
+        console.log(`📋 Fallback Step 3: Updating package request status...`);
+        await prisma.packageRequest.update({
+          where: { id: requestId },
+          data: {
+            status: 'approved',
+            updatedAt: new Date()
+          }
+        });
+        console.log(`✅ Fallback: Package request status updated to approved`);
+
+        result = {
+          success: true,
+          message: 'Package approved successfully with MLM commission distribution (fallback method)',
+          user: user.username,
+          package: packageData.package_name,
+          packageAmount: packageData.package_amount,
+          packagePoints: packageData.package_points,
+          isRenewal: user.currentPackageId === packageData.id,
+          isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id,
+          fallback: true
+        };
+      } catch (fallbackError) {
+        console.error('❌ Fallback approach also failed:', fallbackError);
+        throw new Error(`Both transaction and fallback approaches failed. Transaction error: ${transactionError.message}. Fallback error: ${fallbackError.message}`);
       }
-    });
-      console.log(`✅ Package request status updated to approved`);
-
-    return {
-      success: true,
-      message: 'Package approved successfully with MLM commission distribution',
-      user: user.username,
-      package: packageData.package_name,
-      packageAmount: packageData.package_amount,
-      packagePoints: packageData.package_points,
-        isRenewal: user.currentPackageId === packageData.id,
-        isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id
-      };
-    }, { timeout: 30000 }); // 30 second timeout for complex MLM calculations
+    }
 
     console.log(`🎉 Package request ${packageRequestId} approved successfully`);
     return result;
 
   } catch (error) {
     console.error('❌ Package approval failed:', error);
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      meta: error.meta,
+      stack: error.stack
+    });
     
     // Try to update package request status to failed if possible
     try {
@@ -467,11 +523,16 @@ export async function approvePackageRequest(packageRequestId) {
           updatedAt: new Date()
         }
       });
+      console.log(`✅ Updated package request ${requestId} status to failed`);
     } catch (updateError) {
       console.error('❌ Failed to update package request status to failed:', updateError);
     }
     
-    throw error;
+    // Re-throw with more context
+    const enhancedError = new Error(`Package approval failed for request ${requestId}: ${error.message}`);
+    enhancedError.originalError = error;
+    enhancedError.requestId = requestId;
+    throw enhancedError;
   }
 }
 
