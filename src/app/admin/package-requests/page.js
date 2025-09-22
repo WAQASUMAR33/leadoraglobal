@@ -12,6 +12,8 @@ export default function PackageRequests() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [rejectionLoading, setRejectionLoading] = useState(false);
   const [searchFilters, setSearchFilters] = useState({
     username: '',
     requestNumber: '',
@@ -97,6 +99,13 @@ export default function PackageRequests() {
   };
 
   const handleStatusUpdate = async (requestId, newStatus, adminNotes = '') => {
+    // Set loading state based on action
+    if (newStatus === 'approved') {
+      setApprovalLoading(true);
+    } else if (newStatus === 'rejected') {
+      setRejectionLoading(true);
+    }
+
     try {
       const response = await fetch(`/api/admin/package-requests/${requestId}`, {
         method: 'PUT',
@@ -110,7 +119,12 @@ export default function PackageRequests() {
       });
 
       if (response.ok) {
-        alert(`Package request ${newStatus} successfully!`);
+        const result = await response.json();
+        if (newStatus === 'approved') {
+          alert(`Package request approved successfully! ${result.approvalResult?.message || ''}`);
+        } else {
+          alert(`Package request ${newStatus} successfully!`);
+        }
         fetchPackageRequests(); // Refresh the list
         setShowDetailModal(false); // Close modal after update
       } else if (response.status === 401) {
@@ -118,11 +132,16 @@ export default function PackageRequests() {
         alert('Session expired. Please login again.');
         router.push('/admin/login');
       } else {
-        alert('Failed to update package request status');
+        const errorData = await response.json();
+        alert(`Failed to update package request status: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('Error updating package request status');
+      alert(`Error updating package request status: ${error.message}`);
+    } finally {
+      // Clear loading states
+      setApprovalLoading(false);
+      setRejectionLoading(false);
     }
   };
 
@@ -648,29 +667,65 @@ export default function PackageRequests() {
 
                 {/* Admin Actions */}
                   {selectedRequest.status === 'pending' && (
-                  <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-                    <div className="text-sm text-gray-600">
-                      Action required: Approve or reject this request
-                    </div>
+                  <div className="pt-6 border-t border-gray-200">
+                    {(approvalLoading || rejectionLoading) && (
+                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">
+                              {approvalLoading ? 'Processing Package Approval...' : 'Processing Rejection...'}
+                            </p>
+                            <p className="text-xs text-blue-600 mt-1">
+                              This may take up to 2 minutes for complex MLM calculations. Please wait...
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 w-full bg-blue-200 rounded-full h-2">
+                          <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-gray-600">
+                        Action required: Approve or reject this request
+                      </div>
                     <div className="flex space-x-3">
                       <button
                         onClick={() => {
                           const notes = prompt('Add admin notes (optional):');
                             handleStatusUpdate(selectedRequest.id, 'rejected', notes);
                         }}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+                        disabled={rejectionLoading || approvalLoading}
+                        className={`px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
+                          rejectionLoading || approvalLoading
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700'
+                        }`}
                       >
-                        Reject
+                        {rejectionLoading && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        )}
+                        <span>{rejectionLoading ? 'Rejecting...' : 'Reject'}</span>
                       </button>
                       <button
                         onClick={() => {
                           const notes = prompt('Add admin notes (optional):');
                             handleStatusUpdate(selectedRequest.id, 'approved', notes);
                         }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                        disabled={approvalLoading || rejectionLoading}
+                        className={`px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
+                          approvalLoading || rejectionLoading
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700'
+                        }`}
                       >
-                        Approve
+                        {approvalLoading && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        )}
+                        <span>{approvalLoading ? 'Approving...' : 'Approve'}</span>
                       </button>
+                    </div>
                     </div>
                   </div>
                 )}

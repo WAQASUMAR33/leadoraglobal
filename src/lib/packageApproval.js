@@ -452,8 +452,8 @@ export async function approvePackageRequest(packageRequestId) {
           isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id
         };
       }, { 
-        timeout: 60000, // 60 second timeout for complex MLM calculations
-        maxWait: 10000, // 10 second max wait for transaction to start
+        timeout: 120000, // 120 second timeout for complex MLM calculations
+        maxWait: 15000, // 15 second max wait for transaction to start
         isolationLevel: 'ReadCommitted' // Use ReadCommitted isolation level for better performance
       });
     } catch (transactionError) {
