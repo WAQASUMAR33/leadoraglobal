@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import Link from "next/link";
-import { useUser } from "../../../lib/userContext";
+import { UserContext } from "../../../lib/userContext";
 
 export default function MyPackage() {
-  const { user, isAuthenticated } = useUser();
+  const { user, isAuthenticated } = useContext(UserContext);
   const [userPackage, setUserPackage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [packageDetails, setPackageDetails] = useState(null);

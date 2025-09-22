@@ -27,7 +27,7 @@ export default function SubscribePackage() {
         setUserBalance(parseFloat(user.balance || 0));
       }
     }
-  }, [user, isAuthenticated, fetchUserBalance]);
+  }, [user, isAuthenticated]);
 
   const fetchPackages = async () => {
     try {
@@ -48,6 +48,8 @@ export default function SubscribePackage() {
   };
 
   const fetchUserBalance = useCallback(async () => {
+    if (!user?.id) return;
+    
     try {
       console.log('🔍 Subscribe page - Fetching user balance for user:', user.id);
       const response = await fetch('/api/user/profile', {
@@ -75,7 +77,7 @@ export default function SubscribePackage() {
       console.error('🔍 Subscribe page - Error fetching user balance:', error);
       setUserBalance(0);
     }
-  }, [user]);
+  }, [user?.id]);
 
   const handleBalancePayment = async (packageId) => {
     if (!user) {
@@ -108,7 +110,9 @@ export default function SubscribePackage() {
         setSelectedPackage(null);
         setPaymentMethod('request');
         setTimeout(() => {
-          window.location.href = '/user-dashboard/my-package';
+          if (typeof window !== 'undefined') {
+            window.location.href = '/user-dashboard/my-package';
+          }
         }, 2000);
       } else {
         setError(data.error || 'Failed to subscribe to package');
@@ -123,7 +127,9 @@ export default function SubscribePackage() {
 
   const handlePackageRequest = (packageId) => {
     // Redirect to package request page
-    window.location.href = `/user-dashboard/package-request?packageId=${packageId}`;
+    if (typeof window !== 'undefined') {
+      window.location.href = `/user-dashboard/package-request?packageId=${packageId}`;
+    }
   };
 
   if (loading) {
@@ -174,7 +180,7 @@ export default function SubscribePackage() {
               <div className="mt-3 flex items-center gap-4">
                 <div className="bg-green-900/20 border border-green-500/30 rounded-lg px-3 py-2">
                   <span className="text-green-300 text-sm font-medium">
-                    Current Balance: PKR {userBalance.toLocaleString()}
+                    Current Balance: PKR {userBalance ? userBalance.toLocaleString() : '0'}
                   </span>
                 </div>
               </div>
