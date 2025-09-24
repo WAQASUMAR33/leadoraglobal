@@ -36,16 +36,12 @@ export default function AdminUserManagement() {
     status: 'all',
   });
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [usersPerPage, setUsersPerPage] = useState(20);
+  // Remove pagination state - we'll show all records
 
   useEffect(() => {
     fetchUsers();
     fetchRanks();
-  }, [currentPage, usersPerPage]);
+  }, []);
 
   useEffect(() => {
     applyFilters();
@@ -54,14 +50,13 @@ export default function AdminUserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/users?page=${currentPage}&limit=${usersPerPage}`, {
+      // Fetch all users without pagination
+      const response = await fetch(`/api/admin/users?limit=all`, {
         credentials: 'include',
       });
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users || []);
-        setTotalUsers(data.pagination?.total || 0);
-        setTotalPages(data.pagination?.pages || 1);
       } else {
         console.error('Failed to fetch users:', response.status);
         setUsers([]);
@@ -335,67 +330,7 @@ export default function AdminUserManagement() {
     });
   };
 
-  // Pagination handlers
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const handleUsersPerPageChange = (newUsersPerPage) => {
-    setUsersPerPage(newUsersPerPage);
-    setCurrentPage(1); // Reset to first page when changing page size
-  };
-
-  const renderPagination = () => {
-    const pages = [];
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(
-        <button
-          key={i}
-          onClick={() => handlePageChange(i)}
-          className={`px-3 py-2 text-sm font-medium rounded-lg ${
-            i === currentPage
-              ? 'bg-purple-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-          }`}
-        >
-          {i}
-        </button>
-      );
-    }
-
-    return (
-      <div className="flex items-center justify-between mt-6">
-        <div className="text-sm text-gray-700">
-          Showing {((currentPage - 1) * usersPerPage) + 1} to {Math.min(currentPage * usersPerPage, totalUsers)} of {totalUsers} users
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
-          {pages}
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    );
-  };
+  // Pagination removed - showing all records
 
   if (loading) {
     return (
@@ -445,21 +380,6 @@ export default function AdminUserManagement() {
             </select>
           </div>
 
-          {/* Records Per Page */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Records Per Page</label>
-            <select
-              value={usersPerPage}
-              onChange={(e) => handleUsersPerPageChange(parseInt(e.target.value))}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-              <option value={200}>200</option>
-            </select>
-          </div>
 
           {/* Clear Filters */}
           <div>
@@ -474,7 +394,7 @@ export default function AdminUserManagement() {
 
         {/* Results Count */}
         <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredUsers.length} of {totalUsers} users (Page {currentPage} of {totalPages})
+          Showing {filteredUsers.length} users (All records)
         </div>
       </div>
 
@@ -488,25 +408,19 @@ export default function AdminUserManagement() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                  Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Username
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Points
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Wallet
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Points
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Referrals
+                  Rank
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -516,6 +430,7 @@ export default function AdminUserManagement() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
+                  {/* Name Column */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
@@ -535,32 +450,34 @@ export default function AdminUserManagement() {
                       </div>
                     </div>
                   </td>
+                  
+                  {/* Username Column */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-800">{user.username || 'Unknown'}</div>
+                    <div className="text-sm text-gray-800 font-medium">{user.username || 'Unknown'}</div>
                   </td>
+                  
+                  {/* Points Column */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-800">{user.email || 'N/A'}</div>
+                    <div className="text-sm text-gray-800 font-medium">
+                      {user.points || 0}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.status)}`}>
-                      {user.status}
-                    </span>
-                  </td>
+                  
+                  {/* Wallet Column */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-800 font-medium">
                       {formatCurrency(user.balance)}
                     </div>
                   </td>
+                  
+                  {/* Rank Column */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-800">
-                      {user.points || 0}
+                      {user.rank?.title || 'No Rank'}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-800">
-                      {user.referralCount || 0}
-                    </div>
-                  </td>
+                  
+                  {/* Actions Column */}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-1">
                       <button
@@ -616,9 +533,6 @@ export default function AdminUserManagement() {
             </tbody>
           </table>
         </div>
-        
-        {/* Pagination */}
-        {totalPages > 1 && renderPagination()}
       </div>
 
       {/* User Details Modal */}
