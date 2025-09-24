@@ -3,8 +3,15 @@ import prisma from '../../../../lib/prisma';
 import { verifyToken } from '../../../../lib/auth';
 
 // Recursive function to build referral tree
-async function buildReferralTree(username, level = 1, maxLevel = 10) {
+async function buildReferralTree(username, level = 1, maxLevel = 10, visited = new Set()) {
   if (level > maxLevel) return [];
+  
+  // Prevent infinite loops by tracking visited usernames
+  if (visited.has(username)) {
+    console.warn(`⚠️ Circular reference detected in referral tree: ${username}`);
+    return [];
+  }
+  visited.add(username);
 
   // Get all users referred by this username
   const referrals = await prisma.user.findMany({
@@ -51,7 +58,7 @@ async function buildReferralTree(username, level = 1, maxLevel = 10) {
     };
 
     // Recursively get children
-    const children = await buildReferralTree(referral.username, level + 1, maxLevel);
+    const children = await buildReferralTree(referral.username, level + 1, maxLevel, visited);
     referralData.children = children;
 
     tree.push(referralData);

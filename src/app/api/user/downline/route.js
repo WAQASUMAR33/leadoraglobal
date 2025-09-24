@@ -2,6 +2,33 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { verifyToken } from '../../../../lib/auth';
 
+// Helper function to detect circular references
+function wouldCreateCircularReference(childUsername, parentUsername, userMap) {
+  // Check if adding this relationship would create a circular reference
+  // by traversing up the tree from the parent
+  const visited = new Set();
+  let currentUsername = parentUsername;
+  
+  while (currentUsername && !visited.has(currentUsername)) {
+    visited.add(currentUsername);
+    
+    // If we encounter the child username while traversing up, it's a circular reference
+    if (currentUsername === childUsername) {
+      return true;
+    }
+    
+    // Get the parent of current user
+    const currentUser = userMap.get(currentUsername.toLowerCase());
+    if (currentUser && currentUser.referredBy) {
+      currentUsername = currentUser.referredBy;
+    } else {
+      break;
+    }
+  }
+  
+  return false;
+}
+
 // Optimized function to get all downline members using single query
 async function getAllDownlineMembers(username) {
   try {
@@ -47,11 +74,26 @@ async function getAllDownlineMembers(username) {
     });
 
     // Build parent-child relationships with case-insensitive lookup
+    // and prevent circular references
     allUsers.forEach(user => {
       if (user.referredBy) {
         const lowerReferredBy = user.referredBy.toLowerCase();
         if (userMap.has(lowerReferredBy)) {
-          userMap.get(lowerReferredBy).children.push(user.username);
+          const parentUser = userMap.get(lowerReferredBy);
+          
+          // Prevent circular references:
+          // 1. User cannot refer themselves
+          // 2. User cannot refer their own referrer (creates circular reference)
+          // 3. Check if this would create a circular reference in the tree
+          const isCircularReference = user.username === parentUser.username || 
+                                    user.username === parentUser.referredBy ||
+                                    wouldCreateCircularReference(user.username, parentUser.username, userMap);
+          
+          if (!isCircularReference) {
+            userMap.get(lowerReferredBy).children.push(user.username);
+          } else {
+            console.warn(`⚠️ Preventing circular reference: ${user.username} -> ${parentUser.username}`);
+          }
         }
       }
     });

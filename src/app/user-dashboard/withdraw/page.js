@@ -11,13 +11,32 @@ import {
   Divider,
   Chip,
   CircularProgress,
-  Avatar
+  Avatar,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Stepper,
+  Step,
+  StepLabel,
+  Paper
 } from '@mui/material';
 import {
   History,
   CheckCircle,
   Pending,
-  Cancel
+  Cancel,
+  Add,
+  AccountBalance,
+  Phone,
+  Email,
+  AttachMoney
 } from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
 
@@ -30,12 +49,44 @@ export default function WithdrawPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [dataFetched, setDataFetched] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  // Withdrawal form states
+  const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+  const [withdrawalFormData, setWithdrawalFormData] = useState({
+    amount: '',
+    paymentMethodId: '',
+    notes: ''
+  });
+  const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
 
   const { user, isAuthenticated } = context || {};
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Fetch payment methods
+  const fetchPaymentMethods = async () => {
+    try {
+      setPaymentMethodsLoading(true);
+      const response = await fetch('/api/user/payment-methods', {
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentMethods(data.paymentMethods || []);
+      } else {
+        console.error('Failed to fetch payment methods');
+      }
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+    } finally {
+      setPaymentMethodsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user && !dataFetched) {
@@ -49,10 +100,11 @@ export default function WithdrawPage() {
             await context.refreshUserData();
           }
           
-          // Fetch withdrawal history
-          const withdrawalResponse = await fetch('/api/user/withdrawals', {
-            credentials: 'include'
-          });
+          // Fetch withdrawal history and payment methods in parallel
+          const [withdrawalResponse] = await Promise.all([
+            fetch('/api/user/withdrawals', { credentials: 'include' }),
+            fetchPaymentMethods()
+          ]);
 
           if (withdrawalResponse.ok) {
             const withdrawalData = await withdrawalResponse.json();
@@ -109,6 +161,112 @@ export default function WithdrawPage() {
     });
   };
 
+  // Handle withdrawal form submission
+  const handleWithdrawalSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!withdrawalFormData.amount || !withdrawalFormData.paymentMethodId) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    const amount = parseFloat(withdrawalFormData.amount);
+    if (isNaN(amount) || amount < 1000) {
+      setError('Minimum withdrawal amount is PKR 1,000');
+      return;
+    }
+
+    if (amount > user.balance) {
+      setError('Insufficient balance for withdrawal');
+      return;
+    }
+
+    try {
+      setSubmittingWithdrawal(true);
+      setError(null);
+      
+      const response = await fetch('/api/user/withdrawals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          amount: amount,
+          paymentMethodId: withdrawalFormData.paymentMethodId,
+          notes: withdrawalFormData.notes || null
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage('Withdrawal request submitted successfully!');
+        setWithdrawalFormData({ amount: '', paymentMethodId: '', notes: '' });
+        setShowWithdrawalForm(false);
+        
+        // Refresh data
+        if (context?.refreshUserData) {
+          await context.refreshUserData();
+        }
+        
+        // Refresh withdrawal history
+        const withdrawalResponse = await fetch('/api/user/withdrawals', {
+          credentials: 'include'
+        });
+        if (withdrawalResponse.ok) {
+          const withdrawalData = await withdrawalResponse.json();
+          setWithdrawalHistory(withdrawalData.withdrawals || []);
+        }
+      } else {
+        setError(data.error || 'Failed to submit withdrawal request');
+      }
+    } catch (error) {
+      console.error('Error submitting withdrawal request:', error);
+      setError('Error submitting withdrawal request');
+    } finally {
+      setSubmittingWithdrawal(false);
+    }
+  };
+
+  // Handle form input changes
+  const handleFormChange = (field, value) => {
+    setWithdrawalFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Get payment method icon
+  const getPaymentMethodIcon = (type) => {
+    switch (type) {
+      case 'bank_transfer':
+        return <AccountBalance />;
+      case 'easypaisa':
+      case 'jazzcash':
+        return <Phone />;
+      case 'paypal':
+        return <Email />;
+      default:
+        return <AttachMoney />;
+    }
+  };
+
+  // Format payment method display
+  const formatPaymentMethod = (method) => {
+    switch (method.type) {
+      case 'bank_transfer':
+        return `${method.bankName} - ${method.accountName} (${method.accountNumber})`;
+      case 'easypaisa':
+      case 'jazzcash':
+        return `${method.type.toUpperCase()} - ${method.accountName} (${method.mobileNumber})`;
+      case 'paypal':
+        return `PayPal - ${method.email}`;
+      default:
+        return method.type;
+    }
+  };
+
   // Prevent hydration mismatch by showing loading until mounted
   if (!mounted) {
     return (
@@ -121,11 +279,78 @@ export default function WithdrawPage() {
   return (
     <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto' }}>
       <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 2, fontSize: { xs: '1.5rem', md: '2rem' } }}>
-        Withdrawal History
+        Withdraw Funds
       </Typography>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {/* Balance Card */}
+      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h6" gutterBottom sx={{ opacity: 0.9 }}>
+                Available Balance
+              </Typography>
+              <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                {formatCurrency(user?.balance || 0)}
+              </Typography>
+            </Box>
+            <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 60, height: 60 }}>
+              <AttachMoney sx={{ fontSize: 30 }} />
+            </Avatar>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Withdrawal Request Section */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+              New Withdrawal Request
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setShowWithdrawalForm(true)}
+              disabled={!user?.balance || user.balance < 1000}
+              sx={{ 
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
+                }
+              }}
+            >
+              Request Withdrawal
+            </Button>
+          </Box>
+          
+          {(!user?.balance || user.balance < 1000) && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Minimum balance of PKR 1,000 required to make withdrawal requests.
+            </Alert>
+          )}
+          
+          {paymentMethods.length === 0 && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2" gutterBottom>
+                No payment methods found. Please add a payment method first.
+              </Typography>
+              <Button 
+                variant="outlined" 
+                size="small" 
+                component="a"
+                href="/user-dashboard/payment-methods"
+                sx={{ mt: 1 }}
+              >
+                Add Payment Method
+              </Button>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Withdrawal History Section */}
       <Box sx={{ mt: 2 }}>
@@ -253,6 +478,148 @@ export default function WithdrawPage() {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Withdrawal Form Dialog */}
+      <Dialog 
+        open={showWithdrawalForm} 
+        onClose={() => setShowWithdrawalForm(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Request Withdrawal
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box component="form" onSubmit={handleWithdrawalSubmit} sx={{ mt: 2 }}>
+            <Grid container spacing={3}>
+              {/* Amount Field */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Withdrawal Amount (PKR)"
+                  type="number"
+                  value={withdrawalFormData.amount}
+                  onChange={(e) => handleFormChange('amount', e.target.value)}
+                  required
+                  inputProps={{ min: 1000, max: user?.balance || 0 }}
+                  helperText={`Minimum: PKR 1,000 | Maximum: ${formatCurrency(user?.balance || 0)}`}
+                  InputProps={{
+                    startAdornment: <Typography sx={{ mr: 1 }}>PKR</Typography>
+                  }}
+                />
+              </Grid>
+
+              {/* Payment Method Selection */}
+              <Grid item xs={12}>
+                <FormControl fullWidth required>
+                  <InputLabel>Payment Method</InputLabel>
+                  <Select
+                    value={withdrawalFormData.paymentMethodId}
+                    onChange={(e) => handleFormChange('paymentMethodId', e.target.value)}
+                    label="Payment Method"
+                  >
+                    {paymentMethods.map((method) => (
+                      <MenuItem key={method.id} value={method.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {getPaymentMethodIcon(method.type)}
+                          <Box>
+                            <Typography variant="body1">
+                              {formatPaymentMethod(method)}
+                            </Typography>
+                            {method.isDefault && (
+                              <Chip 
+                                label="Default" 
+                                size="small" 
+                                color="primary" 
+                                sx={{ height: 16, fontSize: '0.7rem' }}
+                              />
+                            )}
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Notes Field */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Notes (Optional)"
+                  multiline
+                  rows={3}
+                  value={withdrawalFormData.notes}
+                  onChange={(e) => handleFormChange('notes', e.target.value)}
+                  placeholder="Add any additional notes for your withdrawal request..."
+                />
+              </Grid>
+
+              {/* Withdrawal Summary */}
+              {withdrawalFormData.amount && (
+                <Grid item xs={12}>
+                  <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                      Withdrawal Summary
+                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography>Requested Amount:</Typography>
+                      <Typography sx={{ fontWeight: 'bold' }}>
+                        {formatCurrency(withdrawalFormData.amount)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography color="error">Processing Fee (10%):</Typography>
+                      <Typography color="error" sx={{ fontWeight: 'bold' }}>
+                        -{formatCurrency(parseFloat(withdrawalFormData.amount) * 0.1)}
+                      </Typography>
+                    </Box>
+                    <Divider sx={{ my: 1 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        Net Amount:
+                      </Typography>
+                      <Typography variant="h6" color="success.main" sx={{ fontWeight: 'bold' }}>
+                        {formatCurrency(parseFloat(withdrawalFormData.amount) * 0.9)}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </Grid>
+              )}
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={() => setShowWithdrawalForm(false)}
+            disabled={submittingWithdrawal}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleWithdrawalSubmit}
+            variant="contained"
+            disabled={submittingWithdrawal || !withdrawalFormData.amount || !withdrawalFormData.paymentMethodId}
+            sx={{ 
+              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
+              }
+            }}
+          >
+            {submittingWithdrawal ? (
+              <>
+                <CircularProgress size={20} sx={{ mr: 1 }} />
+                Submitting...
+              </>
+            ) : (
+              'Submit Request'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </Box>
   );
