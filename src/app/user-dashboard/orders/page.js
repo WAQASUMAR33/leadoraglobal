@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser } from "../../../lib/userContext";
@@ -15,13 +15,7 @@ export default function Orders() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted) {
-      fetchOrders();
-    }
-  }, [mounted]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       if (!user) {
         setLoading(false);
@@ -40,7 +34,13 @@ export default function Orders() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (mounted) {
+      fetchOrders();
+    }
+  }, [mounted, fetchOrders]);
 
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {

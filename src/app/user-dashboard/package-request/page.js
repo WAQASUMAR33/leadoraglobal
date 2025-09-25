@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useUser } from "../../../lib/userContext";
 
 function PackageRequestForm() {
@@ -24,14 +25,7 @@ function PackageRequestForm() {
 
   const packageId = searchParams.get('packageId');
 
-  useEffect(() => {
-    if (packageId) {
-      fetchPackageDetails();
-      fetchBankAccounts();
-    }
-  }, [packageId]);
-
-  const fetchPackageDetails = async () => {
+  const fetchPackageDetails = useCallback(async () => {
     try {
       const response = await fetch('/api/packages');
       if (response.ok) {
@@ -50,9 +44,9 @@ function PackageRequestForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [packageId, router]);
 
-  const fetchBankAccounts = async () => {
+  const fetchBankAccounts = useCallback(async () => {
     try {
       const response = await fetch('/api/bank-accounts');
       if (response.ok) {
@@ -66,7 +60,14 @@ function PackageRequestForm() {
       console.error('Error fetching bank accounts:', error);
       setBankAccounts([]);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (packageId) {
+      fetchPackageDetails();
+      fetchBankAccounts();
+    }
+  }, [packageId, fetchPackageDetails, fetchBankAccounts]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -398,9 +399,11 @@ function PackageRequestForm() {
                {/* Image Preview */}
                {imagePreview && (
                  <div className="mt-3">
-                   <img
+                   <Image
                      src={imagePreview}
                      alt="Receipt Preview"
+                     width={128}
+                     height={128}
                      className="w-32 h-32 object-cover rounded-lg border border-gray-600"
                    />
                    <div className="flex items-center justify-between mt-2">

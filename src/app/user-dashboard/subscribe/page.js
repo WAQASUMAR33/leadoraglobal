@@ -27,7 +27,7 @@ export default function SubscribePackage() {
         setUserBalance(parseFloat(user.balance || 0));
       }
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, fetchUserBalance]);
 
   const fetchPackages = async () => {
     try {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import { UserContext } from '../../../lib/userContext';
 
 export default function PaymentMethodsPage() {
@@ -39,11 +39,7 @@ export default function PaymentMethodsPage() {
     }
   }, [context?.isAuthenticated, context?.user]);
 
-  useEffect(() => {
-    applyFilters();
-  }, [paymentMethods, filters]);
-
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...paymentMethods];
 
     // Search filter
@@ -71,7 +67,11 @@ export default function PaymentMethodsPage() {
     }
 
     setFilteredPaymentMethods(filtered);
-  };
+  }, [paymentMethods, filters]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [paymentMethods, filters, applyFilters]);
 
   const clearFilters = () => {
     setFilters({

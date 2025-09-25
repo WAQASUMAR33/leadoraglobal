@@ -74,7 +74,7 @@ export default function WithdrawalsHistoryPage() {
         context.refreshUserData();
       }
     }
-  }, [mounted, context?.isAuthenticated, context?.user, context?.refreshUserData, fetchWithdrawalHistory]);
+  }, [mounted, context, fetchWithdrawalHistory]);
   
   // Safety check for context
   if (!context) {
