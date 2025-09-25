@@ -47,15 +47,22 @@ export default function AdminUserManagement() {
     applyFilters();
   }, [users, filters, applyFilters]);
 
+  // Helper function to get authenticated headers
+  const getAuthHeaders = () => {
+    const adminToken = localStorage.getItem('adminToken');
+    return {
+      'Content-Type': 'application/json',
+      ...(adminToken && { 'Authorization': `Bearer ${adminToken}` }),
+    };
+  };
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
       // Fetch all users without pagination
       const response = await fetch(`/api/admin/users?limit=all`, {
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
       
       if (response.ok) {
@@ -82,6 +89,7 @@ export default function AdminUserManagement() {
     try {
       const response = await fetch('/api/admin/ranks', {
         credentials: 'include',
+        headers: getAuthHeaders(),
       });
       if (response.ok) {
         const data = await response.json();
@@ -183,9 +191,7 @@ export default function AdminUserManagement() {
     try {
       const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ password: newPassword }),
       });
@@ -222,9 +228,7 @@ export default function AdminUserManagement() {
     try {
       const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ balance: balance }),
       });
@@ -261,9 +265,7 @@ export default function AdminUserManagement() {
     try {
       const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ points: points }),
       });
@@ -293,9 +295,7 @@ export default function AdminUserManagement() {
     try {
       const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ rankId: newRankId ? parseInt(newRankId) : null }),
       });
