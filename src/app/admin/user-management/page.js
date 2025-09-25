@@ -39,6 +39,19 @@ export default function AdminUserManagement() {
   // Remove pagination state - we'll show all records
 
   useEffect(() => {
+    // Check if admin is logged in
+    const adminData = localStorage.getItem('admin');
+    const adminToken = localStorage.getItem('adminToken');
+    
+    console.log('Admin data in localStorage:', adminData ? 'Present' : 'Missing');
+    console.log('Admin token in localStorage:', adminToken ? 'Present' : 'Missing');
+    
+    if (!adminData || !adminToken) {
+      console.error('Admin not logged in, redirecting to login');
+      window.location.href = '/admin/login';
+      return;
+    }
+    
     fetchUsers();
     fetchRanks();
   }, []);
@@ -50,6 +63,7 @@ export default function AdminUserManagement() {
   // Helper function to get authenticated headers
   const getAuthHeaders = () => {
     const adminToken = localStorage.getItem('adminToken');
+    console.log('Admin token from localStorage:', adminToken ? 'Present' : 'Missing');
     return {
       'Content-Type': 'application/json',
       ...(adminToken && { 'Authorization': `Bearer ${adminToken}` }),
@@ -65,16 +79,23 @@ export default function AdminUserManagement() {
         headers: getAuthHeaders(),
       });
       
+      console.log('Fetch users response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
         console.log('Users fetched successfully:', data);
         setUsers(Array.isArray(data.users) ? data.users : []);
       } else if (response.status === 401) {
         console.error('Authentication failed, redirecting to login');
+        // Clear invalid tokens
+        localStorage.removeItem('admin');
+        localStorage.removeItem('adminToken');
         window.location.href = '/admin/login';
         return;
       } else {
         console.error('Failed to fetch users:', response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response data:', errorData);
         setUsers([]);
       }
     } catch (error) {

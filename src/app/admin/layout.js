@@ -176,9 +176,16 @@ export default function AdminLayout({ children }) {
       try {
         console.log('Checking admin authentication...');
         
+        // Get admin token from localStorage for Authorization header
+        const adminToken = localStorage.getItem('adminToken');
+        
         const response = await fetch('/api/admin/stats', {
           method: 'GET',
           credentials: 'include', // Include cookies
+          headers: {
+            'Content-Type': 'application/json',
+            ...(adminToken && { 'Authorization': `Bearer ${adminToken}` }),
+          },
         });
 
         console.log('Admin stats response status:', response.status);
