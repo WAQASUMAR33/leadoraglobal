@@ -56,10 +56,6 @@ export default function AdminUserManagement() {
     fetchRanks();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [users, filters, applyFilters]);
-
   // Helper function to get authenticated headers
   const getAuthHeaders = () => {
     const adminToken = localStorage.getItem('adminToken');
@@ -145,6 +141,10 @@ export default function AdminUserManagement() {
 
     setFilteredUsers(filtered);
   }, [users, filters]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [users, filters, applyFilters]);
 
   const clearFilters = () => {
     setFilters({
