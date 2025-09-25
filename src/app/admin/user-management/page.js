@@ -53,12 +53,21 @@ export default function AdminUserManagement() {
       // Fetch all users without pagination
       const response = await fetch(`/api/admin/users?limit=all`, {
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+      
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.users || []);
+        console.log('Users fetched successfully:', data);
+        setUsers(Array.isArray(data.users) ? data.users : []);
+      } else if (response.status === 401) {
+        console.error('Authentication failed, redirecting to login');
+        window.location.href = '/admin/login';
+        return;
       } else {
-        console.error('Failed to fetch users:', response.status);
+        console.error('Failed to fetch users:', response.status, response.statusText);
         setUsers([]);
       }
     } catch (error) {
@@ -86,18 +95,23 @@ export default function AdminUserManagement() {
   };
 
   const applyFilters = useCallback(() => {
+    if (!users || !Array.isArray(users)) {
+      setFilteredUsers([]);
+      return;
+    }
+
     let filtered = [...users];
 
     if (filters.search) {
       filtered = filtered.filter(user =>
-        user.fullname?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user.username?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user.email?.toLowerCase().includes(filters.search.toLowerCase())
+        user?.fullname?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        user?.username?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        user?.email?.toLowerCase().includes(filters.search.toLowerCase())
       );
     }
 
     if (filters.status !== 'all') {
-      filtered = filtered.filter(user => user.status === filters.status);
+      filtered = filtered.filter(user => user?.status === filters.status);
     }
 
     setFilteredUsers(filtered);
@@ -340,6 +354,23 @@ export default function AdminUserManagement() {
     );
   }
 
+  // Safety check to prevent rendering errors
+  if (!Array.isArray(users)) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading user data</p>
+          <button 
+            onClick={fetchUsers}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -428,7 +459,7 @@ export default function AdminUserManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
+              {Array.isArray(filteredUsers) && filteredUsers.map((user) => user && (
                 <tr key={user.id} className="hover:bg-gray-50">
                   {/* Name Column */}
                   <td className="px-6 py-4 whitespace-nowrap">
