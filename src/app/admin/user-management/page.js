@@ -45,7 +45,7 @@ export default function AdminUserManagement() {
 
   useEffect(() => {
     applyFilters();
-  }, [users, filters]);
+  }, [users, filters, applyFilters]);
 
   const fetchUsers = async () => {
     setLoading(true);

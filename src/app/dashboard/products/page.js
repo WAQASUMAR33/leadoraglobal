@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 
 export default function UserProducts() {
@@ -14,10 +14,6 @@ export default function UserProducts() {
   useEffect(() => {
     fetchProducts();
   }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [products, searchTerm, selectedCategory, sortBy]);
 
   const fetchProducts = async () => {
     try {
@@ -35,7 +31,7 @@ export default function UserProducts() {
     }
   };
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...products];
 
     // Search filter
@@ -68,7 +64,11 @@ export default function UserProducts() {
     });
 
     setFilteredProducts(filtered);
-  };
+  }, [products, searchTerm, selectedCategory, sortBy]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [products, searchTerm, selectedCategory, sortBy, applyFilters]);
 
   const getCategories = () => {
     const categories = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export default function AdminWithdrawalsPage() {
   const [withdrawals, setWithdrawals] = useState([]);
@@ -31,11 +31,7 @@ export default function AdminWithdrawalsPage() {
     fetchWithdrawals();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [withdrawals, filters]);
-
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...withdrawals];
 
     // Search filter
@@ -53,7 +49,11 @@ export default function AdminWithdrawalsPage() {
     }
 
     setFilteredWithdrawals(filtered);
-  };
+  }, [withdrawals, filters]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [withdrawals, filters, applyFilters]);
 
   const clearFilters = () => {
     setFilters({

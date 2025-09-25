@@ -36,7 +36,7 @@ export default function MyPackage() {
       console.log('🔄 Component mounted - fetching package requests');
       fetchPackageRequests(user.id);
     }
-  }, [loading]); // Only run when loading changes
+  }, [loading, user?.id]); // Only run when loading changes
 
   const fetchUserPackage = async (userId) => {
     try {

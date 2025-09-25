@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 export default function KYCVerificationPage() {
@@ -12,11 +12,7 @@ export default function KYCVerificationPage() {
   const [pagination, setPagination] = useState({});
   const [processingId, setProcessingId] = useState(null);
 
-  useEffect(() => {
-    fetchKYCSubmissions();
-  }, [selectedStatus, currentPage]);
-
-  const fetchKYCSubmissions = async () => {
+  const fetchKYCSubmissions = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -40,7 +36,11 @@ export default function KYCVerificationPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedStatus, currentPage]);
+
+  useEffect(() => {
+    fetchKYCSubmissions();
+  }, [selectedStatus, currentPage, fetchKYCSubmissions]);
 
   const handleStatusUpdate = async (kycId, newStatus) => {
     if (!confirm(`Are you sure you want to ${newStatus} this KYC submission?`)) {

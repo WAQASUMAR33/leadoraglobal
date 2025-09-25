@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -13,13 +13,7 @@ export default function KYCDetailPage() {
   const [processing, setProcessing] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
 
-  useEffect(() => {
-    if (params.id) {
-      fetchKYCDetail();
-    }
-  }, [params.id]);
-
-  const fetchKYCDetail = async () => {
+  const fetchKYCDetail = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/admin/kyc/${params.id}`);
@@ -39,7 +33,13 @@ export default function KYCDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id, router]);
+
+  useEffect(() => {
+    if (params.id) {
+      fetchKYCDetail();
+    }
+  }, [params.id, fetchKYCDetail]);
 
   const handleStatusUpdate = async (newStatus) => {
     if (!confirm(`Are you sure you want to ${newStatus} this KYC submission?`)) {
@@ -194,7 +194,7 @@ export default function KYCDetailPage() {
                 <p className="mt-1 text-sm text-gray-900">{kycSubmission.fullname}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Father's Name</label>
+                <label className="block text-sm font-medium text-gray-700">Father&apos;s Name</label>
                 <p className="mt-1 text-sm text-gray-900">{kycSubmission.father_name}</p>
               </div>
               <div>
