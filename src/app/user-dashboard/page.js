@@ -62,6 +62,7 @@ export default function UserDashboardHome() {
     return `PKR ${parseFloat(amount).toLocaleString()}`;
   };
 
+  // Format date for display
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
