@@ -15,20 +15,6 @@ export default function SubscribePackage() {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Fetch packages and user balance from API
-    fetchPackages();
-    if (user && isAuthenticated) {
-      fetchUserBalance();
-      
-      // Also check if balance is available in user context
-      if (user.balance !== undefined) {
-        console.log('🔍 Subscribe page - Balance from user context:', user.balance);
-        setUserBalance(parseFloat(user.balance || 0));
-      }
-    }
-  }, [user, isAuthenticated, fetchUserBalance]);
-
   const fetchPackages = async () => {
     try {
       const response = await fetch('/api/packages');
@@ -78,6 +64,20 @@ export default function SubscribePackage() {
       setUserBalance(0);
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    // Fetch packages and user balance from API
+    fetchPackages();
+    if (user && isAuthenticated) {
+      fetchUserBalance();
+      
+      // Also check if balance is available in user context
+      if (user.balance !== undefined) {
+        console.log('🔍 Subscribe page - Balance from user context:', user.balance);
+        setUserBalance(parseFloat(user.balance || 0));
+      }
+    }
+  }, [user, isAuthenticated, fetchUserBalance]);
 
   const handleBalancePayment = async (packageId) => {
     if (!user) {
