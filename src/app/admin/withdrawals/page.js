@@ -39,6 +39,7 @@ export default function AdminWithdrawalsPage() {
       filtered = filtered.filter(withdrawal => 
         withdrawal.withdrawalRef.toLowerCase().includes(filters.search.toLowerCase()) ||
         (withdrawal.user?.fullname || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+        (withdrawal.user?.username || '').toLowerCase().includes(filters.search.toLowerCase()) ||
         (withdrawal.user?.email || '').toLowerCase().includes(filters.search.toLowerCase())
       );
     }
@@ -290,6 +291,9 @@ export default function AdminWithdrawalsPage() {
                           {withdrawal.user?.fullname || 'Unknown User'}
                         </div>
                         <div className="text-sm text-gray-500">
+                          @{withdrawal.user?.username || 'N/A'}
+                        </div>
+                        <div className="text-xs text-gray-400">
                           ID: {withdrawal.userId}
                         </div>
                       </div>
@@ -407,6 +411,10 @@ export default function AdminWithdrawalsPage() {
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Name:</span>
                       <span className="text-sm font-medium">{selectedWithdrawal.user?.fullname || 'Unknown'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Username:</span>
+                      <span className="text-sm font-medium">@{selectedWithdrawal.user?.username || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">User ID:</span>
