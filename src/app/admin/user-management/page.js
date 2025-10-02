@@ -19,6 +19,8 @@ export default function AdminUserManagement() {
   const [newPoints, setNewPoints] = useState('');
   const [newRankId, setNewRankId] = useState('');
   const [newReferral, setNewReferral] = useState('');
+  const [referralDropdownOpen, setReferralDropdownOpen] = useState(false);
+  const [referralSearchTerm, setReferralSearchTerm] = useState('');
   const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
   const [walletUpdateLoading, setWalletUpdateLoading] = useState(false);
   const [pointsUpdateLoading, setPointsUpdateLoading] = useState(false);
@@ -194,10 +196,36 @@ export default function AdminUserManagement() {
   const openUpdateReferralModal = (user) => {
     setSelectedUser(user);
     setNewReferral(user.referredBy || '');
+    setReferralSearchTerm('');
+    setReferralDropdownOpen(false);
     setReferralUpdateError('');
     setReferralUpdateSuccess('');
     setShowUpdateReferralModal(true);
   };
+
+  // Get filtered usernames for referral dropdown (excluding current user)
+  const getFilteredUsernames = () => {
+    return users
+      .filter(user => 
+        user.id !== selectedUser?.id && // Exclude current user
+        user.username.toLowerCase().includes(referralSearchTerm.toLowerCase())
+      )
+      .slice(0, 10); // Limit to 10 results for performance
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (referralDropdownOpen && !event.target.closest('.referral-dropdown')) {
+        setReferralDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [referralDropdownOpen]);
 
   const openUserDetailsModal = (user) => {
     setSelectedUser(user);
@@ -1041,15 +1069,79 @@ export default function AdminUserManagement() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">New Referral Username</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800"
-                  value={newReferral}
-                  onChange={(e) => setNewReferral(e.target.value)}
-                  placeholder="Enter username or leave empty to remove referral"
-                />
+                <div className="relative referral-dropdown">
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800"
+                    value={referralSearchTerm}
+                    onChange={(e) => {
+                      setReferralSearchTerm(e.target.value);
+                      setReferralDropdownOpen(true);
+                      if (e.target.value === '') {
+                        setNewReferral('');
+                      }
+                    }}
+                    onFocus={() => setReferralDropdownOpen(true)}
+                    placeholder="Search and select username or leave empty to remove referral"
+                  />
+                  
+                  {/* Dropdown Arrow */}
+                  <button
+                    type="button"
+                    onClick={() => setReferralDropdownOpen(!referralDropdownOpen)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className={`w-5 h-5 transition-transform ${referralDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {referralDropdownOpen && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {/* Clear/Remove Referral Option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewReferral('');
+                          setReferralSearchTerm('');
+                          setReferralDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 border-b border-gray-100"
+                      >
+                        <span className="text-red-600">Remove referral (no referrer)</span>
+                      </button>
+                      
+                      {/* Username Options */}
+                      {getFilteredUsernames().map((user) => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => {
+                            setNewReferral(user.username);
+                            setReferralSearchTerm(user.username);
+                            setReferralDropdownOpen(false);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">@{user.username}</span>
+                            <span className="text-xs text-gray-500">{user.fullname || 'No name'}</span>
+                          </div>
+                        </button>
+                      ))}
+                      
+                      {/* No Results */}
+                      {getFilteredUsernames().length === 0 && referralSearchTerm && (
+                        <div className="px-3 py-2 text-sm text-gray-500">
+                          No users found matching "{referralSearchTerm}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Leave empty to remove the referral. The username must exist in the system.
+                  Search and select a username from the dropdown, or leave empty to remove the referral.
                 </p>
               </div>
               
