@@ -46,6 +46,11 @@ export default function AdminUserManagement() {
   // Remove pagination state - we'll show all records
 
   useEffect(() => {
+    // Check if we're in the browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     // Check if admin is logged in
     const adminData = localStorage.getItem('admin');
     const adminToken = localStorage.getItem('adminToken');
@@ -64,14 +69,17 @@ export default function AdminUserManagement() {
   }, [fetchUsers, fetchRanks]);
 
   // Helper function to get authenticated headers
-  const getAuthHeaders = () => {
+  const getAuthHeaders = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return { 'Content-Type': 'application/json' };
+    }
     const adminToken = localStorage.getItem('adminToken');
     console.log('Admin token from localStorage:', adminToken ? 'Present' : 'Missing');
     return {
       'Content-Type': 'application/json',
       ...(adminToken && { 'Authorization': `Bearer ${adminToken}` }),
     };
-  };
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -107,7 +115,7 @@ export default function AdminUserManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getAuthHeaders]);
 
   const fetchRanks = useCallback(async () => {
     try {
@@ -124,7 +132,7 @@ export default function AdminUserManagement() {
     } catch (error) {
       console.error('Error fetching ranks:', error);
     }
-  }, []);
+  }, [getAuthHeaders]);
 
   const applyFilters = useCallback(() => {
     if (!users || !Array.isArray(users)) {
@@ -204,14 +212,17 @@ export default function AdminUserManagement() {
   };
 
   // Get filtered usernames for referral dropdown (excluding current user)
-  const getFilteredUsernames = () => {
+  const getFilteredUsernames = useCallback(() => {
+    if (!Array.isArray(users) || !selectedUser) {
+      return [];
+    }
     return users
       .filter(user => 
         user.id !== selectedUser?.id && // Exclude current user
-        user.username.toLowerCase().includes(referralSearchTerm.toLowerCase())
+        user.username && user.username.toLowerCase().includes(referralSearchTerm.toLowerCase())
       )
       .slice(0, 10); // Limit to 10 results for performance
-  };
+  }, [users, selectedUser, referralSearchTerm]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
