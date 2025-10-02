@@ -61,7 +61,7 @@ export default function AdminUserManagement() {
     
     fetchUsers();
     fetchRanks();
-  }, []);
+  }, [fetchUsers, fetchRanks]);
 
   // Helper function to get authenticated headers
   const getAuthHeaders = () => {
@@ -73,7 +73,7 @@ export default function AdminUserManagement() {
     };
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       // Fetch all users without pagination
@@ -107,9 +107,9 @@ export default function AdminUserManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchRanks = async () => {
+  const fetchRanks = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/ranks', {
         credentials: 'include',
@@ -124,7 +124,7 @@ export default function AdminUserManagement() {
     } catch (error) {
       console.error('Error fetching ranks:', error);
     }
-  };
+  }, []);
 
   const applyFilters = useCallback(() => {
     if (!users || !Array.isArray(users)) {
@@ -1134,7 +1134,7 @@ export default function AdminUserManagement() {
                       {/* No Results */}
                       {getFilteredUsernames().length === 0 && referralSearchTerm && (
                         <div className="px-3 py-2 text-sm text-gray-500">
-                          No users found matching "{referralSearchTerm}"
+                          No users found matching &quot;{referralSearchTerm}&quot;
                         </div>
                       )}
                     </div>

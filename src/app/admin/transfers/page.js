@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -68,7 +68,7 @@ export default function AdminTransfersPage() {
   });
 
   // Fetch transfers
-  const fetchTransfers = async () => {
+  const fetchTransfers = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -95,11 +95,11 @@ export default function AdminTransfersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, filters.type, filters.status]);
 
   useEffect(() => {
     fetchTransfers();
-  }, [pagination.page, filters.type, filters.status]);
+  }, [fetchTransfers]);
 
   // Handle transfer form submission
   const handleTransferSubmit = async (e) => {

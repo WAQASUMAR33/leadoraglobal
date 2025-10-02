@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 export default function AdminRanks() {
@@ -28,9 +28,9 @@ export default function AdminRanks() {
 
   useEffect(() => {
     applyFilters();
-  }, [ranks, filters]);
+  }, [ranks, filters, applyFilters]);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...ranks];
 
     // Search filter
@@ -50,7 +50,7 @@ export default function AdminRanks() {
     }
 
     setFilteredRanks(filtered);
-  };
+  }, [ranks, filters]);
 
   const clearFilters = () => {
     setFilters({
