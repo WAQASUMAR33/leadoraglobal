@@ -45,29 +45,6 @@ export default function AdminUserManagement() {
 
   // Remove pagination state - we'll show all records
 
-  useEffect(() => {
-    // Check if we're in the browser environment
-    if (typeof window === 'undefined') {
-      return;
-    }
-    
-    // Check if admin is logged in
-    const adminData = localStorage.getItem('admin');
-    const adminToken = localStorage.getItem('adminToken');
-    
-    console.log('Admin data in localStorage:', adminData ? 'Present' : 'Missing');
-    console.log('Admin token in localStorage:', adminToken ? 'Present' : 'Missing');
-    
-    if (!adminData || !adminToken) {
-      console.error('Admin not logged in, redirecting to login');
-      window.location.href = '/admin/login';
-      return;
-    }
-    
-    fetchUsers();
-    fetchRanks();
-  }, [fetchUsers, fetchRanks]);
-
   // Helper function to get authenticated headers
   const getAuthHeaders = useCallback(() => {
     if (typeof window === 'undefined') {
@@ -133,6 +110,30 @@ export default function AdminUserManagement() {
       console.error('Error fetching ranks:', error);
     }
   }, [getAuthHeaders]);
+
+  // Initial data loading effect
+  useEffect(() => {
+    // Check if we're in the browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
+    // Check if admin is logged in
+    const adminData = localStorage.getItem('admin');
+    const adminToken = localStorage.getItem('adminToken');
+    
+    console.log('Admin data in localStorage:', adminData ? 'Present' : 'Missing');
+    console.log('Admin token in localStorage:', adminToken ? 'Present' : 'Missing');
+    
+    if (!adminData || !adminToken) {
+      console.error('Admin not logged in, redirecting to login');
+      window.location.href = '/admin/login';
+      return;
+    }
+    
+    fetchUsers();
+    fetchRanks();
+  }, [fetchUsers, fetchRanks]);
 
   const applyFilters = useCallback(() => {
     if (!users || !Array.isArray(users)) {
