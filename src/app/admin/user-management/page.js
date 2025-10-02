@@ -11,16 +11,19 @@ export default function AdminUserManagement() {
   const [showUpdateWalletModal, setShowUpdateWalletModal] = useState(false);
   const [showUpdatePointsModal, setShowUpdatePointsModal] = useState(false);
   const [showUpdateRankModal, setShowUpdateRankModal] = useState(false);
+  const [showUpdateReferralModal, setShowUpdateReferralModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [newWalletBalance, setNewWalletBalance] = useState('');
   const [newPoints, setNewPoints] = useState('');
   const [newRankId, setNewRankId] = useState('');
+  const [newReferral, setNewReferral] = useState('');
   const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
   const [walletUpdateLoading, setWalletUpdateLoading] = useState(false);
   const [pointsUpdateLoading, setPointsUpdateLoading] = useState(false);
   const [rankUpdateLoading, setRankUpdateLoading] = useState(false);
+  const [referralUpdateLoading, setReferralUpdateLoading] = useState(false);
   const [passwordUpdateError, setPasswordUpdateError] = useState('');
   const [passwordUpdateSuccess, setPasswordUpdateSuccess] = useState('');
   const [walletUpdateError, setWalletUpdateError] = useState('');
@@ -29,6 +32,8 @@ export default function AdminUserManagement() {
   const [pointsUpdateSuccess, setPointsUpdateSuccess] = useState('');
   const [rankUpdateError, setRankUpdateError] = useState('');
   const [rankUpdateSuccess, setRankUpdateSuccess] = useState('');
+  const [referralUpdateError, setReferralUpdateError] = useState('');
+  const [referralUpdateSuccess, setReferralUpdateSuccess] = useState('');
   const [ranks, setRanks] = useState([]);
 
   const [filters, setFilters] = useState({
@@ -186,6 +191,14 @@ export default function AdminUserManagement() {
     setShowUpdateRankModal(true);
   };
 
+  const openUpdateReferralModal = (user) => {
+    setSelectedUser(user);
+    setNewReferral(user.referredBy || '');
+    setReferralUpdateError('');
+    setReferralUpdateSuccess('');
+    setShowUpdateReferralModal(true);
+  };
+
   const openUserDetailsModal = (user) => {
     setSelectedUser(user);
     setShowUserDetailsModal(true);
@@ -334,6 +347,36 @@ export default function AdminUserManagement() {
       setRankUpdateError('An unexpected error occurred.');
     } finally {
       setRankUpdateLoading(false);
+    }
+  };
+
+  const handleUpdateReferral = async (e) => {
+    e.preventDefault();
+    setReferralUpdateLoading(true);
+    setReferralUpdateError('');
+    setReferralUpdateSuccess('');
+
+    try {
+      const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ referredBy: newReferral.trim() || null }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setReferralUpdateSuccess('Referral updated successfully!');
+        setShowUpdateReferralModal(false);
+        fetchUsers(); // Refresh user list
+      } else {
+        setReferralUpdateError(data.error || data.message || 'Failed to update referral.');
+      }
+    } catch (error) {
+      console.error('Error updating referral:', error);
+      setReferralUpdateError('An unexpected error occurred.');
+    } finally {
+      setReferralUpdateLoading(false);
     }
   };
 
@@ -570,6 +613,15 @@ export default function AdminUserManagement() {
                         </svg>
                       </button>
                       <button
+                        onClick={() => openUpdateReferralModal(user)}
+                        className="text-orange-600 hover:text-orange-900 p-1 rounded hover:bg-orange-50"
+                        title="Update Referral"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </button>
+                      <button
                         onClick={() => openUpdatePasswordModal(user)}
                         className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
                         title="Update Password"
@@ -685,19 +737,28 @@ export default function AdminUserManagement() {
 
               {/* Actions */}
               <div className="border-t pt-4">
-                <div className="flex space-x-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => {
                       setShowUserDetailsModal(false);
                       openUpdatePasswordModal(selectedUser);
                     }}
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                   >
                     Update Password
                   </button>
                   <button
+                    onClick={() => {
+                      setShowUserDetailsModal(false);
+                      openUpdateReferralModal(selectedUser);
+                    }}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                  >
+                    Update Referral
+                  </button>
+                  <button
                     onClick={() => setShowUserDetailsModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                    className="col-span-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                   >
                     Close
                   </button>
@@ -949,6 +1010,75 @@ export default function AdminUserManagement() {
                   className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed"
                 >
                   {rankUpdateLoading ? 'Updating...' : 'Update Rank'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Update Referral Modal */}
+      {showUpdateReferralModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-800">Update Referral for {selectedUser.username}</h3>
+              <button
+                onClick={() => setShowUpdateReferralModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleUpdateReferral} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Current Referral</label>
+                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                  {selectedUser.referredBy || 'No referral'}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Referral Username</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800"
+                  value={newReferral}
+                  onChange={(e) => setNewReferral(e.target.value)}
+                  placeholder="Enter username or leave empty to remove referral"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Leave empty to remove the referral. The username must exist in the system.
+                </p>
+              </div>
+              
+              {referralUpdateError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-600 text-sm">{referralUpdateError}</p>
+                </div>
+              )}
+              
+              {referralUpdateSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-green-600 text-sm">{referralUpdateSuccess}</p>
+                </div>
+              )}
+              
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowUpdateReferralModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={referralUpdateLoading}
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-orange-400 disabled:cursor-not-allowed"
+                >
+                  {referralUpdateLoading ? 'Updating...' : 'Update Referral'}
                 </button>
               </div>
             </form>
