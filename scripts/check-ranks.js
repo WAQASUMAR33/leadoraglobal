@@ -4,41 +4,98 @@ const prisma = new PrismaClient();
 
 async function checkRanks() {
   try {
-    console.log('Checking ranks in the system...');
+    console.log('🔍 Checking ranks in database...\n');
     
     const ranks = await prisma.rank.findMany({
-      orderBy: { required_points: 'asc' }
+      select: {
+        id: true,
+        title: true,
+        required_points: true
+      },
+      orderBy: {
+        required_points: 'asc'
+      }
     });
     
-    console.log('\nRank Hierarchy (from lowest to highest points):');
-    ranks.forEach((rank, index) => {
-      console.log(`${index + 1}. ${rank.title} - ${rank.required_points} points`);
-    });
-    
-    // Check if Manager rank exists
-    const managerRank = ranks.find(rank => rank.title.toLowerCase().includes('manager'));
-    if (managerRank) {
-      console.log(`\n✅ Manager rank found: ${managerRank.title} (${managerRank.required_points} points)`);
-    } else {
-      console.log('\n❌ No Manager rank found');
+    if (ranks.length === 0) {
+      console.log('❌ No ranks found in database.');
+      return;
     }
     
-    // Check for Sapphire Diamond
-    const sapphireDiamond = ranks.find(rank => 
-      rank.title.toLowerCase().includes('sapphire') && 
-      rank.title.toLowerCase().includes('diamond')
-    );
-    if (sapphireDiamond) {
-      console.log(`✅ Sapphire Diamond rank found: ${sapphireDiamond.title} (${sapphireDiamond.required_points} points)`);
+    console.log('📊 Current ranks in database:');
+    console.log('================================');
+    ranks.forEach(rank => {
+      console.log(`${rank.id}: ${rank.title} - ${rank.required_points} points`);
+    });
+    
+    console.log('\n🔍 Checking some users with high points...\n');
+    
+    // Check users with various point ranges
+    const usersToCheck = await prisma.user.findMany({
+      where: {
+        points: {
+          gte: 0
+        }
+      },
+      select: {
+        id: true,
+        username: true,
+        points: true,
+        rank: {
+          select: {
+            title: true,
+            required_points: true
+          }
+        }
+      },
+      orderBy: {
+        points: 'desc'
+      },
+      take: 50
+    });
+    
+    console.log('👥 Users and their ranks (checking for mismatches):');
+    console.log('==================================================');
+    
+    let incorrectCount = 0;
+    let totalCount = 0;
+    
+    usersToCheck.forEach(user => {
+      const expectedRank = getExpectedRank(user.points);
+      const isCorrect = user.rank?.title === expectedRank;
+      totalCount++;
+      
+      if (!isCorrect) {
+        incorrectCount++;
+        console.log(`${user.username}: ${user.points} points`);
+        console.log(`  Current Rank: ${user.rank?.title || 'No Rank'} (requires ${user.rank?.required_points || 0} points)`);
+        console.log(`  Expected Rank: ${expectedRank}`);
+        console.log(`  Status: ❌ Incorrect`);
+        console.log('');
+      }
+    });
+    
+    console.log(`📊 Summary: ${incorrectCount} incorrect ranks out of ${totalCount} users checked`);
+    
+    if (incorrectCount === 0) {
+      console.log('✅ All ranks appear to be correct!');
     } else {
-      console.log('❌ No Sapphire Diamond rank found');
+      console.log(`❌ Found ${incorrectCount} users with incorrect ranks that need to be fixed.`);
     }
     
   } catch (error) {
-    console.error('Error checking ranks:', error);
+    console.error('❌ Error checking ranks:', error);
   } finally {
     await prisma.$disconnect();
   }
+}
+
+function getExpectedRank(points) {
+  if (points >= 24000) return 'Sapphire Diamond';
+  else if (points >= 8000) return 'Diamond';
+  else if (points >= 2000) return 'Sapphire Manager';
+  else if (points >= 1000) return 'Manager';
+  else return 'Consultant';
 }
 
 checkRanks();

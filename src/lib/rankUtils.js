@@ -1,12 +1,87 @@
 import prisma from './prisma.js';
 
-// Simple rank calculation based on points
+// Define higher ranks that require downline requirements
+const HIGHER_RANKS = [
+  'Sapphire Diamond',
+  'Ambassador', 
+  'Sapphire Ambassador',
+  'Royal Ambassador',
+  'Global Ambassador',
+  'Honory Share Holder'
+];
+
+// Define downline requirements for higher ranks
+const RANK_REQUIREMENTS = {
+  'Sapphire Diamond': { requiredDirectDiamonds: 2, requiredDirectSapphireManagers: 1 },
+  'Ambassador': { requiredDirectDiamonds: 3, requiredDirectSapphireDiamonds: 1 },
+  'Sapphire Ambassador': { requiredDirectDiamonds: 5, requiredDirectSapphireDiamonds: 2 },
+  'Royal Ambassador': { requiredDirectDiamonds: 8, requiredDirectSapphireDiamonds: 3 },
+  'Global Ambassador': { requiredDirectDiamonds: 12, requiredDirectSapphireDiamonds: 5 },
+  'Honory Share Holder': { requiredDirectDiamonds: 20, requiredDirectSapphireDiamonds: 8 }
+};
+
+// Check if a user meets downline requirements for higher ranks
+async function checkDownlineRequirements(user, rankTitle) {
+  try {
+    const requirements = RANK_REQUIREMENTS[rankTitle];
+    if (!requirements) {
+      return true; // No special requirements for this rank
+    }
+
+    // Get all direct referrals of the user
+    const directReferrals = await prisma.user.findMany({
+      where: { referredBy: user.username },
+      include: { rank: true }
+    });
+
+    let directDiamonds = 0;
+    let directSapphireManagers = 0;
+    let directSapphireDiamonds = 0;
+
+    // Count direct referrals with required ranks
+    directReferrals.forEach(referral => {
+      if (referral.rank?.title === 'Diamond') {
+        directDiamonds++;
+      } else if (referral.rank?.title === 'Sapphire Manager') {
+        directSapphireManagers++;
+      } else if (referral.rank?.title === 'Sapphire Diamond') {
+        directSapphireDiamonds++;
+      }
+    });
+
+    // Check if requirements are met
+    const meetsDiamondRequirement = directDiamonds >= (requirements.requiredDirectDiamonds || 0);
+    const meetsSapphireManagerRequirement = directSapphireManagers >= (requirements.requiredDirectSapphireManagers || 0);
+    const meetsSapphireDiamondRequirement = directSapphireDiamonds >= (requirements.requiredDirectSapphireDiamonds || 0);
+
+    console.log(`🔍 Downline check for ${user.username} (${rankTitle}):`);
+    console.log(`  Direct Diamonds: ${directDiamonds}/${requirements.requiredDirectDiamonds || 0}`);
+    console.log(`  Direct Sapphire Managers: ${directSapphireManagers}/${requirements.requiredDirectSapphireManagers || 0}`);
+    console.log(`  Direct Sapphire Diamonds: ${directSapphireDiamonds}/${requirements.requiredDirectSapphireDiamonds || 0}`);
+
+    const meetsRequirements = meetsDiamondRequirement && meetsSapphireManagerRequirement && meetsSapphireDiamondRequirement;
+    
+    if (meetsRequirements) {
+      console.log(`✅ ${user.username} meets ${rankTitle} downline requirements`);
+    } else {
+      console.log(`❌ ${user.username} does not meet ${rankTitle} downline requirements`);
+    }
+
+    return meetsRequirements;
+  } catch (error) {
+    console.error(`❌ Error checking downline requirements for ${user.username}:`, error);
+    return false;
+  }
+}
+
+// Enhanced rank calculation with downline requirements for higher ranks
 export async function updateUserRank(userId) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
+        username: true,
         points: true,
         rank: {
           select: {
@@ -21,30 +96,51 @@ export async function updateUserRank(userId) {
       return null;
     }
 
-    // Simple rank calculation based on points
-    let newRankName = 'Consultant';
-    if (user.points >= 24000) newRankName = 'Sapphire Diamond';
-    else if (user.points >= 8000) newRankName = 'Diamond';
-    else if (user.points >= 2000) newRankName = 'Sapphire Manager';
-    else if (user.points >= 1000) newRankName = 'Manager';
-
-    // Get or create rank
-    let rank = await prisma.rank.findFirst({
-      where: { title: newRankName }
+    // Get all ranks from database ordered by required points (descending)
+    const ranks = await prisma.rank.findMany({
+      orderBy: { required_points: 'desc' }
     });
 
-    if (!rank) {
-      const points = user.points >= 24000 ? 24000 : 
-                    user.points >= 8000 ? 8000 : 
-                    user.points >= 2000 ? 2000 : 
-                    user.points >= 1000 ? 1000 : 0;
-      rank = await prisma.rank.create({
-        data: {
-          title: newRankName,
-          required_points: points,
-          details: `Auto-created rank for ${newRankName}`
+    if (ranks.length === 0) {
+      console.log(`❌ No ranks found in database`);
+      return null;
+    }
+
+    // Find the highest rank the user qualifies for
+    let newRankName = 'Consultant'; // Default fallback
+    let newRankId = null;
+
+    for (const rank of ranks) {
+      if (user.points >= rank.required_points) {
+        // For higher ranks, also check downline requirements
+        if (HIGHER_RANKS.includes(rank.title)) {
+          console.log(`🔍 Checking ${rank.title} requirements for ${user.username}...`);
+          const meetsDownlineRequirements = await checkDownlineRequirements(user, rank.title);
+          
+          if (meetsDownlineRequirements) {
+            newRankName = rank.title;
+            newRankId = rank.id;
+            console.log(`✅ ${user.username} qualifies for ${rank.title} (points + downline requirements met)`);
+            break;
+          } else {
+            console.log(`❌ ${user.username} has points for ${rank.title} but doesn't meet downline requirements`);
+            // Continue checking lower ranks
+          }
+        } else {
+          // For lower ranks, only points matter
+          newRankName = rank.title;
+          newRankId = rank.id;
+          console.log(`✅ ${user.username} qualifies for ${rank.title} (points requirement met)`);
+          break;
         }
-      });
+      }
+    }
+
+    // If no rank found that user qualifies for, use the lowest rank
+    if (!newRankId) {
+      const lowestRank = ranks[ranks.length - 1];
+      newRankName = lowestRank.title;
+      newRankId = lowestRank.id;
     }
 
     // Only update if rank changed
@@ -52,11 +148,11 @@ export async function updateUserRank(userId) {
       await prisma.user.update({
         where: { id: userId },
         data: {
-          rankId: rank.id
+          rankId: newRankId
         }
       });
 
-      console.log(`✅ Updated rank for user ${userId}: ${user.rank?.title || 'No rank'} → ${newRankName} (${user.points} points)`);
+      console.log(`✅ Updated rank for user ${userId}: ${user.rank?.title || 'No rank'} → ${newRankName} (${user.points} points, requires ${ranks.find(r => r.title === newRankName)?.required_points || 0} points)`);
       return newRankName;
     }
 

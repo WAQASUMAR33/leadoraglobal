@@ -6,39 +6,89 @@ import { updateUserRank } from './rankUtils.js';
  */
 async function updateUserRankInTransaction(userId, currentPoints, tx) {
   try {
-    // Get all ranks ordered by required points
-    const ranks = await tx.rank.findMany({
-      orderBy: { required_points: 'asc' }
+    // Get user details
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        points: true,
+        rank: {
+          select: { title: true }
+        }
+      }
     });
 
-    // Determine the appropriate rank based on points
-    let newRankTitle = 'Consultant'; // Default rank
-    
-    if (currentPoints >= 24000) {
-      newRankTitle = 'Sapphire Diamond';
-    } else if (currentPoints >= 8000) {
-      newRankTitle = 'Diamond';
-    } else if (currentPoints >= 2000) {
-      newRankTitle = 'Sapphire Manager';
-    } else if (currentPoints >= 1000) {
-      newRankTitle = 'Manager';
+    if (!user) {
+      console.log(`❌ User ${userId} not found for rank update`);
+      return 'No Rank';
     }
 
-    // Find the rank record
-    const rankRecord = ranks.find(rank => rank.title === newRankTitle);
-    
-    if (!rankRecord) {
-      console.log(`Rank '${newRankTitle}' not found in database`);
+    // Get all ranks from database ordered by required points (descending)
+    const ranks = await tx.rank.findMany({
+      orderBy: { required_points: 'desc' }
+    });
+
+    if (ranks.length === 0) {
+      console.log(`❌ No ranks found in database`);
       return 'No Rank';
+    }
+
+    // Define higher ranks that require downline requirements
+    const HIGHER_RANKS = [
+      'Sapphire Diamond',
+      'Ambassador', 
+      'Sapphire Ambassador',
+      'Royal Ambassador',
+      'Global Ambassador',
+      'Honory Share Holder'
+    ];
+
+    // Find the highest rank the user qualifies for
+    let newRankTitle = 'Consultant'; // Default fallback
+    let newRankId = null;
+
+    for (const rank of ranks) {
+      if (currentPoints >= rank.required_points) {
+        // For higher ranks, also check downline requirements
+        if (HIGHER_RANKS.includes(rank.title)) {
+          console.log(`🔍 Checking ${rank.title} requirements for ${user.username}...`);
+          const meetsDownlineRequirements = await checkRankRequirementsInTransaction(user, rank.title, tx);
+          
+          if (meetsDownlineRequirements) {
+            newRankTitle = rank.title;
+            newRankId = rank.id;
+            console.log(`✅ ${user.username} qualifies for ${rank.title} (points + downline requirements met)`);
+            break;
+          } else {
+            console.log(`❌ ${user.username} has points for ${rank.title} but doesn't meet downline requirements`);
+            // Continue checking lower ranks
+          }
+        } else {
+          // For lower ranks, only points matter
+          newRankTitle = rank.title;
+          newRankId = rank.id;
+          console.log(`✅ ${user.username} qualifies for ${rank.title} (points requirement met)`);
+          break;
+        }
+      }
+    }
+
+    // If no rank found that user qualifies for, use the lowest rank
+    if (!newRankId) {
+      const lowestRank = ranks[ranks.length - 1];
+      newRankTitle = lowestRank.title;
+      newRankId = lowestRank.id;
     }
 
     // Update user's rank
     await tx.user.update({
       where: { id: userId },
-      data: { rankId: rankRecord.id }
+      data: { rankId: newRankId }
     });
 
-    console.log(`✅ Updated rank for user ${userId}: ${newRankTitle} (${currentPoints} points)`);
+    const requiredPoints = ranks.find(r => r.title === newRankTitle)?.required_points || 0;
+    console.log(`✅ Updated rank for user ${userId}: ${newRankTitle} (${currentPoints} points, requires ${requiredPoints} points)`);
     return newRankTitle;
 
   } catch (error) {
@@ -955,6 +1005,7 @@ async function checkDirectTreesWithRankInTransaction(user, requirements, tx) {
 
   let directDiamonds = 0;
   let directSapphireManagers = 0;
+  let directSapphireDiamonds = 0;
 
   // Count direct referrals with required ranks
   directReferrals.forEach(referral => {
@@ -962,18 +1013,22 @@ async function checkDirectTreesWithRankInTransaction(user, requirements, tx) {
       directDiamonds++;
     } else if (referral.rank?.title === 'Sapphire Manager') {
       directSapphireManagers++;
+    } else if (referral.rank?.title === 'Sapphire Diamond') {
+      directSapphireDiamonds++;
     }
   });
 
   // Check if requirements are met
   const meetsDiamondRequirement = directDiamonds >= (requirements.requiredDirectDiamonds || 0);
   const meetsSapphireManagerRequirement = directSapphireManagers >= (requirements.requiredDirectSapphireManagers || 0);
+  const meetsSapphireDiamondRequirement = directSapphireDiamonds >= (requirements.requiredDirectSapphireDiamonds || 0);
 
   console.log(`Direct referrals check for ${user.username}:`);
   console.log(`  Diamonds: ${directDiamonds}/${requirements.requiredDirectDiamonds || 0}`);
   console.log(`  Sapphire Managers: ${directSapphireManagers}/${requirements.requiredDirectSapphireManagers || 0}`);
+  console.log(`  Sapphire Diamonds: ${directSapphireDiamonds}/${requirements.requiredDirectSapphireDiamonds || 0}`);
 
-  return meetsDiamondRequirement && meetsSapphireManagerRequirement;
+  return meetsDiamondRequirement && meetsSapphireManagerRequirement && meetsSapphireDiamondRequirement;
 }
 
 /**

@@ -16,7 +16,6 @@ async function checkUsers() {
           fullname: true,
           username: true,
           email: true,
-          role: true,
           status: true,
           createdAt: true
         },
@@ -28,7 +27,7 @@ async function checkUsers() {
       
       console.log('\nRecent users:');
       users.forEach((user, index) => {
-        console.log(`${index + 1}. ${user.fullname} (${user.username}) - ${user.role} - ${user.status}`);
+        console.log(`${index + 1}. ${user.fullname} (${user.username}) - ${user.status}`);
       });
     } else {
       console.log('No users found in database.');

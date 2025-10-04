@@ -308,6 +308,12 @@ export async function GET(request) {
     return NextResponse.json({
       success: true,
       data: dashboardData
+    }, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
 
   } catch (error) {
