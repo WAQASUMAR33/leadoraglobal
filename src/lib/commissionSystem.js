@@ -820,8 +820,23 @@ async function distributeIndirectCommissionsInTransaction(username, indirectComm
       // Found users with this rank - give accumulated commission to first user
       const firstMember = membersOfRank[0];
       
-      // Check if this member meets rank requirements
-      const meetsRequirements = await checkRankRequirementsInTransaction(firstMember, currentRank, tx);
+      // For indirect commission, we only need to check if user has the rank
+      // Higher ranks with downline requirements are checked separately
+      const HIGHER_RANKS_WITH_REQUIREMENTS = [
+        'Sapphire Diamond',
+        'Ambassador',
+        'Sapphire Ambassador', 
+        'Royal Ambassador',
+        'Global Ambassador',
+        'Honory Share Holder'
+      ];
+      
+      let meetsRequirements = true;
+      
+      // Only check downline requirements for higher ranks
+      if (HIGHER_RANKS_WITH_REQUIREMENTS.includes(currentRank)) {
+        meetsRequirements = await checkRankRequirementsInTransaction(firstMember, currentRank, tx);
+      }
       
       if (meetsRequirements) {
         // Calculate total commission: accumulated + current rank's commission
