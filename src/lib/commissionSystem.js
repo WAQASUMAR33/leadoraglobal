@@ -1,5 +1,6 @@
 import prisma from './prisma.js';
 import { updateUserRank } from './rankUtils.js';
+import { checkNewRankRequirements } from './newRankLogic.js';
 
 /**
  * Transaction-based version of updateUserRank
@@ -34,14 +35,15 @@ async function updateUserRankInTransaction(userId, currentPoints, tx) {
       return 'No Rank';
     }
 
-    // Define higher ranks that require downline requirements
+    // Define higher ranks that require downline requirements (including Diamond with new logic)
     const HIGHER_RANKS = [
-      'Sapphire Diamond',
-      'Ambassador', 
-      'Sapphire Ambassador',
-      'Royal Ambassador',
-      'Global Ambassador',
-      'Honory Share Holder'
+      'Diamond',           // NEW: 8000 points + 3 lines with 2000+ points
+      'Sapphire Diamond',  // NEW: 3 lines with Diamond rank
+      'Ambassador',        // NEW: 6 lines with Diamond rank
+      'Sapphire Ambassador', // NEW: 3 lines with Ambassador OR 10 lines with Diamond
+      'Royal Ambassador',  // NEW: 3 lines with Sapphire Ambassador OR 15 lines with Diamond
+      'Global Ambassador', // NEW: 3 lines with Royal Ambassador OR 25 lines with Diamond
+      'Honory Share Holder' // NEW: 3 lines with Global Ambassador OR 50 lines with Diamond + 10 lines with Royal Ambassador
     ];
 
     // Find the highest rank the user qualifies for
@@ -50,18 +52,21 @@ async function updateUserRankInTransaction(userId, currentPoints, tx) {
 
     for (const rank of ranks) {
       if (currentPoints >= rank.required_points) {
-        // For higher ranks, also check downline requirements
+        // For higher ranks, also check downline requirements using NEW LOGIC
         if (HIGHER_RANKS.includes(rank.title)) {
-          console.log(`🔍 Checking ${rank.title} requirements for ${user.username}...`);
-          const meetsDownlineRequirements = await checkRankRequirementsInTransaction(user, rank.title, tx);
+          console.log(`🔍 Checking ${rank.title} requirements for ${user.username} using NEW LOGIC...`);
+          const rankCheckResult = await checkNewRankRequirements(user.username, rank.title, tx);
           
-          if (meetsDownlineRequirements) {
+          if (rankCheckResult.qualifies) {
             newRankTitle = rank.title;
             newRankId = rank.id;
-            console.log(`✅ ${user.username} qualifies for ${rank.title} (points + downline requirements met)`);
+            console.log(`✅ ${user.username} qualifies for ${rank.title}: ${rankCheckResult.reason}`);
+            if (rankCheckResult.details) {
+              console.log(`📊 Details:`, rankCheckResult.details);
+            }
             break;
           } else {
-            console.log(`❌ ${user.username} has points for ${rank.title} but doesn't meet downline requirements`);
+            console.log(`❌ ${user.username} doesn't qualify for ${rank.title}: ${rankCheckResult.reason}`);
             // Continue checking lower ranks
           }
         } else {
