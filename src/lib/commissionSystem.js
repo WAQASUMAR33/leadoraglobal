@@ -1,6 +1,6 @@
 import prisma from './prisma.js';
 import { updateUserRank } from './rankUtils.js';
-import { checkNewRankRequirements } from './newRankLogic.js';
+import { checkNewRankRequirementsOptimized } from './newRankLogicOptimized.js';
 
 /**
  * Transaction-based version of updateUserRank
@@ -55,7 +55,7 @@ async function updateUserRankInTransaction(userId, currentPoints, tx) {
         // For higher ranks, also check downline requirements using NEW LOGIC
         if (HIGHER_RANKS.includes(rank.title)) {
           console.log(`🔍 Checking ${rank.title} requirements for ${user.username} using NEW LOGIC...`);
-          const rankCheckResult = await checkNewRankRequirements(user.username, rank.title, tx);
+          const rankCheckResult = await checkNewRankRequirementsOptimized(user.username, rank.title, tx);
           
           if (rankCheckResult.qualifies) {
             newRankTitle = rank.title;

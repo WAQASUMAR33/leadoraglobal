@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import prisma from '../../../../../lib/prisma';
-import { approvePackageRequest } from '../../../../../lib/packageApproval';
+import prisma from '../../../../../lib/prisma.js';
+import { approvePackageRequest } from '../../../../../lib/packageApproval.js';
 
 export async function PUT(request, { params }) {
   try {

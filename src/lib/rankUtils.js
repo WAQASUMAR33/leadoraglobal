@@ -1,5 +1,5 @@
 import prisma from './prisma.js';
-import { checkNewRankRequirements } from './newRankLogic.js';
+import { checkNewRankRequirementsOptimized } from './newRankLogicOptimized.js';
 
 // Define higher ranks that require downline requirements (using NEW LOGIC)
 const HIGHER_RANKS = [
@@ -117,7 +117,7 @@ export async function updateUserRank(userId) {
         // For higher ranks, also check downline requirements using NEW LOGIC
         if (HIGHER_RANKS.includes(rank.title)) {
           console.log(`🔍 Checking ${rank.title} requirements for ${user.username} using NEW LOGIC...`);
-          const rankCheckResult = await checkNewRankRequirements(user.username, rank.title);
+          const rankCheckResult = await checkNewRankRequirementsOptimized(user.username, rank.title);
           
           if (rankCheckResult.qualifies) {
             newRankName = rank.title;
