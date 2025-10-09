@@ -94,42 +94,32 @@ export async function PUT(request, { params }) {
     if (status) {
       updateData.status = status;
       
-      // If status is approved, deduct amount and apply 10% fee
+      // If status is approved, calculate 10% fee and 90% net payout
+      // Note: Balance was already deducted when user submitted the request
       if (status === 'approved' && existingWithdrawal.status !== 'approved') {
-        const totalAmount = parseFloat(existingWithdrawal.amount); // This is the total amount user wants to withdraw
+        const totalAmount = parseFloat(existingWithdrawal.amount); // Total amount user requested
         const feeAmount = totalAmount * 0.1; // 10% fee
-        const netAmount = totalAmount - feeAmount; // 90% net amount to user
+        const netAmount = totalAmount - feeAmount; // 90% net amount to be paid to user
         
-        // Check if user has enough balance for the total withdrawal amount
-        if (totalAmount > parseFloat(existingWithdrawal.user.balance)) {
-          return NextResponse.json(
-            { error: 'Insufficient user balance for withdrawal' },
-            { status: 400 }
-          );
-        }
-
-        // Update user balance (deduct the total amount)
-        const newBalance = parseFloat(existingWithdrawal.user.balance) - totalAmount;
-        
-        await prisma.user.update({
-          where: { id: existingWithdrawal.userId },
-          data: { balance: newBalance }
-        });
-
         // Update withdrawal request with fee details
         updateData.feeAmount = feeAmount;
         updateData.netAmount = netAmount;
+        
+        console.log(`✅ Withdrawal Approved: Amount: ${totalAmount}, Fee (10%): ${feeAmount}, Net Payout (90%): ${netAmount}`);
       }
       
-      // If status is rejected and was previously approved, refund the total amount
-      if (status === 'rejected' && existingWithdrawal.status === 'approved') {
-        const refundAmount = parseFloat(existingWithdrawal.amount); // Refund the total amount that was deducted
+      // If status is rejected, refund the full amount back to user's balance
+      // This applies regardless of previous status (pending or any other status)
+      if (status === 'rejected' && existingWithdrawal.status !== 'rejected') {
+        const refundAmount = parseFloat(existingWithdrawal.amount); // Refund the full amount
         const newBalance = parseFloat(existingWithdrawal.user.balance) + refundAmount;
         
         await prisma.user.update({
           where: { id: existingWithdrawal.userId },
           data: { balance: newBalance }
         });
+        
+        console.log(`💰 Withdrawal Rejected - Refunded: User ${existingWithdrawal.userId}, Amount: ${refundAmount}, New Balance: ${newBalance}`);
       }
     }
 
@@ -200,15 +190,18 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Withdrawal request not found' }, { status: 404 });
     }
 
-    // If withdrawal was approved, refund the total amount
-    if (existingWithdrawal.status === 'approved') {
-      const refundAmount = parseFloat(existingWithdrawal.amount); // Refund the total amount that was deducted
+    // If withdrawal is not yet rejected or approved, refund the amount
+    // (Balance was deducted when user submitted, so we need to refund)
+    if (existingWithdrawal.status !== 'rejected' && existingWithdrawal.status !== 'approved') {
+      const refundAmount = parseFloat(existingWithdrawal.amount); // Refund the full amount
       const newBalance = parseFloat(existingWithdrawal.user.balance) + refundAmount;
       
       await prisma.user.update({
         where: { id: existingWithdrawal.userId },
         data: { balance: newBalance }
       });
+      
+      console.log(`💰 Withdrawal Cancelled - Refunded: User ${existingWithdrawal.userId}, Amount: ${refundAmount}, New Balance: ${newBalance}`);
     }
 
     // Soft delete by setting status to rejected

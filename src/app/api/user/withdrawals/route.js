@@ -146,44 +146,61 @@ export async function POST(request) {
     // Generate unique withdrawal reference
     const withdrawalRef = `WD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-    // Fee will be calculated on approval (10%), so initially no fee
+    // Deduct 100% of withdrawal amount from user's balance immediately
+    // Fee will be calculated when admin approves (10% fee, 90% net payout)
     const feeAmount = 0; // Fee calculated on approval
     const netAmount = withdrawalAmount; // Full amount initially
 
-    // Create withdrawal request
-    const withdrawal = await prisma.withdrawalRequest.create({
-      data: {
-        userId: decoded.userId,
-        amount: withdrawalAmount,
-        feeAmount: feeAmount,
-        netAmount: netAmount,
-        paymentMethod: paymentMethod.type,
-        accountDetails: JSON.stringify({
-          type: paymentMethod.type,
-          accountName: paymentMethod.accountName,
-          bankName: paymentMethod.bankName,
-          accountNumber: paymentMethod.accountNumber,
-          ibanNumber: paymentMethod.ibanNumber,
-          mobileNumber: paymentMethod.mobileNumber,
-          email: paymentMethod.email
-        }),
-        notes: notes || null,
-        status: 'pending',
-        withdrawalRef
-      }
+    // Use transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // Deduct the full withdrawal amount from user's balance
+      const updatedUser = await tx.user.update({
+        where: { id: decoded.userId },
+        data: {
+          balance: {
+            decrement: withdrawalAmount
+          }
+        }
+      });
+
+      // Create withdrawal request
+      const withdrawal = await tx.withdrawalRequest.create({
+        data: {
+          userId: decoded.userId,
+          amount: withdrawalAmount,
+          feeAmount: feeAmount,
+          netAmount: netAmount,
+          paymentMethod: paymentMethod.type,
+          accountDetails: JSON.stringify({
+            type: paymentMethod.type,
+            accountName: paymentMethod.accountName,
+            bankName: paymentMethod.bankName,
+            accountNumber: paymentMethod.accountNumber,
+            ibanNumber: paymentMethod.ibanNumber,
+            mobileNumber: paymentMethod.mobileNumber,
+            email: paymentMethod.email
+          }),
+          notes: notes || null,
+          status: 'pending',
+          withdrawalRef
+        }
+      });
+
+      return { withdrawal, updatedUser };
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Withdrawal request submitted successfully',
+      message: 'Withdrawal request submitted successfully. Amount has been deducted from your balance.',
       withdrawal: {
-        id: withdrawal.id,
-        amount: withdrawal.amount,
-        paymentMethod: withdrawal.paymentMethod,
-        status: withdrawal.status,
-        withdrawalRef: withdrawal.withdrawalRef,
-        createdAt: withdrawal.createdAt
-      }
+        id: result.withdrawal.id,
+        amount: result.withdrawal.amount,
+        paymentMethod: result.withdrawal.paymentMethod,
+        status: result.withdrawal.status,
+        withdrawalRef: result.withdrawal.withdrawalRef,
+        createdAt: result.withdrawal.createdAt
+      },
+      newBalance: result.updatedUser.balance
     }, { status: 201 });
 
   } catch (error) {
