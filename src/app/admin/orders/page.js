@@ -457,108 +457,139 @@ export default function AdminOrdersPage() {
         onClose={() => setOrderDialogOpen(false)}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: { 
+            bgcolor: '#ffffff',
+            backgroundImage: 'none'
+          }
+        }}
       >
         {selectedOrder && (
           <>
-            <DialogTitle>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <ShoppingCart />
-                Order Details - {selectedOrder.orderNumber}
-              </Box>
-            </DialogTitle>
-            <DialogContent>
-              {selectedOrder && (
+            <DialogTitle sx={{ 
+              bgcolor: '#f8f9fa', 
+              borderBottom: '1px solid #e0e0e0',
+              color: '#333'
+            }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <ShoppingCart sx={{ color: '#1976d2' }} />
+                <Typography variant="h6" component="span" sx={{ fontWeight: 'bold' }}>
+                  Order Details - {selectedOrder.orderNumber}
+                </Typography>
+          </Box>
+        </DialogTitle>
+            <DialogContent sx={{ bgcolor: '#ffffff', pt: 3 }}>
+          {selectedOrder && (
             <Box sx={{ mt: 2 }}>
               {/* Order Summary */}
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
-                  <Card variant="outlined">
+                  <Card variant="outlined" sx={{ bgcolor: '#f8f9fa', borderColor: '#dee2e6' }}>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Customer Information
+                      <Typography variant="h6" gutterBottom sx={{ color: '#333', fontWeight: 'bold', mb: 2 }}>
+                        👤 Customer Information
                       </Typography>
-                      <Typography variant="body2">
-                        <strong>Name:</strong> {selectedOrder.user?.fullname || 'Unknown'}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Typography variant="body2" sx={{ color: '#555' }}>
+                          <strong style={{ color: '#333' }}>Name:</strong> {selectedOrder.user?.fullname || 'Unknown'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#555' }}>
+                          <strong style={{ color: '#333' }}>Username:</strong> @{selectedOrder.user?.username || 'N/A'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#555' }}>
+                          <strong style={{ color: '#333' }}>User ID:</strong> {selectedOrder.userId}
                       </Typography>
-                      <Typography variant="body2">
-                        <strong>User ID:</strong> {selectedOrder.userId}
+                        <Typography variant="body2" sx={{ color: '#555' }}>
+                          <strong style={{ color: '#333' }}>Email:</strong> {selectedOrder.user?.email || 'N/A'}
                       </Typography>
-                      <Typography variant="body2">
-                        <strong>Email:</strong> {selectedOrder.user?.email || 'N/A'}
+                        <Typography variant="body2" sx={{ color: '#555' }}>
+                          <strong style={{ color: '#333' }}>Phone:</strong> {selectedOrder.user?.phoneNumber || 'N/A'}
                       </Typography>
+                      </Box>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Card variant="outlined">
+                  <Card variant="outlined" sx={{ bgcolor: '#f8f9fa', borderColor: '#dee2e6' }}>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        <AttachMoney sx={{ mr: 1, verticalAlign: 'middle' }} />
-                        Order Summary
+                      <Typography variant="h6" gutterBottom sx={{ color: '#333', fontWeight: 'bold', mb: 2 }}>
+                        📊 Order Summary
                       </Typography>
-                      <Typography variant="body2">
-                        <strong>Total Amount:</strong> {formatCurrency(selectedOrder.totalAmount)}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Typography variant="body2" sx={{ color: '#555' }}>
+                          <strong style={{ color: '#333' }}>Total Amount:</strong> 
+                          <Typography component="span" sx={{ ml: 1, fontWeight: 'bold', color: '#1976d2', fontSize: '1.1rem' }}>
+                            {formatCurrency(selectedOrder.totalAmount)}
+                          </Typography>
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#555' }}>
+                          <strong style={{ color: '#333' }}>Order Date:</strong> {formatDate(selectedOrder.createdAt)}
+                        </Typography>
+                        <Box>
+                          <Typography variant="body2" sx={{ color: '#555', mb: 0.5 }}>
+                            <strong style={{ color: '#333' }}>Status:</strong>
                       </Typography>
-                      <Typography variant="body2">
-                        <strong>Status:</strong> 
                         <Chip
                           label={selectedOrder.status}
                           color={getStatusColor(selectedOrder.status)}
                           size="small"
-                          sx={{ ml: 1 }}
+                            sx={{ fontWeight: 'bold' }}
                         />
+                        </Box>
+                        <Box>
+                          <Typography variant="body2" sx={{ color: '#555', mb: 0.5 }}>
+                            <strong style={{ color: '#333' }}>Payment Status:</strong>
                       </Typography>
-                      <Typography variant="body2">
-                        <strong>Payment:</strong> 
                         <Chip
                           label={selectedOrder.paymentStatus}
                           color={getPaymentStatusColor(selectedOrder.paymentStatus)}
                           size="small"
-                          sx={{ ml: 1 }}
+                            sx={{ fontWeight: 'bold' }}
                         />
-                      </Typography>
+                        </Box>
+                      </Box>
                     </CardContent>
                   </Card>
                 </Grid>
               </Grid>
 
-              <Divider sx={{ my: 3 }} />
+              <Divider sx={{ my: 3, borderColor: '#e0e0e0' }} />
 
               {/* Order Items */}
-              <Typography variant="h6" gutterBottom>
-                Order Items
+              <Typography variant="h6" gutterBottom sx={{ color: '#333', fontWeight: 'bold', mb: 2 }}>
+                🛒 Order Items
               </Typography>
-              <TableContainer component={Paper} variant="outlined">
+              <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: '#ffffff', borderColor: '#dee2e6' }}>
                 <Table>
                   <TableHead>
-                    <TableRow>
-                      <TableCell>Product</TableCell>
-                      <TableCell>Price</TableCell>
-                      <TableCell>Quantity</TableCell>
-                      <TableCell>Total</TableCell>
+                    <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                      <TableCell sx={{ color: '#333', fontWeight: 'bold', borderColor: '#dee2e6' }}>Product</TableCell>
+                      <TableCell sx={{ color: '#333', fontWeight: 'bold', borderColor: '#dee2e6' }}>Price</TableCell>
+                      <TableCell sx={{ color: '#333', fontWeight: 'bold', borderColor: '#dee2e6' }}>Quantity</TableCell>
+                      <TableCell sx={{ color: '#333', fontWeight: 'bold', borderColor: '#dee2e6' }}>Total</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {selectedOrder.orderItems?.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>
+                      <TableRow key={item.id} sx={{ '&:hover': { bgcolor: '#f8f9fa' } }}>
+                        <TableCell sx={{ borderColor: '#dee2e6' }}>
                           <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#333' }}>
                               {item.product?.title}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              ID: {item.productId}
+                            <Typography variant="caption" sx={{ color: '#666' }}>
+                              Product ID: {item.productId}
                             </Typography>
                           </Box>
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ color: '#555', borderColor: '#dee2e6' }}>
                           {formatCurrency(item.price)}
                         </TableCell>
-                        <TableCell>
-                          {item.quantity}
+                        <TableCell sx={{ color: '#555', borderColor: '#dee2e6' }}>
+                          <Chip label={item.quantity} size="small" sx={{ bgcolor: '#e3f2fd', color: '#1976d2', fontWeight: 'bold' }} />
                         </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        <TableCell sx={{ borderColor: '#dee2e6' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#1976d2', fontSize: '1rem' }}>
                             {formatCurrency(item.price * item.quantity)}
                           </Typography>
                         </TableCell>
@@ -569,43 +600,80 @@ export default function AdminOrdersPage() {
               </TableContainer>
 
               {/* Shipping Address */}
-              {selectedOrder.shippingAddress && (
-                <>
-                  <Divider sx={{ my: 3 }} />
-                  <Typography variant="h6" gutterBottom>
-                    <LocalShipping sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Shipping Address
+              <Divider sx={{ my: 3, borderColor: '#e0e0e0' }} />
+              <Typography variant="h6" gutterBottom sx={{ color: '#333', fontWeight: 'bold', mb: 2 }}>
+                <LocalShipping sx={{ mr: 1, verticalAlign: 'middle', color: '#1976d2' }} />
+                Shipping Details
                   </Typography>
-                  <Card variant="outlined">
+              <Card variant="outlined" sx={{ bgcolor: '#f8f9fa', borderColor: '#dee2e6' }}>
                     <CardContent>
-                      <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                        {(() => {
-                          try {
-                            const address = typeof selectedOrder.shippingAddress === 'string' 
-                              ? JSON.parse(selectedOrder.shippingAddress) 
-                              : selectedOrder.shippingAddress;
-                            
-                            if (typeof address === 'object') {
-                              return Object.entries(address)
-                                .map(([key, value]) => `${key}: ${value}`)
-                                .join('\n');
-                            }
-                            return address || 'No address provided';
-                          } catch (error) {
-                            console.error('Error parsing shipping address:', error);
-                            return selectedOrder.shippingAddress || 'No address provided';
+                  {selectedOrder.shippingAddress ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {(() => {
+                        try {
+                          const address = typeof selectedOrder.shippingAddress === 'string' 
+                            ? JSON.parse(selectedOrder.shippingAddress) 
+                            : selectedOrder.shippingAddress;
+                          
+                          if (typeof address === 'object' && address !== null) {
+                            return Object.entries(address).map(([key, value]) => (
+                              <Typography key={key} variant="body2" sx={{ color: '#555' }}>
+                                <strong style={{ color: '#333', textTransform: 'capitalize' }}>
+                                  {key.replace(/([A-Z])/g, ' $1').trim()}:
+                                </strong>{' '}
+                                {value || 'N/A'}
+                              </Typography>
+                            ));
                           }
-                        })()}
+                          return (
+                            <Typography variant="body2" sx={{ color: '#555', whiteSpace: 'pre-line' }}>
+                              {address || 'No shipping address provided'}
+                            </Typography>
+                          );
+                        } catch (error) {
+                          console.error('Error parsing shipping address:', error);
+                          return (
+                            <Typography variant="body2" sx={{ color: '#555', whiteSpace: 'pre-line' }}>
+                              {selectedOrder.shippingAddress}
+                            </Typography>
+                          );
+                        }
+                      })()}
+                    </Box>
+                  ) : (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 1, 
+                      p: 2, 
+                      bgcolor: '#fff3cd', 
+                      borderRadius: 1,
+                      border: '1px solid #ffc107'
+                    }}>
+                      <Typography variant="body2" sx={{ color: '#856404' }}>
+                        ⚠️ No shipping address provided for this order
                       </Typography>
+                    </Box>
+                  )}
                     </CardContent>
                   </Card>
-                </>
-              )}
             </Box>
-              )}
+          )}
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setOrderDialogOpen(false)}>
+            <DialogActions sx={{ 
+              bgcolor: '#f8f9fa', 
+              borderTop: '1px solid #e0e0e0',
+              px: 3,
+              py: 2
+            }}>
+              <Button 
+                onClick={() => setOrderDialogOpen(false)}
+                variant="contained"
+                sx={{ 
+                  bgcolor: '#1976d2',
+                  '&:hover': { bgcolor: '#1565c0' }
+                }}
+              >
                 Close
               </Button>
             </DialogActions>
