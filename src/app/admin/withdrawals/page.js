@@ -247,9 +247,6 @@ export default function AdminWithdrawalsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reference
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -272,11 +269,6 @@ export default function AdminWithdrawalsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredWithdrawals.map((withdrawal) => (
                 <tr key={withdrawal.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-800">
-                      {withdrawal.withdrawalRef}
-                    </div>
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
