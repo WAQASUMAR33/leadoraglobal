@@ -129,19 +129,8 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Check if user has any pending withdrawal requests
-    const pendingWithdrawal = await prisma.withdrawalRequest.findFirst({
-      where: {
-        userId: decoded.userId,
-        status: 'pending'
-      }
-    });
-
-    if (pendingWithdrawal) {
-      return NextResponse.json({
-        error: 'You already have a pending withdrawal request. Please wait for it to be processed.'
-      }, { status: 400 });
-    }
+    // Allow multiple pending withdrawal requests
+    // (Removed restriction - users can now submit multiple requests)
 
     // Generate unique withdrawal reference
     const withdrawalRef = `WD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
