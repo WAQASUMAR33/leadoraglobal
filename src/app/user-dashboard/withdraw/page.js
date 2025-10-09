@@ -22,10 +22,15 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Stepper,
-  Step,
-  StepLabel,
-  Paper
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   History,
@@ -36,7 +41,11 @@ import {
   AccountBalance,
   Phone,
   Email,
-  AttachMoney
+  AttachMoney,
+  Visibility,
+  Info,
+  TrendingDown,
+  Assessment
 } from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
 
@@ -60,6 +69,8 @@ export default function WithdrawPage() {
     notes: ''
   });
   const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   const { user, isAuthenticated } = context || {};
 
@@ -93,64 +104,39 @@ export default function WithdrawPage() {
       const fetchData = async () => {
         try {
           setHistoryLoading(true);
-          setDataFetched(true); // Prevent multiple calls
+          setDataFetched(true);
           
-          // Refresh user data first to get latest balance
           if (context?.refreshUserData) {
             await context.refreshUserData();
           }
           
-          // Fetch withdrawal history and payment methods in parallel
-          const [withdrawalResponse] = await Promise.all([
-            fetch('/api/user/withdrawals', { credentials: 'include' }),
-            fetchPaymentMethods()
-          ]);
-
+          const withdrawalResponse = await fetch('/api/user/withdrawals', {
+            credentials: 'include'
+          });
           if (withdrawalResponse.ok) {
             const withdrawalData = await withdrawalResponse.json();
             setWithdrawalHistory(withdrawalData.withdrawals || []);
-          } else {
-            console.error('Failed to fetch withdrawal history');
           }
         } catch (error) {
           console.error('Error fetching data:', error);
-          setDataFetched(false); // Reset on error to allow retry
         } finally {
           setHistoryLoading(false);
         }
       };
-      
+
       fetchData();
     }
   }, [mounted, context, dataFetched]);
-  
-  // Safety check for context
-  if (!context) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading...
-        </Typography>
-      </Box>
-    );
-  }
 
-
-  // Withdrawal status options
-  const statusOptions = {
-    pending: { label: 'Pending', color: 'warning', icon: <Pending /> },
-    approved: { label: 'Approved', color: 'success', icon: <CheckCircle /> },
-    rejected: { label: 'Rejected', color: 'error', icon: <Cancel /> },
-    processing: { label: 'Processing', color: 'info', icon: <Pending /> }
-  };
-
-
-
+  // Format currency
   const formatCurrency = (amount) => {
-    return `PKR ${parseFloat(amount).toLocaleString()}`;
+    return `PKR ${parseFloat(amount || 0).toLocaleString('en-PK', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
   };
 
+  // Format date
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -201,16 +187,14 @@ export default function WithdrawPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage('Withdrawal request submitted successfully!');
+        setMessage('Withdrawal request submitted successfully! Amount has been deducted from your balance.');
         setWithdrawalFormData({ amount: '', paymentMethodId: '', notes: '' });
         setShowWithdrawalForm(false);
         
-        // Refresh data
         if (context?.refreshUserData) {
           await context.refreshUserData();
         }
         
-        // Refresh withdrawal history
         const withdrawalResponse = await fetch('/api/user/withdrawals', {
           credentials: 'include'
         });
@@ -229,7 +213,6 @@ export default function WithdrawPage() {
     }
   };
 
-  // Handle form input changes
   const handleFormChange = (field, value) => {
     setWithdrawalFormData(prev => ({
       ...prev,
@@ -237,7 +220,37 @@ export default function WithdrawPage() {
     }));
   };
 
-  // Get payment method icon
+  const statusOptions = {
+    pending: { 
+      label: 'Pending', 
+      color: 'warning', 
+      icon: <Pending sx={{ fontSize: 20 }} />,
+      bgColor: '#fff3cd',
+      textColor: '#856404'
+    },
+    processing: { 
+      label: 'Processing', 
+      color: 'info', 
+      icon: <Assessment sx={{ fontSize: 20 }} />,
+      bgColor: '#cfe2ff',
+      textColor: '#084298'
+    },
+    approved: { 
+      label: 'Approved', 
+      color: 'success', 
+      icon: <CheckCircle sx={{ fontSize: 20 }} />,
+      bgColor: '#d1e7dd',
+      textColor: '#0f5132'
+    },
+    rejected: { 
+      label: 'Rejected', 
+      color: 'error', 
+      icon: <Cancel sx={{ fontSize: 20 }} />,
+      bgColor: '#f8d7da',
+      textColor: '#842029'
+    }
+  };
+
   const getPaymentMethodIcon = (type) => {
     switch (type) {
       case 'bank_transfer':
@@ -252,22 +265,30 @@ export default function WithdrawPage() {
     }
   };
 
-  // Format payment method display
   const formatPaymentMethod = (method) => {
-    switch (method.type) {
-      case 'bank_transfer':
-        return `${method.bankName} - ${method.accountName} (${method.accountNumber})`;
-      case 'easypaisa':
-      case 'jazzcash':
-        return `${method.type.toUpperCase()} - ${method.accountName} (${method.mobileNumber})`;
-      case 'paypal':
-        return `PayPal - ${method.email}`;
-      default:
-        return method.type;
+    try {
+      const details = typeof method === 'string' ? JSON.parse(method) : method;
+      switch (details.type) {
+        case 'bank_transfer':
+          return `${details.bankName} - ${details.accountName} (${details.accountNumber})`;
+        case 'easypaisa':
+        case 'jazzcash':
+          return `${details.type.toUpperCase()} - ${details.accountName} (${details.mobileNumber})`;
+        case 'paypal':
+          return `PayPal - ${details.email}`;
+        default:
+          return details.type || 'N/A';
+      }
+    } catch {
+      return method || 'N/A';
     }
   };
 
-  // Prevent hydration mismatch by showing loading until mounted
+  const handleViewDetails = (withdrawal) => {
+    setSelectedWithdrawal(withdrawal);
+    setShowDetailsDialog(true);
+  };
+
   if (!mounted) {
     return (
       <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
@@ -277,49 +298,154 @@ export default function WithdrawPage() {
   }
 
   return (
-    <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto' }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 2, fontSize: { xs: '1.5rem', md: '2rem' } }}>
-        Withdraw Funds
-      </Typography>
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: 'auto', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
+      {/* Page Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+          💰 Withdraw Funds
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#666' }}>
+          Request withdrawals and manage your payout history
+        </Typography>
+      </Box>
 
-      {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {message && (
+        <Alert 
+          severity="success" 
+          sx={{ mb: 3, bgcolor: '#d1e7dd', color: '#0f5132', borderRadius: 2 }} 
+          onClose={() => setMessage(null)}
+        >
+          {message}
+        </Alert>
+      )}
+      
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3, bgcolor: '#f8d7da', color: '#842029', borderRadius: 2 }} 
+          onClose={() => setError(null)}
+        >
+          {error}
+        </Alert>
+      )}
 
-      {/* Balance Card */}
-      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="h6" gutterBottom sx={{ opacity: 0.9 }}>
-                Available Balance
-              </Typography>
-              <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Available Balance Card */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+            color: 'white',
+            borderRadius: 3,
+            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.3)'
+          }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
+                  Available Balance
+                </Typography>
+                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
+                  <AttachMoney />
+                </Avatar>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
                 {formatCurrency(user?.balance || 0)}
               </Typography>
-            </Box>
-            <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 60, height: 60 }}>
-              <AttachMoney sx={{ fontSize: 30 }} />
-            </Avatar>
-          </Box>
-        </CardContent>
-      </Card>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                Ready for withdrawal
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-      {/* Withdrawal Request Section */}
-      <Card sx={{ mb: 3 }}>
+        {/* Total Withdrawals Card */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            bgcolor: '#ffffff', 
+            borderRadius: 3,
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
+          }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: '#666', fontSize: '0.875rem' }}>
+                  Total Withdrawals
+                </Typography>
+                <Avatar sx={{ bgcolor: '#e3f2fd', width: 48, height: 48 }}>
+                  <TrendingDown sx={{ color: '#1976d2' }} />
+                </Avatar>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                {withdrawalHistory.length}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#999' }}>
+                All-time requests
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Pending Requests Card */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            bgcolor: '#ffffff', 
+            borderRadius: 3,
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
+          }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: '#666', fontSize: '0.875rem' }}>
+                  Pending Requests
+                </Typography>
+                <Avatar sx={{ bgcolor: '#fff3cd', width: 48, height: 48 }}>
+                  <Pending sx={{ color: '#ff9800' }} />
+                </Avatar>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                {withdrawalHistory.filter(w => w.status === 'pending').length}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#999' }}>
+                Awaiting approval
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Quick Actions Card */}
+      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
         <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-              New Withdrawal Request
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 0.5 }}>
+                Request New Withdrawal
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#666' }}>
+                Withdraw your earnings securely • Minimum PKR 1,000 • 10% processing fee
+              </Typography>
+            </Box>
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={() => setShowWithdrawalForm(true)}
+              onClick={() => {
+                fetchPaymentMethods();
+                setShowWithdrawalForm(true);
+              }}
               disabled={!user?.balance || user.balance < 1000}
               sx={{ 
                 background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)',
+                px: 4,
+                py: 1.5,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 'bold',
                 '&:hover': {
                   background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
+                  boxShadow: '0 6px 16px rgba(33, 150, 243, 0.4)',
+                },
+                '&:disabled': {
+                  background: '#e0e0e0',
+                  color: '#999'
                 }
               }}
             >
@@ -328,15 +454,17 @@ export default function WithdrawPage() {
           </Box>
           
           {(!user?.balance || user.balance < 1000) && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Minimum balance of PKR 1,000 required to make withdrawal requests.
+            <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+              <Typography variant="body2">
+                <strong>Minimum balance requirement:</strong> You need at least PKR 1,000 in your account to request a withdrawal.
+              </Typography>
             </Alert>
           )}
           
           {paymentMethods.length === 0 && (
-            <Alert severity="info" sx={{ mt: 2 }}>
+            <Alert severity="info" icon={<Info />} sx={{ mt: 2, borderRadius: 2 }}>
               <Typography variant="body2" gutterBottom>
-                No payment methods found. Please add a payment method first.
+                <strong>No payment methods found.</strong> Please add a payment method to receive withdrawals.
               </Typography>
               <Button 
                 variant="outlined" 
@@ -352,249 +480,195 @@ export default function WithdrawPage() {
         </CardContent>
       </Card>
 
-      {/* Withdrawal History Section */}
-      <Box sx={{ mt: 2 }}>
-        <Card sx={{ p: { xs: 1, md: 2 } }}>
-          <CardContent sx={{ p: { xs: 1, md: 2 } }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold', fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
+      {/* Withdrawal History Table */}
+      <Card sx={{ borderRadius: 3, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+        <CardContent sx={{ p: 0 }}>
+          <Box sx={{ p: 3, pb: 2 }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold', color: '#1a1a2e' }}>
               <History />
               Withdrawal History
             </Typography>
-            <Divider sx={{ mb: 2 }} />
+            <Typography variant="body2" sx={{ color: '#666', mt: 0.5 }}>
+              Track all your withdrawal requests and their status
+            </Typography>
+          </Box>
+          
+          <Divider />
 
-            {historyLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : withdrawalHistory.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {withdrawalHistory.map((withdrawal) => (
-                  <Card key={withdrawal.id} variant="outlined" sx={{ p: { xs: 1, md: 2 } }}>
-                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 2, gap: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: statusOptions[withdrawal.status]?.color + '.light', width: { xs: 32, md: 40 }, height: { xs: 32, md: 40 } }}>
-                          {statusOptions[withdrawal.status]?.icon}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: { xs: '1rem', md: '1.25rem' } }}>
-                            {formatCurrency(withdrawal.amount)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                            Reference: {withdrawal.withdrawalRef}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      <Chip
-                        label={statusOptions[withdrawal.status]?.label}
-                        color={statusOptions[withdrawal.status]?.color}
-                        variant="outlined"
-                        size="small"
-                      />
-                    </Box>
-
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ p: { xs: 1, md: 2 }, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
-                          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                            Amount Breakdown
-                          </Typography>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="body2" sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Requested:</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                              {formatCurrency(withdrawal.amount)}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="body2" sx={{ color: 'error.light', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Fee (10%):</Typography>
-                            <Typography variant="body2" sx={{ color: 'error.light', fontWeight: 'bold', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                              -{formatCurrency(withdrawal.feeAmount || 0)}
-                            </Typography>
-                          </Box>
-                          <Divider sx={{ my: 1, borderColor: 'grey.600' }} />
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Net Amount:</Typography>
-                            <Typography variant="body2" sx={{ color: 'success.light', fontWeight: 'bold', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                              {formatCurrency(withdrawal.netAmount || 0)}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Grid>
-                      
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ p: { xs: 1, md: 2 }, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
-                          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                            Payment Details
-                          </Typography>
-                          <Typography variant="body2" gutterBottom sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                            <strong style={{ color: 'white' }}>Method:</strong> {withdrawal.paymentMethod}
-                          </Typography>
-                          <Typography variant="body2" gutterBottom sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                            <strong style={{ color: 'white' }}>Account:</strong> {withdrawal.accountDetails}
-                          </Typography>
-                          {withdrawal.notes && (
-                            <Typography variant="body2" gutterBottom sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                              <strong style={{ color: 'white' }}>Notes:</strong> {withdrawal.notes}
-                            </Typography>
-                          )}
-                        </Box>
-                      </Grid>
-                    </Grid>
-
-                    <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
-                        Requested: {formatDate(withdrawal.createdAt)}
-                      </Typography>
-                      {withdrawal.processedAt && (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
-                          Processed: {formatDate(withdrawal.processedAt)}
+          {historyLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <CircularProgress />
+            </Box>
+          ) : withdrawalHistory.length > 0 ? (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Reference</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Fee</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Net Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {withdrawalHistory.map((withdrawal) => (
+                    <TableRow 
+                      key={withdrawal.id}
+                      sx={{ 
+                        '&:hover': { bgcolor: '#f8f9fa' },
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#1976d2' }}>
+                          {withdrawal.withdrawalRef}
                         </Typography>
-                      )}
-                    </Box>
-
-                    {withdrawal.adminNotes && (
-                      <Box sx={{ mt: 2, p: { xs: 1, md: 2 }, bgcolor: 'info.light', borderRadius: 1 }}>
-                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          Admin Notes:
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#1a1a2e' }}>
+                          {formatCurrency(withdrawal.amount)}
                         </Typography>
-                        <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          {withdrawal.adminNotes}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ color: '#d32f2f' }}>
+                          -{formatCurrency(withdrawal.feeAmount || 0)}
                         </Typography>
-                      </Box>
-                    )}
-                  </Card>
-                ))}
-              </Box>
-            ) : (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <History sx={{ fontSize: { xs: 36, md: 48 }, color: 'text.secondary', mb: 2 }} />
-                <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
-                  No Withdrawal History
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>
-                  You haven&apos;t made any withdrawal requests yet.
-                </Typography>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-      </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
+                          {formatCurrency(withdrawal.netAmount || (withdrawal.amount * 0.9))}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={statusOptions[withdrawal.status]?.label}
+                          size="small"
+                          sx={{
+                            bgcolor: statusOptions[withdrawal.status]?.bgColor,
+                            color: statusOptions[withdrawal.status]?.textColor,
+                            fontWeight: 'bold',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ color: '#666' }}>
+                          {formatDate(withdrawal.createdAt)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title="View Details">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleViewDetails(withdrawal)}
+                            sx={{ color: '#1976d2' }}
+                          >
+                            <Visibility fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Box sx={{ p: 8, textAlign: 'center' }}>
+              <TrendingDown sx={{ fontSize: 64, color: '#e0e0e0', mb: 2 }} />
+              <Typography variant="h6" sx={{ color: '#999', mb: 1 }}>
+                No Withdrawal History
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#bbb' }}>
+                You haven&apos;t made any withdrawal requests yet
+              </Typography>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Withdrawal Form Dialog */}
       <Dialog 
         open={showWithdrawalForm} 
         onClose={() => setShowWithdrawalForm(false)}
-        maxWidth="md"
+        maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
       >
-        <DialogTitle>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+        <DialogTitle sx={{ bgcolor: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1a1a2e' }}>
             Request Withdrawal
           </Typography>
+          <Typography variant="body2" sx={{ color: '#666', mt: 0.5 }}>
+            Fill in the details to request a withdrawal
+          </Typography>
         </DialogTitle>
-        <DialogContent>
-          <Box component="form" onSubmit={handleWithdrawalSubmit} sx={{ mt: 2 }}>
-            <Grid container spacing={3}>
-              {/* Amount Field */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Withdrawal Amount (PKR)"
-                  type="number"
-                  value={withdrawalFormData.amount}
-                  onChange={(e) => handleFormChange('amount', e.target.value)}
-                  required
-                  inputProps={{ min: 1000, max: user?.balance || 0 }}
-                  helperText={`Minimum: PKR 1,000 | Maximum: ${formatCurrency(user?.balance || 0)}`}
-                  InputProps={{
-                    startAdornment: <Typography sx={{ mr: 1 }}>PKR</Typography>
-                  }}
-                />
-              </Grid>
+        <DialogContent sx={{ mt: 3 }}>
+          <form onSubmit={handleWithdrawalSubmit}>
+            <TextField
+              fullWidth
+              label="Withdrawal Amount"
+              type="number"
+              value={withdrawalFormData.amount}
+              onChange={(e) => handleFormChange('amount', e.target.value)}
+              required
+              inputProps={{ min: 1000, step: 100 }}
+              helperText="Minimum: PKR 1,000 • Fee: 10% • You'll receive: 90%"
+              sx={{ mb: 3 }}
+            />
 
-              {/* Payment Method Selection */}
-              <Grid item xs={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Payment Method</InputLabel>
-                  <Select
-                    value={withdrawalFormData.paymentMethodId}
-                    onChange={(e) => handleFormChange('paymentMethodId', e.target.value)}
-                    label="Payment Method"
-                  >
-                    {paymentMethods.map((method) => (
-                      <MenuItem key={method.id} value={method.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {getPaymentMethodIcon(method.type)}
-                          <Box>
-                            <Typography variant="body1">
-                              {formatPaymentMethod(method)}
-                            </Typography>
-                            {method.isDefault && (
-                              <Chip 
-                                label="Default" 
-                                size="small" 
-                                color="primary" 
-                                sx={{ height: 16, fontSize: '0.7rem' }}
-                              />
-                            )}
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel>Payment Method</InputLabel>
+              <Select
+                value={withdrawalFormData.paymentMethodId}
+                onChange={(e) => handleFormChange('paymentMethodId', e.target.value)}
+                label="Payment Method"
+                required
+              >
+                {paymentMethodsLoading ? (
+                  <MenuItem disabled>Loading...</MenuItem>
+                ) : paymentMethods.length === 0 ? (
+                  <MenuItem disabled>No payment methods available</MenuItem>
+                ) : (
+                  paymentMethods.map((method) => (
+                    <MenuItem key={method.id} value={method.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {getPaymentMethodIcon(method.type)}
+                        {method.accountName} - {method.type}
+                      </Box>
+                    </MenuItem>
+                  ))
+                )}
+              </Select>
+            </FormControl>
 
-              {/* Notes Field */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Notes (Optional)"
-                  multiline
-                  rows={3}
-                  value={withdrawalFormData.notes}
-                  onChange={(e) => handleFormChange('notes', e.target.value)}
-                  placeholder="Add any additional notes for your withdrawal request..."
-                />
-              </Grid>
+            <TextField
+              fullWidth
+              label="Notes (Optional)"
+              multiline
+              rows={3}
+              value={withdrawalFormData.notes}
+              onChange={(e) => handleFormChange('notes', e.target.value)}
+              placeholder="Add any additional information..."
+              sx={{ mb: 2 }}
+            />
 
-              {/* Withdrawal Summary */}
-              {withdrawalFormData.amount && (
-                <Grid item xs={12}>
-                  <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                      Withdrawal Summary
-                    </Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography>Requested Amount:</Typography>
-                      <Typography sx={{ fontWeight: 'bold' }}>
-                        {formatCurrency(withdrawalFormData.amount)}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography color="error">Processing Fee (10%):</Typography>
-                      <Typography color="error" sx={{ fontWeight: 'bold' }}>
-                        -{formatCurrency(parseFloat(withdrawalFormData.amount) * 0.1)}
-                      </Typography>
-                    </Box>
-                    <Divider sx={{ my: 1 }} />
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                        Net Amount:
-                      </Typography>
-                      <Typography variant="h6" color="success.main" sx={{ fontWeight: 'bold' }}>
-                        {formatCurrency(parseFloat(withdrawalFormData.amount) * 0.9)}
-                      </Typography>
-                    </Box>
-                  </Paper>
-                </Grid>
-              )}
-            </Grid>
-          </Box>
+            <Alert severity="info" icon={<Info />} sx={{ borderRadius: 2 }}>
+              <Typography variant="body2">
+                <strong>Important:</strong> The withdrawal amount will be deducted from your balance immediately. 
+                A 10% processing fee will be applied upon approval.
+              </Typography>
+            </Alert>
+          </form>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
+        <DialogActions sx={{ p: 3, bgcolor: '#f8f9fa', borderTop: '1px solid #e0e0e0' }}>
           <Button 
             onClick={() => setShowWithdrawalForm(false)}
-            disabled={submittingWithdrawal}
+            sx={{ color: '#666' }}
           >
             Cancel
           </Button>
@@ -602,25 +676,152 @@ export default function WithdrawPage() {
             onClick={handleWithdrawalSubmit}
             variant="contained"
             disabled={submittingWithdrawal || !withdrawalFormData.amount || !withdrawalFormData.paymentMethodId}
-            sx={{ 
+            sx={{
               background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-              '&:hover': {
-                background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
-              }
+              px: 3
             }}
           >
-            {submittingWithdrawal ? (
-              <>
-                <CircularProgress size={20} sx={{ mr: 1 }} />
-                Submitting...
-              </>
-            ) : (
-              'Submit Request'
-            )}
+            {submittingWithdrawal ? 'Submitting...' : 'Submit Request'}
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* Details Dialog */}
+      <Dialog
+        open={showDetailsDialog}
+        onClose={() => setShowDetailsDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1a1a2e' }}>
+            Withdrawal Details
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 3 }}>
+          {selectedWithdrawal && (
+            <Box>
+              <Box sx={{ mb: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
+                <Typography variant="caption" sx={{ color: '#666' }}>Reference Number</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', fontFamily: 'monospace', color: '#1976d2' }}>
+                  {selectedWithdrawal.withdrawalRef}
+                </Typography>
+              </Box>
+
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#666' }}>Requested Amount</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1a1a2e' }}>
+                    {formatCurrency(selectedWithdrawal.amount)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#666' }}>Status</Typography>
+                  <Box sx={{ mt: 0.5 }}>
+                    <Chip
+                      label={statusOptions[selectedWithdrawal.status]?.label}
+                      size="small"
+                      sx={{
+                        bgcolor: statusOptions[selectedWithdrawal.status]?.bgColor,
+                        color: statusOptions[selectedWithdrawal.status]?.textColor,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                  </Box>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                  Amount Breakdown
+                </Typography>
+                <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" sx={{ color: '#666' }}>Requested:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {formatCurrency(selectedWithdrawal.amount)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" sx={{ color: '#d32f2f' }}>Fee (10%):</Typography>
+                    <Typography variant="body2" sx={{ color: '#d32f2f', fontWeight: 'bold' }}>
+                      -{formatCurrency(selectedWithdrawal.feeAmount || 0)}
+                    </Typography>
+                  </Box>
+                  <Divider sx={{ my: 1 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Net Amount:</Typography>
+                    <Typography variant="body2" sx={{ color: '#2e7d32', fontWeight: 'bold' }}>
+                      {formatCurrency(selectedWithdrawal.netAmount || (selectedWithdrawal.amount * 0.9))}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                  Payment Method
+                </Typography>
+                <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    {formatPaymentMethod(selectedWithdrawal.accountDetails)}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {selectedWithdrawal.notes && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                    Notes
+                  </Typography>
+                  <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
+                    <Typography variant="body2" sx={{ color: '#666' }}>
+                      {selectedWithdrawal.notes}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+
+              {selectedWithdrawal.adminNotes && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                    Admin Notes
+                  </Typography>
+                  <Box sx={{ p: 2, bgcolor: '#fff3cd', borderRadius: 2 }}>
+                    <Typography variant="body2" sx={{ color: '#856404' }}>
+                      {selectedWithdrawal.adminNotes}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+
+              <Box sx={{ mt: 3, p: 2, bgcolor: '#e3f2fd', borderRadius: 2 }}>
+                <Typography variant="caption" sx={{ color: '#1976d2' }}>
+                  <strong>Created:</strong> {formatDate(selectedWithdrawal.createdAt)}
+                </Typography>
+                {selectedWithdrawal.processedAt && (
+                  <>
+                    <br />
+                    <Typography variant="caption" sx={{ color: '#1976d2' }}>
+                      <strong>Processed:</strong> {formatDate(selectedWithdrawal.processedAt)}
+                    </Typography>
+                  </>
+                )}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, bgcolor: '#f8f9fa', borderTop: '1px solid #e0e0e0' }}>
+          <Button onClick={() => setShowDetailsDialog(false)} variant="contained">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
