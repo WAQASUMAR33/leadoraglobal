@@ -458,14 +458,16 @@ export default function AdminOrdersPage() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ShoppingCart />
-            Order Details - {selectedOrder?.orderNumber}
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {selectedOrder && (
+        {selectedOrder && (
+          <>
+            <DialogTitle>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <ShoppingCart />
+                Order Details - {selectedOrder.orderNumber}
+              </Box>
+            </DialogTitle>
+            <DialogContent>
+              {selectedOrder && (
             <Box sx={{ mt: 2 }}>
               {/* Order Summary */}
               <Grid container spacing={3}>
@@ -577,20 +579,38 @@ export default function AdminOrdersPage() {
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                        {JSON.parse(selectedOrder.shippingAddress)}
+                        {(() => {
+                          try {
+                            const address = typeof selectedOrder.shippingAddress === 'string' 
+                              ? JSON.parse(selectedOrder.shippingAddress) 
+                              : selectedOrder.shippingAddress;
+                            
+                            if (typeof address === 'object') {
+                              return Object.entries(address)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join('\n');
+                            }
+                            return address || 'No address provided';
+                          } catch (error) {
+                            console.error('Error parsing shipping address:', error);
+                            return selectedOrder.shippingAddress || 'No address provided';
+                          }
+                        })()}
                       </Typography>
                     </CardContent>
                   </Card>
                 </>
               )}
             </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOrderDialogOpen(false)}>
-            Close
-          </Button>
-        </DialogActions>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOrderDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
 
       {/* Update Status Dialog */}
