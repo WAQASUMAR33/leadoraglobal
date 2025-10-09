@@ -298,13 +298,13 @@ export default function WithdrawPage() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: 'auto', bgcolor: '#f5f7fa', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: 'auto', bgcolor: '#0a0e27', minHeight: '100vh' }}>
       {/* Page Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#ffffff', mb: 1 }}>
           💰 Withdraw Funds
         </Typography>
-        <Typography variant="body2" sx={{ color: '#666' }}>
+        <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
           Request withdrawals and manage your payout history
         </Typography>
       </Box>
@@ -312,7 +312,7 @@ export default function WithdrawPage() {
       {message && (
         <Alert 
           severity="success" 
-          sx={{ mb: 3, bgcolor: '#d1e7dd', color: '#0f5132', borderRadius: 2 }} 
+          sx={{ mb: 3, bgcolor: '#1e4620', color: '#4caf50', borderRadius: 2, border: '1px solid #2e7d32' }} 
           onClose={() => setMessage(null)}
         >
           {message}
@@ -322,7 +322,7 @@ export default function WithdrawPage() {
       {error && (
         <Alert 
           severity="error" 
-          sx={{ mb: 3, bgcolor: '#f8d7da', color: '#842029', borderRadius: 2 }} 
+          sx={{ mb: 3, bgcolor: '#4a1a1a', color: '#f44336', borderRadius: 2, border: '1px solid #d32f2f' }} 
           onClose={() => setError(null)}
         >
           {error}
@@ -361,23 +361,24 @@ export default function WithdrawPage() {
         {/* Total Withdrawals Card */}
         <Grid item xs={12} md={4}>
           <Card sx={{ 
-            bgcolor: '#ffffff', 
+            bgcolor: '#1a1f3a', 
             borderRadius: 3,
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            border: '1px solid rgba(255,255,255,0.1)'
           }}>
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ color: '#666', fontSize: '0.875rem' }}>
+                <Typography variant="subtitle2" sx={{ color: '#b0b0b0', fontSize: '0.875rem' }}>
                   Total Withdrawals
                 </Typography>
-                <Avatar sx={{ bgcolor: '#e3f2fd', width: 48, height: 48 }}>
-                  <TrendingDown sx={{ color: '#1976d2' }} />
+                <Avatar sx={{ bgcolor: 'rgba(33, 150, 243, 0.2)', width: 48, height: 48 }}>
+                  <TrendingDown sx={{ color: '#2196F3' }} />
                 </Avatar>
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#ffffff', mb: 1 }}>
                 {withdrawalHistory.length}
               </Typography>
-              <Typography variant="caption" sx={{ color: '#999' }}>
+              <Typography variant="caption" sx={{ color: '#808080' }}>
                 All-time requests
               </Typography>
             </CardContent>
@@ -387,23 +388,24 @@ export default function WithdrawPage() {
         {/* Pending Requests Card */}
         <Grid item xs={12} md={4}>
           <Card sx={{ 
-            bgcolor: '#ffffff', 
+            bgcolor: '#1a1f3a', 
             borderRadius: 3,
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)'
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            border: '1px solid rgba(255,255,255,0.1)'
           }}>
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ color: '#666', fontSize: '0.875rem' }}>
+                <Typography variant="subtitle2" sx={{ color: '#b0b0b0', fontSize: '0.875rem' }}>
                   Pending Requests
                 </Typography>
-                <Avatar sx={{ bgcolor: '#fff3cd', width: 48, height: 48 }}>
+                <Avatar sx={{ bgcolor: 'rgba(255, 152, 0, 0.2)', width: 48, height: 48 }}>
                   <Pending sx={{ color: '#ff9800' }} />
                 </Avatar>
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+              <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#ffffff', mb: 1 }}>
                 {withdrawalHistory.filter(w => w.status === 'pending').length}
               </Typography>
-              <Typography variant="caption" sx={{ color: '#999' }}>
+              <Typography variant="caption" sx={{ color: '#808080' }}>
                 Awaiting approval
               </Typography>
             </CardContent>
@@ -412,14 +414,14 @@ export default function WithdrawPage() {
       </Grid>
 
       {/* Quick Actions Card */}
-      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', bgcolor: '#1a1f3a', border: '1px solid rgba(255,255,255,0.1)' }}>
         <CardContent sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 0.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ffffff', mb: 0.5 }}>
                 Request New Withdrawal
               </Typography>
-              <Typography variant="body2" sx={{ color: '#666' }}>
+              <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
                 Withdraw your earnings securely • Minimum PKR 1,000 • 10% processing fee
               </Typography>
             </Box>
@@ -481,19 +483,19 @@ export default function WithdrawPage() {
       </Card>
 
       {/* Withdrawal History Table */}
-      <Card sx={{ borderRadius: 3, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+      <Card sx={{ borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', bgcolor: '#1a1f3a', border: '1px solid rgba(255,255,255,0.1)' }}>
         <CardContent sx={{ p: 0 }}>
           <Box sx={{ p: 3, pb: 2 }}>
-            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold', color: '#1a1a2e' }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold', color: '#ffffff' }}>
               <History />
               Withdrawal History
             </Typography>
-            <Typography variant="body2" sx={{ color: '#666', mt: 0.5 }}>
+            <Typography variant="body2" sx={{ color: '#b0b0b0', mt: 0.5 }}>
               Track all your withdrawal requests and their status
             </Typography>
           </Box>
           
-          <Divider />
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
 
           {historyLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -503,14 +505,14 @@ export default function WithdrawPage() {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Reference</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Fee</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Net Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#666' }}>Actions</TableCell>
+                  <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#b0b0b0', borderColor: 'rgba(255,255,255,0.1)' }}>Reference</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#b0b0b0', borderColor: 'rgba(255,255,255,0.1)' }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#b0b0b0', borderColor: 'rgba(255,255,255,0.1)' }}>Fee</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#b0b0b0', borderColor: 'rgba(255,255,255,0.1)' }}>Net Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#b0b0b0', borderColor: 'rgba(255,255,255,0.1)' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#b0b0b0', borderColor: 'rgba(255,255,255,0.1)' }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', color: '#b0b0b0', borderColor: 'rgba(255,255,255,0.1)' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -518,31 +520,31 @@ export default function WithdrawPage() {
                     <TableRow 
                       key={withdrawal.id}
                       sx={{ 
-                        '&:hover': { bgcolor: '#f8f9fa' },
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
                         cursor: 'pointer'
                       }}
                     >
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#1976d2' }}>
+                      <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#2196F3' }}>
                           {withdrawal.withdrawalRef}
                         </Typography>
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#1a1a2e' }}>
+                      <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#ffffff' }}>
                           {formatCurrency(withdrawal.amount)}
                         </Typography>
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ color: '#d32f2f' }}>
+                      <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <Typography variant="body2" sx={{ color: '#f44336' }}>
                           -{formatCurrency(withdrawal.feeAmount || 0)}
                         </Typography>
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
+                      <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
                           {formatCurrency(withdrawal.netAmount || (withdrawal.amount * 0.9))}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
                         <Chip
                           label={statusOptions[withdrawal.status]?.label}
                           size="small"
@@ -554,17 +556,17 @@ export default function WithdrawPage() {
                           }}
                         />
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ color: '#666' }}>
+                      <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
                           {formatDate(withdrawal.createdAt)}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
                         <Tooltip title="View Details">
                           <IconButton 
                             size="small" 
                             onClick={() => handleViewDetails(withdrawal)}
-                            sx={{ color: '#1976d2' }}
+                            sx={{ color: '#2196F3' }}
                           >
                             <Visibility fontSize="small" />
                           </IconButton>
@@ -577,11 +579,11 @@ export default function WithdrawPage() {
             </TableContainer>
           ) : (
             <Box sx={{ p: 8, textAlign: 'center' }}>
-              <TrendingDown sx={{ fontSize: 64, color: '#e0e0e0', mb: 2 }} />
-              <Typography variant="h6" sx={{ color: '#999', mb: 1 }}>
+              <TrendingDown sx={{ fontSize: 64, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
+              <Typography variant="h6" sx={{ color: '#808080', mb: 1 }}>
                 No Withdrawal History
               </Typography>
-              <Typography variant="body2" sx={{ color: '#bbb' }}>
+              <Typography variant="body2" sx={{ color: '#666' }}>
                 You haven&apos;t made any withdrawal requests yet
               </Typography>
             </Box>
@@ -596,18 +598,22 @@ export default function WithdrawPage() {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3 }
+          sx: { 
+            borderRadius: 3,
+            bgcolor: '#1a1f3a',
+            backgroundImage: 'none'
+          }
         }}
       >
-        <DialogTitle sx={{ bgcolor: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1a1a2e' }}>
+        <DialogTitle sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ffffff' }}>
             Request Withdrawal
           </Typography>
-          <Typography variant="body2" sx={{ color: '#666', mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: '#b0b0b0', mt: 0.5 }}>
             Fill in the details to request a withdrawal
           </Typography>
         </DialogTitle>
-        <DialogContent sx={{ mt: 3 }}>
+        <DialogContent sx={{ mt: 3, bgcolor: '#1a1f3a' }}>
           <form onSubmit={handleWithdrawalSubmit}>
             <TextField
               fullWidth
@@ -618,16 +624,33 @@ export default function WithdrawPage() {
               required
               inputProps={{ min: 1000, step: 100 }}
               helperText="Minimum: PKR 1,000 • Fee: 10% • You'll receive: 90%"
-              sx={{ mb: 3 }}
+              sx={{ 
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  color: '#ffffff',
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+                  '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
+                  '&.Mui-focused fieldset': { borderColor: '#2196F3' }
+                },
+                '& .MuiInputLabel-root': { color: '#b0b0b0' },
+                '& .MuiFormHelperText-root': { color: '#808080' }
+              }}
             />
 
             <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>Payment Method</InputLabel>
+              <InputLabel sx={{ color: '#b0b0b0' }}>Payment Method</InputLabel>
               <Select
                 value={withdrawalFormData.paymentMethodId}
                 onChange={(e) => handleFormChange('paymentMethodId', e.target.value)}
                 label="Payment Method"
                 required
+                sx={{
+                  color: '#ffffff',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2196F3' },
+                  '& .MuiSvgIcon-root': { color: '#b0b0b0' }
+                }}
               >
                 {paymentMethodsLoading ? (
                   <MenuItem disabled>Loading...</MenuItem>
@@ -654,10 +677,20 @@ export default function WithdrawPage() {
               value={withdrawalFormData.notes}
               onChange={(e) => handleFormChange('notes', e.target.value)}
               placeholder="Add any additional information..."
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  color: '#ffffff',
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+                  '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
+                  '&.Mui-focused fieldset': { borderColor: '#2196F3' }
+                },
+                '& .MuiInputLabel-root': { color: '#b0b0b0' },
+                '& .MuiInputBase-input::placeholder': { color: '#666' }
+              }}
             />
 
-            <Alert severity="info" icon={<Info />} sx={{ borderRadius: 2 }}>
+            <Alert severity="info" icon={<Info />} sx={{ borderRadius: 2, bgcolor: 'rgba(33, 150, 243, 0.1)', color: '#2196F3', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
               <Typography variant="body2">
                 <strong>Important:</strong> The withdrawal amount will be deducted from your balance immediately. 
                 A 10% processing fee will be applied upon approval.
@@ -665,10 +698,10 @@ export default function WithdrawPage() {
             </Alert>
           </form>
         </DialogContent>
-        <DialogActions sx={{ p: 3, bgcolor: '#f8f9fa', borderTop: '1px solid #e0e0e0' }}>
+        <DialogActions sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.05)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <Button 
             onClick={() => setShowWithdrawalForm(false)}
-            sx={{ color: '#666' }}
+            sx={{ color: '#b0b0b0' }}
           >
             Cancel
           </Button>
@@ -693,33 +726,37 @@ export default function WithdrawPage() {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3 }
+          sx: { 
+            borderRadius: 3,
+            bgcolor: '#1a1f3a',
+            backgroundImage: 'none'
+          }
         }}
       >
-        <DialogTitle sx={{ bgcolor: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1a1a2e' }}>
+        <DialogTitle sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ffffff' }}>
             Withdrawal Details
           </Typography>
         </DialogTitle>
-        <DialogContent sx={{ mt: 3 }}>
+        <DialogContent sx={{ mt: 3, bgcolor: '#1a1f3a' }}>
           {selectedWithdrawal && (
             <Box>
-              <Box sx={{ mb: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
-                <Typography variant="caption" sx={{ color: '#666' }}>Reference Number</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', fontFamily: 'monospace', color: '#1976d2' }}>
+              <Box sx={{ mb: 3, p: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }}>
+                <Typography variant="caption" sx={{ color: '#b0b0b0' }}>Reference Number</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', fontFamily: 'monospace', color: '#2196F3' }}>
                   {selectedWithdrawal.withdrawalRef}
                 </Typography>
               </Box>
 
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={6}>
-                  <Typography variant="caption" sx={{ color: '#666' }}>Requested Amount</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1a1a2e' }}>
+                  <Typography variant="caption" sx={{ color: '#b0b0b0' }}>Requested Amount</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ffffff' }}>
                     {formatCurrency(selectedWithdrawal.amount)}
                   </Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="caption" sx={{ color: '#666' }}>Status</Typography>
+                  <Typography variant="caption" sx={{ color: '#b0b0b0' }}>Status</Typography>
                   <Box sx={{ mt: 0.5 }}>
                     <Chip
                       label={statusOptions[selectedWithdrawal.status]?.label}
@@ -734,29 +771,29 @@ export default function WithdrawPage() {
                 </Grid>
               </Grid>
 
-              <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
 
               <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#ffffff', mb: 1 }}>
                   Amount Breakdown
                 </Typography>
-                <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
+                <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ color: '#666' }}>Requested:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="body2" sx={{ color: '#b0b0b0' }}>Requested:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#ffffff' }}>
                       {formatCurrency(selectedWithdrawal.amount)}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ color: '#d32f2f' }}>Fee (10%):</Typography>
-                    <Typography variant="body2" sx={{ color: '#d32f2f', fontWeight: 'bold' }}>
+                    <Typography variant="body2" sx={{ color: '#f44336' }}>Fee (10%):</Typography>
+                    <Typography variant="body2" sx={{ color: '#f44336', fontWeight: 'bold' }}>
                       -{formatCurrency(selectedWithdrawal.feeAmount || 0)}
                     </Typography>
                   </Box>
-                  <Divider sx={{ my: 1 }} />
+                  <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Net Amount:</Typography>
-                    <Typography variant="body2" sx={{ color: '#2e7d32', fontWeight: 'bold' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#ffffff' }}>Net Amount:</Typography>
+                    <Typography variant="body2" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
                       {formatCurrency(selectedWithdrawal.netAmount || (selectedWithdrawal.amount * 0.9))}
                     </Typography>
                   </Box>
@@ -764,11 +801,11 @@ export default function WithdrawPage() {
               </Box>
 
               <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#ffffff', mb: 1 }}>
                   Payment Method
                 </Typography>
-                <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
-                  <Typography variant="body2" sx={{ color: '#666' }}>
+                <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
                     {formatPaymentMethod(selectedWithdrawal.accountDetails)}
                   </Typography>
                 </Box>
@@ -776,11 +813,11 @@ export default function WithdrawPage() {
 
               {selectedWithdrawal.notes && (
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#ffffff', mb: 1 }}>
                     Notes
                   </Typography>
-                  <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
-                    <Typography variant="body2" sx={{ color: '#666' }}>
+                  <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
                       {selectedWithdrawal.notes}
                     </Typography>
                   </Box>
@@ -789,25 +826,25 @@ export default function WithdrawPage() {
 
               {selectedWithdrawal.adminNotes && (
                 <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1a1a2e', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#ffffff', mb: 1 }}>
                     Admin Notes
                   </Typography>
-                  <Box sx={{ p: 2, bgcolor: '#fff3cd', borderRadius: 2 }}>
-                    <Typography variant="body2" sx={{ color: '#856404' }}>
+                  <Box sx={{ p: 2, bgcolor: 'rgba(255, 152, 0, 0.1)', borderRadius: 2, border: '1px solid rgba(255, 152, 0, 0.3)' }}>
+                    <Typography variant="body2" sx={{ color: '#ffa726' }}>
                       {selectedWithdrawal.adminNotes}
                     </Typography>
                   </Box>
                 </Box>
               )}
 
-              <Box sx={{ mt: 3, p: 2, bgcolor: '#e3f2fd', borderRadius: 2 }}>
-                <Typography variant="caption" sx={{ color: '#1976d2' }}>
+              <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(33, 150, 243, 0.1)', borderRadius: 2, border: '1px solid rgba(33, 150, 243, 0.3)' }}>
+                <Typography variant="caption" sx={{ color: '#2196F3' }}>
                   <strong>Created:</strong> {formatDate(selectedWithdrawal.createdAt)}
                 </Typography>
                 {selectedWithdrawal.processedAt && (
                   <>
                     <br />
-                    <Typography variant="caption" sx={{ color: '#1976d2' }}>
+                    <Typography variant="caption" sx={{ color: '#2196F3' }}>
                       <strong>Processed:</strong> {formatDate(selectedWithdrawal.processedAt)}
                     </Typography>
                   </>
@@ -816,7 +853,7 @@ export default function WithdrawPage() {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 3, bgcolor: '#f8f9fa', borderTop: '1px solid #e0e0e0' }}>
+        <DialogActions sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.05)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <Button onClick={() => setShowDetailsDialog(false)} variant="contained">
             Close
           </Button>
