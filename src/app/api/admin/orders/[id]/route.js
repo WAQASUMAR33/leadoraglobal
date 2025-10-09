@@ -162,24 +162,28 @@ export async function PUT(request, { params }) {
                               new Date(userWithPackage.packageExpiryDate) > new Date();
 
       if (!hasActivePackage) {
-        // Add order amount to user's balance
+        // Add points to user based on order amount (instead of balance)
+        // Points = Shopping amount (totalAmount)
         const orderAmount = parseFloat(updatedOrder.totalAmount);
-        const newBalance = parseFloat(user.balance) + orderAmount;
+        const pointsToAdd = Math.floor(orderAmount); // Convert amount to points (1 PKR = 1 point)
 
         await prisma.user.update({
           where: { id: user.id },
           data: {
-            balance: newBalance,
+            points: {
+              increment: pointsToAdd
+            },
             updatedAt: new Date()
           }
         });
 
-        console.log(`Added PKR ${orderAmount} to user ${user.username}'s account. New balance: PKR ${newBalance}`);
+        console.log(`✅ Order Approved for user without package: Added ${pointsToAdd} points to user ${user.username} (from order amount: PKR ${orderAmount})`);
         
         return NextResponse.json({
           success: true,
-          message: `Order updated successfully. Added PKR ${orderAmount} to user's balance.`,
-          order: updatedOrder
+          message: `Order updated successfully. Added ${pointsToAdd} points to user's account.`,
+          order: updatedOrder,
+          pointsAdded: pointsToAdd
         });
       }
     }
