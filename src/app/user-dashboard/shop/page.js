@@ -193,48 +193,6 @@ export default function Shop() {
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-white">Shop Products</h1>
             <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base">Browse and purchase products from our catalog</p>
-            
-            {/* Shopping Status Info */}
-            {eligibilityLoading ? (
-              <div className="mt-2 md:mt-3 flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                <span className="text-xs md:text-sm text-gray-400">Loading shop...</span>
-              </div>
-            ) : shoppingEligibility ? (
-              <div className="mt-2 md:mt-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-xs md:text-sm text-green-400">Shopping Available</span>
-                  </div>
-                  
-                  {/* Show package info if user has package */}
-                  {shoppingEligibility.package && (
-                    <>
-                      <div className="text-xs md:text-sm text-gray-400">
-                        Package: <span className="text-white font-medium">{shoppingEligibility.package.name}</span>
-                      </div>
-                      <div className="text-xs md:text-sm text-gray-400">
-                        Benefits: <span className="text-white font-medium">PKR {shoppingEligibility.package.shoppingAmount.toFixed(2)}</span>
-                      </div>
-                    </>
-                  )}
-                  
-                  {/* Show payment proof info for users without packages */}
-                  {!shoppingEligibility.package && (
-                    <div className="text-xs md:text-sm text-gray-400">
-                      <span className="text-white font-medium">Payment Proof Required</span> - Amount added after approval
-                    </div>
-                  )}
-                  
-                  {getCartTotal() > 0 && (
-                    <div className="text-xs md:text-sm text-gray-400">
-                      Cart: <span className="text-yellow-400 font-medium">PKR {getCartTotal().toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : null}
           </div>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
             <Link
@@ -257,6 +215,127 @@ export default function Shop() {
           </div>
         </div>
       </div>
+
+      {/* Shopping Amount Display */}
+      {!eligibilityLoading && shoppingEligibility && shoppingEligibility.shopping && shoppingEligibility.shopping.shoppingType === 'package_benefits' && shoppingEligibility.shopping.remainingAmount !== null && (
+        <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-xl p-4 md:p-6 border border-blue-700">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center space-x-2 mb-2">
+                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-white">Shopping Amount</h3>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Total Limit</p>
+                  <p className="text-lg font-bold text-white">PKR {shoppingEligibility.package.shoppingAmount.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Already Spent</p>
+                  <p className="text-lg font-bold text-red-400">PKR {shoppingEligibility.shopping.totalSpent.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Current Cart</p>
+                  <p className="text-lg font-bold text-yellow-400">PKR {getCartTotal().toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Remaining</p>
+                  <p className="text-lg font-bold text-green-400">PKR {Math.max(0, shoppingEligibility.shopping.remainingAmount - getCartTotal()).toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div className="flex h-full">
+                  {/* Already Spent */}
+                  {shoppingEligibility.shopping.totalSpent > 0 && (
+                    <div 
+                      className="bg-red-500 h-full transition-all duration-300"
+                      style={{ 
+                        width: `${Math.min(100, (shoppingEligibility.shopping.totalSpent / shoppingEligibility.package.shoppingAmount) * 100)}%` 
+                      }}
+                    />
+                  )}
+                  
+                  {/* Current Cart */}
+                  {getCartTotal() > 0 && (
+                    <div 
+                      className="bg-yellow-500 h-full transition-all duration-300"
+                      style={{ 
+                        width: `${Math.min(100 - (shoppingEligibility.shopping.totalSpent / shoppingEligibility.package.shoppingAmount) * 100, (getCartTotal() / shoppingEligibility.package.shoppingAmount) * 100)}%` 
+                      }}
+                    />
+                  )}
+                  
+                  {/* Remaining */}
+                  <div 
+                    className="bg-green-500 h-full transition-all duration-300"
+                    style={{ 
+                      width: `${Math.max(0, ((shoppingEligibility.shopping.remainingAmount - getCartTotal()) / shoppingEligibility.package.shoppingAmount) * 100)}%` 
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 mt-3 text-xs">
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 bg-red-500 rounded"></div>
+                  <span className="text-gray-300">Spent</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+                  <span className="text-gray-300">In Cart</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 bg-green-500 rounded"></div>
+                  <span className="text-gray-300">Available</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Warning if close to limit */}
+            {(shoppingEligibility.shopping.remainingAmount - getCartTotal()) < (shoppingEligibility.package.shoppingAmount * 0.1) && (
+              <div className="flex items-start space-x-2 bg-yellow-900/30 border border-yellow-600 rounded-lg p-3">
+                <svg className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-yellow-400">Nearly at limit!</p>
+                  <p className="text-xs text-yellow-300 mt-1">You have limited shopping amount remaining.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Info for users without package or with payment proof */}
+      {!eligibilityLoading && shoppingEligibility && (!shoppingEligibility.package || shoppingEligibility.shopping.shoppingType === 'payment_proof_required') && (
+        <div className="bg-gradient-to-r from-green-900 to-teal-900 rounded-xl p-4 md:p-6 border border-green-700">
+          <div className="flex items-start space-x-3">
+            <svg className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-1">Unlimited Shopping Available</h3>
+              <p className="text-sm text-gray-300">
+                {!shoppingEligibility.package 
+                  ? "You can shop for any amount. Payment proof will be required at checkout."
+                  : "You subscribed from balance. You can shop for any amount with payment proof at checkout."
+                }
+              </p>
+              <div className="mt-3 bg-green-800/30 border border-green-600 rounded-lg p-3">
+                <p className="text-xs text-green-200">
+                  <strong>Note:</strong> After placing your order, upload payment proof. Your order will be processed after admin approval.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
