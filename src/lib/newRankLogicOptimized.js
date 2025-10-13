@@ -77,8 +77,8 @@ async function checkSapphireDiamondRankRequirementsOptimized(username, tx = pris
     select: { points: true } 
   });
   
-  if (!user || user.points < 24000) {
-    return { qualifies: false, reason: `Insufficient points: ${user?.points || 0}/24000` };
+  if (!user) {
+    return { qualifies: false, reason: 'User not found' };
   }
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
@@ -95,10 +95,9 @@ async function checkSapphireDiamondRankRequirementsOptimized(username, tx = pris
   if (qualifyingLines >= requiredLines) {
     return { 
       qualifies: true, 
-      reason: `Met points and ${qualifyingLines}/${requiredLines} direct lines with Diamond rank`,
+      reason: `Met downline requirement: ${qualifyingLines}/${requiredLines} direct lines with Diamond rank`,
       details: { 
         points: user.points, 
-        requiredPoints: 24000, 
         totalLines: directReferrals.length, 
         qualifyingLines, 
         requiredLines 
@@ -110,7 +109,6 @@ async function checkSapphireDiamondRankRequirementsOptimized(username, tx = pris
       reason: `Insufficient qualifying lines: ${qualifyingLines}/${requiredLines} (need direct lines with Diamond rank)`,
       details: { 
         points: user.points, 
-        requiredPoints: 24000, 
         totalLines: directReferrals.length, 
         qualifyingLines, 
         requiredLines 
@@ -126,8 +124,8 @@ async function checkAmbassadorRankRequirementsOptimized(username, tx = prisma) {
     select: { points: true } 
   });
   
-  if (!user || user.points < 50000) {
-    return { qualifies: false, reason: `Insufficient points: ${user?.points || 0}/50000` };
+  if (!user) {
+    return { qualifies: false, reason: 'User not found' };
   }
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
@@ -144,10 +142,9 @@ async function checkAmbassadorRankRequirementsOptimized(username, tx = prisma) {
   if (qualifyingLines >= requiredLines) {
     return { 
       qualifies: true, 
-      reason: `Met points and ${qualifyingLines}/${requiredLines} direct lines with Diamond rank`,
+      reason: `Met downline requirement: ${qualifyingLines}/${requiredLines} direct lines with Diamond rank`,
       details: { 
         points: user.points, 
-        requiredPoints: 50000, 
         totalLines: directReferrals.length, 
         qualifyingLines, 
         requiredLines 
@@ -159,7 +156,6 @@ async function checkAmbassadorRankRequirementsOptimized(username, tx = prisma) {
       reason: `Insufficient qualifying lines: ${qualifyingLines}/${requiredLines} (need direct lines with Diamond rank)`,
       details: { 
         points: user.points, 
-        requiredPoints: 50000, 
         totalLines: directReferrals.length, 
         qualifyingLines, 
         requiredLines 
@@ -175,8 +171,8 @@ async function checkSapphireAmbassadorRankRequirementsOptimized(username, tx = p
     select: { points: true } 
   });
   
-  if (!user || user.points < 100000) {
-    return { qualifies: false, reason: `Insufficient points: ${user?.points || 0}/100000` };
+  if (!user) {
+    return { qualifies: false, reason: 'User not found' };
   }
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
@@ -210,10 +206,9 @@ async function checkSapphireAmbassadorRankRequirementsOptimized(username, tx = p
   if (option1Qualifies || option2Qualifies) {
     return { 
       qualifies: true, 
-      reason: `Met points and (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Ambassador OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} direct lines with Diamond)`,
+      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Ambassador OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} direct lines with Diamond)`,
       details: { 
         points: user.points, 
-        requiredPoints: 100000, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
         requiredLinesOption1, 
@@ -227,7 +222,6 @@ async function checkSapphireAmbassadorRankRequirementsOptimized(username, tx = p
       reason: `Insufficient qualifying lines for both options`,
       details: { 
         points: user.points, 
-        requiredPoints: 100000, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
         requiredLinesOption1, 
@@ -245,8 +239,8 @@ async function checkRoyalAmbassadorRankRequirementsOptimized(username, tx = pris
     select: { points: true } 
   });
   
-  if (!user || user.points < 200000) {
-    return { qualifies: false, reason: `Insufficient points: ${user?.points || 0}/200000` };
+  if (!user) {
+    return { qualifies: false, reason: 'User not found' };
   }
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
@@ -280,10 +274,9 @@ async function checkRoyalAmbassadorRankRequirementsOptimized(username, tx = pris
   if (option1Qualifies || option2Qualifies) {
     return { 
       qualifies: true, 
-      reason: `Met points and (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Sapphire Ambassador OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} direct lines with Diamond)`,
+      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Sapphire Ambassador OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} direct lines with Diamond)`,
       details: { 
         points: user.points, 
-        requiredPoints: 200000, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
         requiredLinesOption1, 
@@ -297,7 +290,6 @@ async function checkRoyalAmbassadorRankRequirementsOptimized(username, tx = pris
       reason: `Insufficient qualifying lines for both options`,
       details: { 
         points: user.points, 
-        requiredPoints: 200000, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
         requiredLinesOption1, 
@@ -315,8 +307,8 @@ async function checkGlobalAmbassadorRankRequirementsOptimized(username, tx = pri
     select: { points: true } 
   });
   
-  if (!user || user.points < 500000) {
-    return { qualifies: false, reason: `Insufficient points: ${user?.points || 0}/500000` };
+  if (!user) {
+    return { qualifies: false, reason: 'User not found' };
   }
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
@@ -350,10 +342,9 @@ async function checkGlobalAmbassadorRankRequirementsOptimized(username, tx = pri
   if (option1Qualifies || option2Qualifies) {
     return { 
       qualifies: true, 
-      reason: `Met points and (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Royal Ambassador OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} direct lines with Diamond)`,
+      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Royal Ambassador OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} direct lines with Diamond)`,
       details: { 
         points: user.points, 
-        requiredPoints: 500000, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
         requiredLinesOption1, 
@@ -367,7 +358,6 @@ async function checkGlobalAmbassadorRankRequirementsOptimized(username, tx = pri
       reason: `Insufficient qualifying lines for both options`,
       details: { 
         points: user.points, 
-        requiredPoints: 500000, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
         requiredLinesOption1, 
@@ -385,8 +375,8 @@ async function checkHonoryShareHolderRankRequirementsOptimized(username, tx = pr
     select: { points: true } 
   });
   
-  if (!user || user.points < 1000000) {
-    return { qualifies: false, reason: `Insufficient points: ${user?.points || 0}/1000000` };
+  if (!user) {
+    return { qualifies: false, reason: 'User not found' };
   }
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
@@ -427,10 +417,9 @@ async function checkHonoryShareHolderRankRequirementsOptimized(username, tx = pr
   if (option1Qualifies || option2Qualifies) {
     return { 
       qualifies: true, 
-      reason: `Met points and (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Global Ambassador OR Option 2: ${qualifyingLinesOption2Diamond}/${requiredLinesOption2Diamond} direct lines with Diamond AND ${qualifyingLinesOption2RoyalAmbassador}/${requiredLinesOption2RoyalAmbassador} direct lines with Royal Ambassador)`,
+      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Global Ambassador OR Option 2: ${qualifyingLinesOption2Diamond}/${requiredLinesOption2Diamond} direct lines with Diamond AND ${qualifyingLinesOption2RoyalAmbassador}/${requiredLinesOption2RoyalAmbassador} direct lines with Royal Ambassador)`,
       details: { 
         points: user.points, 
-        requiredPoints: 1000000, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
         requiredLinesOption1, 
@@ -446,7 +435,6 @@ async function checkHonoryShareHolderRankRequirementsOptimized(username, tx = pr
       reason: `Insufficient qualifying lines for both options`,
       details: { 
         points: user.points, 
-        requiredPoints: 1000000, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
         requiredLinesOption1, 
