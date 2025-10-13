@@ -48,6 +48,7 @@ export async function GET(request) {
 
     // Check if user paid from balance (shopping amount should be 0)
     let effectiveShoppingAmount = parseFloat(user.currentPackage?.shopping_amount || 0);
+    let paidFromBalance = false;
     
     if (hasActivePackage) {
       // Get the most recent approved package request to check payment method
@@ -62,13 +63,13 @@ export async function GET(request) {
         }
       });
       
-      // If the package was paid from balance, shopping amount should be 0
+      // If the package was paid from balance, shopping amount should be 0 BUT allow unlimited shopping
       if (recentPackageRequest && 
           recentPackageRequest.transactionId && 
           recentPackageRequest.transactionId.startsWith('BAL_') && 
           recentPackageRequest.transactionReceipt === 'Paid from user balance') {
-        effectiveShoppingAmount = 0;
-        console.log(`Shopping eligibility: User ${user.username} paid from balance - effective shopping amount is 0`);
+        paidFromBalance = true;
+        console.log(`Shopping eligibility: User ${user.username} paid from balance - unlimited shopping with payment proof`);
       }
     }
 
@@ -104,35 +105,93 @@ export async function GET(request) {
         }
       });
     } else {
-      // User with active package - show package info but allow unlimited shopping
+      // User with active package
       const remainingAmount = effectiveShoppingAmount - totalSpent;
 
-      return NextResponse.json({
-        success: true,
-        eligible: true, // Always allow shopping
-        reason: 'package_shopping',
-        message: effectiveShoppingAmount === 0 ? 
-                'You subscribed from balance - no shopping amount available' : 
-                'You can shop with your package benefits',
-        user: {
-          id: user.id,
-          fullname: user.fullname,
-          username: user.username
-        },
-        package: {
-          id: user.currentPackage.id,
-          name: user.currentPackage.package_name,
-          shoppingAmount: effectiveShoppingAmount, // Use effective shopping amount
-          packageAmount: parseFloat(user.currentPackage.package_amount)
-        },
-        shopping: {
-          hasShopped,
-          totalSpent,
-          remainingAmount: Math.max(0, remainingAmount),
-          orderCount: existingOrders.length,
-          shoppingType: effectiveShoppingAmount === 0 ? 'payment_proof_required' : 'package_benefits'
-        }
-      });
+      // Three scenarios:
+      // 1. Paid from balance (paidFromBalance = true) → unlimited shopping with payment proof
+      // 2. Package has shopping amount > 0 → shopping within limit
+      // 3. Package has shopping amount = 0 (like Student package) → NO shopping allowed
+
+      if (paidFromBalance) {
+        // Scenario 1: Paid from balance - unlimited shopping with payment proof
+        return NextResponse.json({
+          success: true,
+          eligible: true,
+          reason: 'balance_payment_shopping',
+          message: 'You subscribed from balance. You can shop with payment proof.',
+          user: {
+            id: user.id,
+            fullname: user.fullname,
+            username: user.username
+          },
+          package: {
+            id: user.currentPackage.id,
+            name: user.currentPackage.package_name,
+            shoppingAmount: effectiveShoppingAmount,
+            packageAmount: parseFloat(user.currentPackage.package_amount)
+          },
+          shopping: {
+            hasShopped,
+            totalSpent,
+            remainingAmount: null, // Unlimited
+            orderCount: existingOrders.length,
+            shoppingType: 'payment_proof_required'
+          }
+        });
+      } else if (effectiveShoppingAmount === 0) {
+        // Scenario 3: Package with 0 shopping amount (Student package) - NO shopping
+        return NextResponse.json({
+          success: true,
+          eligible: false,
+          reason: 'no_shopping_amount',
+          message: 'Your package does not include shopping benefits. Upgrade your package to shop.',
+          user: {
+            id: user.id,
+            fullname: user.fullname,
+            username: user.username
+          },
+          package: {
+            id: user.currentPackage.id,
+            name: user.currentPackage.package_name,
+            shoppingAmount: 0,
+            packageAmount: parseFloat(user.currentPackage.package_amount)
+          },
+          shopping: {
+            hasShopped,
+            totalSpent,
+            remainingAmount: 0,
+            orderCount: existingOrders.length,
+            shoppingType: 'no_shopping_allowed'
+          }
+        });
+      } else {
+        // Scenario 2: Package with shopping amount - shopping within limit
+        return NextResponse.json({
+          success: true,
+          eligible: true,
+          reason: 'package_shopping',
+          message: 'You can shop with your package benefits',
+          user: {
+            id: user.id,
+            fullname: user.fullname,
+            username: user.username
+          },
+          package: {
+            id: user.currentPackage.id,
+            name: user.currentPackage.package_name,
+            shoppingAmount: effectiveShoppingAmount,
+            packageAmount: parseFloat(user.currentPackage.package_amount)
+          },
+          shopping: {
+            hasShopped,
+            totalSpent,
+            remainingAmount: Math.max(0, remainingAmount),
+            orderCount: existingOrders.length,
+            shoppingType: 'package_benefits'
+          }
+        });
+      }
     }
 
   } catch (error) {

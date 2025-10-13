@@ -93,6 +93,16 @@ export default function Shop() {
 
   const addToCart = (product) => {
     try {
+      // Check if shopping is not allowed (Student package with 0 shopping amount)
+      if (shoppingEligibility && !shoppingEligibility.eligible) {
+        alert(
+          `Shopping Not Available!\n\n` +
+          `Your package (${shoppingEligibility.package?.name}) does not include shopping benefits.\n\n` +
+          `Please upgrade your package to shop.`
+        );
+        return;
+      }
+
       // Check if user has active package with shopping amount limit
       if (shoppingEligibility && 
           shoppingEligibility.shopping && 
@@ -312,8 +322,39 @@ export default function Shop() {
         </div>
       )}
 
+      {/* Warning for users with package but no shopping amount (Student package) */}
+      {!eligibilityLoading && shoppingEligibility && shoppingEligibility.shopping && shoppingEligibility.shopping.shoppingType === 'no_shopping_allowed' && (
+        <div className="bg-gradient-to-r from-red-900 to-orange-900 rounded-xl p-4 md:p-6 border border-red-700">
+          <div className="flex items-start space-x-3">
+            <svg className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white mb-1">Shopping Not Available</h3>
+              <p className="text-sm text-gray-300 mb-3">
+                Your current package ({shoppingEligibility.package?.name}) does not include shopping benefits.
+              </p>
+              <div className="bg-red-800/30 border border-red-600 rounded-lg p-3 mb-3">
+                <p className="text-xs text-red-200">
+                  <strong>Shopping Amount:</strong> PKR 0 - Your package does not include shopping privileges.
+                </p>
+              </div>
+              <Link
+                href="/user-dashboard/my-package"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Upgrade Your Package
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Info for users without package or with payment proof */}
-      {!eligibilityLoading && shoppingEligibility && (!shoppingEligibility.package || shoppingEligibility.shopping.shoppingType === 'payment_proof_required') && (
+      {!eligibilityLoading && shoppingEligibility && shoppingEligibility.eligible && (!shoppingEligibility.package || shoppingEligibility.shopping.shoppingType === 'payment_proof_required') && (
         <div className="bg-gradient-to-r from-green-900 to-teal-900 rounded-xl p-4 md:p-6 border border-green-700">
           <div className="flex items-start space-x-3">
             <svg className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
