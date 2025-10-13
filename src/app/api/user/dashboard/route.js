@@ -242,6 +242,24 @@ export async function GET(request) {
       }
     });
 
+    // Get approved withdrawal amount
+    const approvedWithdrawals = await prisma.withdrawalRequest.aggregate({
+      where: {
+        userId: parseInt(userId),
+        status: 'approved'
+      },
+      _sum: {
+        netAmount: true  // Use netAmount for approved withdrawals (after 10% fee deduction)
+      }
+    });
+
+    // Get total withdrawal requests count
+    const totalWithdrawalRequests = await prisma.withdrawalRequest.count({
+      where: {
+        userId: parseInt(userId)
+      }
+    });
+
     // Get inactive package members count and potential revenue
     const inactiveMembers = await prisma.user.findMany({
       where: {
@@ -299,7 +317,9 @@ export async function GET(request) {
         referralCount: user.referralCount || 0,
         ordersCount: ordersCount,
         rank: user.rank,
-        pendingWithdrawals: parseFloat(pendingWithdrawals._sum.amount || 0)
+        pendingWithdrawals: parseFloat(pendingWithdrawals._sum.amount || 0),
+        approvedWithdrawals: parseFloat(approvedWithdrawals._sum.netAmount || 0),
+        totalWithdrawalRequests: totalWithdrawalRequests
       },
       inactiveMembersCount,
       potentialRevenue
