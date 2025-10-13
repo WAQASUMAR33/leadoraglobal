@@ -92,10 +92,41 @@ export default function Shop() {
   };
 
   const addToCart = (product) => {
-    // REMOVED ALL RESTRICTIONS - Everyone can shop now
-    // No eligibility checks, no limit checks - just add to cart
-
     try {
+      // Check if user has active package with shopping amount limit
+      if (shoppingEligibility && 
+          shoppingEligibility.shopping && 
+          shoppingEligibility.shopping.shoppingType === 'package_benefits' &&
+          shoppingEligibility.shopping.remainingAmount !== null) {
+        
+        // Calculate current cart total
+        const currentCartTotal = getCartTotal();
+        
+        // Calculate new cart total if we add this product
+        const productPrice = parseFloat(product.sale_price || product.price);
+        const existingItem = cart.find(item => item.id === product.id);
+        const newItemTotal = existingItem 
+          ? productPrice // Adding 1 more
+          : productPrice; // Adding new item
+        
+        const newCartTotal = currentCartTotal + newItemTotal;
+        const remainingAmount = shoppingEligibility.shopping.remainingAmount;
+        
+        // Check if new cart total exceeds available shopping amount
+        if (newCartTotal > remainingAmount) {
+          const maxCanAdd = Math.max(0, remainingAmount - currentCartTotal);
+          alert(
+            `Shopping amount limit reached!\n\n` +
+            `Available shopping amount: PKR ${remainingAmount.toFixed(2)}\n` +
+            `Current cart total: PKR ${currentCartTotal.toFixed(2)}\n` +
+            `You can add products worth: PKR ${maxCanAdd.toFixed(2)}\n\n` +
+            `This product costs: PKR ${productPrice.toFixed(2)}`
+          );
+          return;
+        }
+      }
+
+      // Proceed with adding to cart
       const existingItem = cart.find(item => item.id === product.id);
       if (existingItem) {
         const updatedCart = cart.map(item =>

@@ -7,6 +7,7 @@ import Image from "next/image";
 export default function Cart() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [shoppingEligibility, setShoppingEligibility] = useState(null);
 
   useEffect(() => {
     // Load cart from localStorage
@@ -14,8 +15,27 @@ export default function Cart() {
     if (savedCart) {
       setCart(JSON.parse(savedCart));
     }
+    
+    // Fetch shopping eligibility
+    fetchShoppingEligibility();
+    
     setLoading(false);
   }, []);
+
+  const fetchShoppingEligibility = async () => {
+    try {
+      const response = await fetch('/api/user/shopping-eligibility', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setShoppingEligibility(data);
+      }
+    } catch (error) {
+      console.error('Error fetching shopping eligibility:', error);
+    }
+  };
 
   const updateQuantity = (productId, newQuantity) => {
     if (newQuantity <= 0) {
@@ -23,6 +43,39 @@ export default function Cart() {
       return;
     }
 
+    // Check if user has shopping amount limit
+    if (shoppingEligibility && 
+        shoppingEligibility.shopping && 
+        shoppingEligibility.shopping.shoppingType === 'package_benefits' &&
+        shoppingEligibility.shopping.remainingAmount !== null) {
+      
+      // Calculate what the new cart total would be
+      const newCart = cart.map(item =>
+        item.id === productId
+          ? { ...item, quantity: newQuantity }
+          : item
+      );
+      
+      const newCartTotal = newCart.reduce((total, item) => {
+        const price = parseFloat(item.sale_price || item.price);
+        return total + (price * item.quantity);
+      }, 0);
+      
+      const remainingAmount = shoppingEligibility.shopping.remainingAmount;
+      
+      // Check if new total exceeds available shopping amount
+      if (newCartTotal > remainingAmount) {
+        alert(
+          `Shopping amount limit reached!\n\n` +
+          `Available shopping amount: PKR ${remainingAmount.toFixed(2)}\n` +
+          `New cart total would be: PKR ${newCartTotal.toFixed(2)}\n\n` +
+          `Please reduce the quantity or remove items from cart.`
+        );
+        return;
+      }
+    }
+
+    // Proceed with update
     const updatedCart = cart.map(item =>
       item.id === productId
         ? { ...item, quantity: newQuantity }
