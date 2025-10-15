@@ -27,8 +27,7 @@ import {
   People,
   Search,
   TrendingUp,
-  PersonAdd,
-  Star
+  PersonAdd
 } from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
 
@@ -138,9 +137,9 @@ export default function DownlistPage() {
 
   // Filter members based on search and level
   const filteredMembers = downlineData?.members?.filter(member => {
-    const matchesSearch = member.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = member.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.rank?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.package?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesLevel = selectedLevel === 'all' || member.level === parseInt(selectedLevel);
     
@@ -221,23 +220,6 @@ export default function DownlistPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent sx={{ padding: '12px 16px' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Total Points
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
-                    {filteredMembers.reduce((total, member) => total + (member.points || 0), 0)}
-                  </Typography>
-                </Box>
-                <Star sx={{ fontSize: 40, color: 'info.main' }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
 
       {/* Level Breakdown */}
@@ -285,7 +267,7 @@ export default function DownlistPage() {
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                placeholder="Search members by name, username, or phone..."
+                placeholder="Search by username, rank, or package..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -382,13 +364,12 @@ export default function DownlistPage() {
                 <Table stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Username</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Level</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Package</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Points</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Joined</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Rank</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Joining Date</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -396,11 +377,6 @@ export default function DownlistPage() {
                       <TableRow key={member.id} hover>
                         <TableCell>
                           <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                                    {member.fullname || 'Unknown'}
-                                  </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" color="text.secondary">
                             @{member.username}
                           </Typography>
                         </TableCell>
@@ -413,26 +389,29 @@ export default function DownlistPage() {
                           />
                         </TableCell>
                         <TableCell>
-                                  <Chip 
-                                    label={member.status || 'Active'} 
-                                    color={getStatusColor(member.status || 'active')}
-                                    size="small"
-                                  />
+                          <Chip 
+                            label={member.status || 'Active'} 
+                            color={getStatusColor(member.status || 'active')}
+                            size="small"
+                          />
                         </TableCell>
                         <TableCell>
-                                  <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary">
                             {member.package || 'No Package'}
-                                  </Typography>
+                          </Typography>
                         </TableCell>
                         <TableCell>
-                                  <Typography variant="body2" sx={{ fontWeight: 'medium', color: 'primary.main' }}>
-                            {member.points || 0}
-                                  </Typography>
+                          <Chip 
+                            label={member.rank || 'No Rank'}
+                            color="primary"
+                            size="small"
+                            variant="filled"
+                          />
                         </TableCell>
                         <TableCell>
-                                  <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary">
                             {formatDate(member.createdAt)}
-                                  </Typography>
+                          </Typography>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -472,14 +451,14 @@ export default function DownlistPage() {
                         <Grid item xs={12} sm={6}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem' }}>
-                              {member.fullname?.charAt(0)?.toUpperCase() || 'U'}
+                              {member.username?.charAt(0)?.toUpperCase() || 'U'}
                             </Avatar>
                             <Box>
                               <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                                {member.fullname || 'Unknown'}
+                                @{member.username}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                @{member.username}
+                                {member.package || 'No Package'}
                               </Typography>
                             </Box>
                           </Box>
@@ -498,7 +477,7 @@ export default function DownlistPage() {
                               size="small"
                             />
                             <Chip 
-                              label={`${member.points || 0} Points`}
+                              label={member.rank || 'No Rank'}
                               color="primary"
                               size="small"
                               variant="filled"

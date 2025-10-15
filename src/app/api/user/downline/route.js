@@ -120,25 +120,20 @@ async function getAllDownlineMembers(username) {
     // Start from level 0 for the root user, so direct referrals are level 1
     calculateLevels(username, 0);
 
-    // Filter and format ONLY downline members (exclude root user)
+    // Filter and format ONLY downline members with active packages (exclude root user)
     const downlineMembers = [];
     allUsers.forEach(user => {
       const level = levels.get(user.username);
-      if (level && level > 0) { // Exclude root user (level 0), only include downline
+      // Only include users with level > 0 (downline) AND have an active package
+      if (level && level > 0 && user.currentPackage?.package_name) {
         downlineMembers.push({
           id: user.id,
-          fullname: user.fullname,
           username: user.username,
-          email: user.email,
-          phoneNumber: user.phoneNumber,
+          level: level,
           status: user.status,
-          balance: parseFloat(user.balance) || 0,
-          points: user.points || 0,
-          totalEarnings: parseFloat(user.totalEarnings) || 0,
-          createdAt: user.createdAt,
-          package: user.currentPackage?.package_name || 'No Package',
+          package: user.currentPackage.package_name,
           rank: user.rank?.title || 'No Rank',
-          level: level
+          createdAt: user.createdAt
         });
       }
     });
