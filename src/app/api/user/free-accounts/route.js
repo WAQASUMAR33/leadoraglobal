@@ -83,11 +83,8 @@ async function buildInactivePackageTree(username, level = 1, maxLevel = 10) {
     const children = await buildInactivePackageTree(referral.username, level + 1, maxLevel);
     referralData.children = children;
     
-    // Only include this member if they have inactive package OR if any of their children have inactive packages
-    const hasInactiveChildren = children.some(child => child.isPackageInactive || child.hasInactiveChildren);
-    referralData.hasInactiveChildren = hasInactiveChildren;
-    
-    if (isPackageInactive || hasInactiveChildren) {
+    // Only include this member if they have inactive package (no active package)
+    if (isPackageInactive) {
       tree.push(referralData);
     }
   }

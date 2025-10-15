@@ -154,8 +154,11 @@ export default function FreeAccountsPage() {
   return (
     <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto' }}>
       <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-        Free Accounts
-        </Typography>
+        Free Accounts (No Active Package)
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Showing only downline members without active packages
+      </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -184,7 +187,7 @@ export default function FreeAccountsPage() {
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Inactive Packages
+                    No Package
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
                     {inactivePackageMembers}
@@ -235,7 +238,7 @@ export default function FreeAccountsPage() {
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant="body2" color="text.secondary">
-                Showing {filteredMembers.length} free accounts in table format
+                Showing {filteredMembers.length} members without active packages
               </Typography>
             </Grid>
           </Grid>
