@@ -502,12 +502,48 @@ export async function updateUserPackageAndRank(packageRequestId) {
         currentPackageId: packageData.id,
         packageExpiryDate: packageExpiryDate,
         packageId: packageData.id
-        // Note: rankId will be updated later based on points after commission distribution
       }
     });
 
-    // Update user's rank based on their current points (this will be called again after points are distributed)
-    await updateUserRank(user.id);
+    // SPECIAL PACKAGE RANK ASSIGNMENT LOGIC (Non-Transaction Version)
+    // Package ID 7 → Sapphire Manager (Rank ID 3)
+    // Package ID 8 → Diamond (Rank ID 4)
+    let assignedRankByPackage = false;
+    let assignedRankTitle = null;
+
+    if (packageData.id === 7) {
+      // Assign Sapphire Manager rank directly
+      console.log(`🎯 Package ID 7 detected - Assigning Sapphire Manager rank to ${user.username}`);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          rankId: 3  // Sapphire Manager
+        }
+      });
+      assignedRankByPackage = true;
+      assignedRankTitle = 'Sapphire Manager';
+      console.log(`✅ Assigned Sapphire Manager rank to ${user.username} (Package ID 7)`);
+    } else if (packageData.id === 8) {
+      // Assign Diamond rank directly
+      console.log(`🎯 Package ID 8 detected - Assigning Diamond rank to ${user.username}`);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          rankId: 4  // Diamond
+        }
+      });
+      assignedRankByPackage = true;
+      assignedRankTitle = 'Diamond';
+      console.log(`✅ Assigned Diamond rank to ${user.username} (Package ID 8)`);
+    } else {
+      // For other packages, update rank based on current points (normal logic)
+      console.log(`📊 Package ID ${packageData.id} - Using normal rank update logic based on points`);
+      await updateUserRank(user.id);
+    }
+
+    if (assignedRankByPackage) {
+      console.log(`📦 Special rank assignment complete for ${user.username}: ${assignedRankTitle}`);
+    }
 
     console.log(`Updated user ${user.username} with package ${packageData.package_name} and updated rank`);
     return { success: true };
@@ -564,7 +600,39 @@ export async function updateUserPackageAndRankInTransaction(packageRequestId, tx
     }
   });
 
-  // Update user's rank based on current points
+  // SPECIAL PACKAGE RANK ASSIGNMENT LOGIC
+  // Package ID 7 → Sapphire Manager (Rank ID 3)
+  // Package ID 8 → Diamond (Rank ID 4)
+  let assignedRankByPackage = false;
+  let assignedRankTitle = null;
+
+  if (packageData.id === 7) {
+    // Assign Sapphire Manager rank directly
+    console.log(`🎯 Package ID 7 detected - Assigning Sapphire Manager rank to ${user.username}`);
+    await tx.user.update({
+      where: { id: user.id },
+      data: {
+        rankId: 3  // Sapphire Manager
+      }
+    });
+    assignedRankByPackage = true;
+    assignedRankTitle = 'Sapphire Manager';
+    console.log(`✅ Assigned Sapphire Manager rank to ${user.username} (Package ID 7)`);
+  } else if (packageData.id === 8) {
+    // Assign Diamond rank directly
+    console.log(`🎯 Package ID 8 detected - Assigning Diamond rank to ${user.username}`);
+    await tx.user.update({
+      where: { id: user.id },
+      data: {
+        rankId: 4  // Diamond
+      }
+    });
+    assignedRankByPackage = true;
+    assignedRankTitle = 'Diamond';
+    console.log(`✅ Assigned Diamond rank to ${user.username} (Package ID 8)`);
+  } else {
+    // For other packages, update rank based on current points (normal logic)
+    console.log(`📊 Package ID ${packageData.id} - Using normal rank update logic based on points`);
   const updatedUser = await tx.user.findUnique({
     where: { id: user.id },
     select: { points: true }
@@ -573,6 +641,11 @@ export async function updateUserPackageAndRankInTransaction(packageRequestId, tx
   if (updatedUser) {
     const newRank = await updateUserRankInTransaction(user.id, updatedUser.points, tx);
     console.log(`Updated user ${user.username} with package ${packageData.package_name} and rank ${newRank}`);
+    }
+  }
+
+  if (assignedRankByPackage) {
+    console.log(`📦 Special rank assignment complete for ${user.username}: ${assignedRankTitle}`);
   }
 
   console.log(`Updated user ${user.username} with package ${packageData.package_name}`);
