@@ -3,6 +3,27 @@ import prisma from './prisma.js';
 // Optimized version of rank logic that uses fewer database queries
 // This version focuses on direct referrals and immediate downlines to avoid deep recursion
 
+// Rank hierarchy for "or higher" comparisons
+const RANK_HIERARCHY = {
+  'Consultant': 1,
+  'Manager': 2,
+  'Sapphire Manager': 3,
+  'Diamond': 4,
+  'Sapphire Diamond': 5,
+  'Ambassador': 6,
+  'Sapphire Ambassador': 7,
+  'Royal Ambassador': 8,
+  'Global Ambassador': 9,
+  'Honory Share Holder': 10
+};
+
+// Helper function to check if a rank is equal to or higher than the required rank
+function isRankEqualOrHigher(userRank, requiredRank) {
+  const userRankLevel = RANK_HIERARCHY[userRank] || 0;
+  const requiredRankLevel = RANK_HIERARCHY[requiredRank] || 0;
+  return userRankLevel >= requiredRankLevel;
+}
+
 // Helper function to get direct referrals with their ranks
 async function getDirectReferralsWithRanks(username, tx = prisma) {
   return await tx.user.findMany({
@@ -70,7 +91,7 @@ async function checkDiamondRankRequirementsOptimized(username, tx = prisma) {
   }
 }
 
-// Optimized Sapphire Diamond check - only check direct referrals for Diamond rank
+// Optimized Sapphire Diamond check - check direct referrals for Diamond or higher rank
 async function checkSapphireDiamondRankRequirementsOptimized(username, tx = prisma) {
   const user = await tx.user.findUnique({ 
     where: { username }, 
@@ -84,40 +105,44 @@ async function checkSapphireDiamondRankRequirementsOptimized(username, tx = pris
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
   const requiredLines = 3;
   
-  // Count direct referrals with Diamond rank
+  // Count direct referrals with Diamond or higher rank
   let qualifyingLines = 0;
+  const qualifyingReferrals = [];
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Diamond') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Diamond')) {
       qualifyingLines++;
+      qualifyingReferrals.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
 
   if (qualifyingLines >= requiredLines) {
     return { 
       qualifies: true, 
-      reason: `Met downline requirement: ${qualifyingLines}/${requiredLines} direct lines with Diamond rank`,
+      reason: `Met downline requirement: ${qualifyingLines}/${requiredLines} direct lines with Diamond or higher rank`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLines, 
-        requiredLines 
+        requiredLines,
+        qualifyingReferrals 
       } 
     };
   } else {
     return { 
       qualifies: false, 
-      reason: `Insufficient qualifying lines: ${qualifyingLines}/${requiredLines} (need direct lines with Diamond rank)`,
+      reason: `Insufficient qualifying lines: ${qualifyingLines}/${requiredLines} (need direct lines with Diamond or higher rank)`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLines, 
-        requiredLines 
+        requiredLines,
+        qualifyingReferrals 
       } 
     };
   }
 }
 
-// Optimized Ambassador check - only check direct referrals for Diamond rank
+// Optimized Ambassador check - check direct referrals for Diamond or higher rank
 async function checkAmbassadorRankRequirementsOptimized(username, tx = prisma) {
   const user = await tx.user.findUnique({ 
     where: { username }, 
@@ -131,40 +156,44 @@ async function checkAmbassadorRankRequirementsOptimized(username, tx = prisma) {
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
   const requiredLines = 6;
   
-  // Count direct referrals with Diamond rank
+  // Count direct referrals with Diamond or higher rank
   let qualifyingLines = 0;
+  const qualifyingReferrals = [];
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Diamond') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Diamond')) {
       qualifyingLines++;
+      qualifyingReferrals.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
 
   if (qualifyingLines >= requiredLines) {
     return { 
       qualifies: true, 
-      reason: `Met downline requirement: ${qualifyingLines}/${requiredLines} direct lines with Diamond rank`,
+      reason: `Met downline requirement: ${qualifyingLines}/${requiredLines} direct lines with Diamond or higher rank`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLines, 
-        requiredLines 
+        requiredLines,
+        qualifyingReferrals 
       } 
     };
   } else {
     return { 
       qualifies: false, 
-      reason: `Insufficient qualifying lines: ${qualifyingLines}/${requiredLines} (need direct lines with Diamond rank)`,
+      reason: `Insufficient qualifying lines: ${qualifyingLines}/${requiredLines} (need direct lines with Diamond or higher rank)`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLines, 
-        requiredLines 
+        requiredLines,
+        qualifyingReferrals 
       } 
     };
   }
 }
 
-// Optimized Sapphire Ambassador check - check direct referrals for Ambassador or Diamond rank
+// Optimized Sapphire Ambassador check - check direct referrals for Ambassador or higher rank OR Diamond or higher rank
 async function checkSapphireAmbassadorRankRequirementsOptimized(username, tx = prisma) {
   const user = await tx.user.findUnique({ 
     where: { username }, 
@@ -177,26 +206,30 @@ async function checkSapphireAmbassadorRankRequirementsOptimized(username, tx = p
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
   
-  // Option 1: 3 lines with Ambassador rank
+  // Option 1: 3 lines with Ambassador or higher rank
   let option1Qualifies = false;
   const requiredLinesOption1 = 3;
   let qualifyingLinesOption1 = 0;
+  const qualifyingReferralsOption1 = [];
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Ambassador') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Ambassador')) {
       qualifyingLinesOption1++;
+      qualifyingReferralsOption1.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
   if (qualifyingLinesOption1 >= requiredLinesOption1) {
     option1Qualifies = true;
   }
 
-  // Option 2: 10 lines with Diamond rank
+  // Option 2: 10 lines with Diamond or higher rank
   let option2Qualifies = false;
   const requiredLinesOption2 = 10;
   let qualifyingLinesOption2 = 0;
+  const qualifyingReferralsOption2 = [];
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Diamond') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Diamond')) {
       qualifyingLinesOption2++;
+      qualifyingReferralsOption2.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
   if (qualifyingLinesOption2 >= requiredLinesOption2) {
@@ -206,33 +239,37 @@ async function checkSapphireAmbassadorRankRequirementsOptimized(username, tx = p
   if (option1Qualifies || option2Qualifies) {
     return { 
       qualifies: true, 
-      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Ambassador OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} direct lines with Diamond)`,
+      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} Ambassador+ OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} Diamond+)`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
-        requiredLinesOption1, 
+        requiredLinesOption1,
+        qualifyingReferralsOption1,
         qualifyingLinesOption2, 
-        requiredLinesOption2 
+        requiredLinesOption2,
+        qualifyingReferralsOption2
       } 
     };
   } else {
     return { 
       qualifies: false, 
-      reason: `Insufficient qualifying lines for both options`,
+      reason: `Insufficient qualifying lines: Need 3 Ambassador+ OR 10 Diamond+`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
-        requiredLinesOption1, 
+        requiredLinesOption1,
+        qualifyingReferralsOption1,
         qualifyingLinesOption2, 
-        requiredLinesOption2 
+        requiredLinesOption2,
+        qualifyingReferralsOption2
       } 
     };
   }
 }
 
-// Optimized Royal Ambassador check
+// Optimized Royal Ambassador check - Sapphire Ambassador or higher OR Diamond or higher
 async function checkRoyalAmbassadorRankRequirementsOptimized(username, tx = prisma) {
   const user = await tx.user.findUnique({ 
     where: { username }, 
@@ -245,26 +282,30 @@ async function checkRoyalAmbassadorRankRequirementsOptimized(username, tx = pris
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
   
-  // Option 1: 3 lines with Sapphire Ambassador rank
+  // Option 1: 3 lines with Sapphire Ambassador or higher rank
   let option1Qualifies = false;
   const requiredLinesOption1 = 3;
   let qualifyingLinesOption1 = 0;
+  const qualifyingReferralsOption1 = [];
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Sapphire Ambassador') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Sapphire Ambassador')) {
       qualifyingLinesOption1++;
+      qualifyingReferralsOption1.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
   if (qualifyingLinesOption1 >= requiredLinesOption1) {
     option1Qualifies = true;
   }
 
-  // Option 2: 15 lines with Diamond rank
+  // Option 2: 15 lines with Diamond or higher rank
   let option2Qualifies = false;
   const requiredLinesOption2 = 15;
   let qualifyingLinesOption2 = 0;
+  const qualifyingReferralsOption2 = [];
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Diamond') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Diamond')) {
       qualifyingLinesOption2++;
+      qualifyingReferralsOption2.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
   if (qualifyingLinesOption2 >= requiredLinesOption2) {
@@ -274,33 +315,37 @@ async function checkRoyalAmbassadorRankRequirementsOptimized(username, tx = pris
   if (option1Qualifies || option2Qualifies) {
     return { 
       qualifies: true, 
-      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Sapphire Ambassador OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} direct lines with Diamond)`,
+      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} Sapphire Ambassador+ OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} Diamond+)`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
-        requiredLinesOption1, 
+        requiredLinesOption1,
+        qualifyingReferralsOption1,
         qualifyingLinesOption2, 
-        requiredLinesOption2 
+        requiredLinesOption2,
+        qualifyingReferralsOption2
       } 
     };
   } else {
     return { 
       qualifies: false, 
-      reason: `Insufficient qualifying lines for both options`,
+      reason: `Insufficient qualifying lines: Need 3 Sapphire Ambassador+ OR 15 Diamond+`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
-        requiredLinesOption1, 
+        requiredLinesOption1,
+        qualifyingReferralsOption1,
         qualifyingLinesOption2, 
-        requiredLinesOption2 
+        requiredLinesOption2,
+        qualifyingReferralsOption2
       } 
     };
   }
 }
 
-// Optimized Global Ambassador check
+// Optimized Global Ambassador check - Royal Ambassador or higher OR Diamond or higher
 async function checkGlobalAmbassadorRankRequirementsOptimized(username, tx = prisma) {
   const user = await tx.user.findUnique({ 
     where: { username }, 
@@ -313,26 +358,30 @@ async function checkGlobalAmbassadorRankRequirementsOptimized(username, tx = pri
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
   
-  // Option 1: 3 lines with Royal Ambassador rank
+  // Option 1: 3 lines with Royal Ambassador or higher rank
   let option1Qualifies = false;
   const requiredLinesOption1 = 3;
   let qualifyingLinesOption1 = 0;
+  const qualifyingReferralsOption1 = [];
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Royal Ambassador') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Royal Ambassador')) {
       qualifyingLinesOption1++;
+      qualifyingReferralsOption1.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
   if (qualifyingLinesOption1 >= requiredLinesOption1) {
     option1Qualifies = true;
   }
 
-  // Option 2: 25 lines with Diamond rank
+  // Option 2: 25 lines with Diamond or higher rank
   let option2Qualifies = false;
   const requiredLinesOption2 = 25;
   let qualifyingLinesOption2 = 0;
+  const qualifyingReferralsOption2 = [];
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Diamond') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Diamond')) {
       qualifyingLinesOption2++;
+      qualifyingReferralsOption2.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
   if (qualifyingLinesOption2 >= requiredLinesOption2) {
@@ -342,33 +391,37 @@ async function checkGlobalAmbassadorRankRequirementsOptimized(username, tx = pri
   if (option1Qualifies || option2Qualifies) {
     return { 
       qualifies: true, 
-      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Royal Ambassador OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} direct lines with Diamond)`,
+      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} Royal Ambassador+ OR Option 2: ${qualifyingLinesOption2}/${requiredLinesOption2} Diamond+)`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
-        requiredLinesOption1, 
+        requiredLinesOption1,
+        qualifyingReferralsOption1,
         qualifyingLinesOption2, 
-        requiredLinesOption2 
+        requiredLinesOption2,
+        qualifyingReferralsOption2
       } 
     };
   } else {
     return { 
       qualifies: false, 
-      reason: `Insufficient qualifying lines for both options`,
+      reason: `Insufficient qualifying lines: Need 3 Royal Ambassador+ OR 25 Diamond+`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
-        requiredLinesOption1, 
+        requiredLinesOption1,
+        qualifyingReferralsOption1,
         qualifyingLinesOption2, 
-        requiredLinesOption2 
+        requiredLinesOption2,
+        qualifyingReferralsOption2
       } 
     };
   }
 }
 
-// Optimized Honory Share Holder check
+// Optimized Honory Share Holder check - Global Ambassador or higher OR (Diamond or higher + Royal Ambassador or higher)
 async function checkHonoryShareHolderRankRequirementsOptimized(username, tx = prisma) {
   const user = await tx.user.findUnique({ 
     where: { username }, 
@@ -381,32 +434,38 @@ async function checkHonoryShareHolderRankRequirementsOptimized(username, tx = pr
 
   const directReferrals = await getDirectReferralsWithRanks(username, tx);
   
-  // Option 1: 3 lines with Global Ambassador rank
+  // Option 1: 3 lines with Global Ambassador or higher rank
   let option1Qualifies = false;
   const requiredLinesOption1 = 3;
   let qualifyingLinesOption1 = 0;
+  const qualifyingReferralsOption1 = [];
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Global Ambassador') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Global Ambassador')) {
       qualifyingLinesOption1++;
+      qualifyingReferralsOption1.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
   if (qualifyingLinesOption1 >= requiredLinesOption1) {
     option1Qualifies = true;
   }
 
-  // Option 2: 50 lines with Diamond AND 10 lines with Royal Ambassador
+  // Option 2: 50 lines with Diamond or higher AND 10 lines with Royal Ambassador or higher
   let option2Qualifies = false;
   const requiredLinesOption2Diamond = 50;
   const requiredLinesOption2RoyalAmbassador = 10;
   let qualifyingLinesOption2Diamond = 0;
   let qualifyingLinesOption2RoyalAmbassador = 0;
+  const qualifyingReferralsOption2Diamond = [];
+  const qualifyingReferralsOption2Royal = [];
 
   for (const referral of directReferrals) {
-    if (referral.rank?.title === 'Diamond') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Diamond')) {
       qualifyingLinesOption2Diamond++;
+      qualifyingReferralsOption2Diamond.push(`${referral.username} (${referral.rank?.title})`);
     }
-    if (referral.rank?.title === 'Royal Ambassador') {
+    if (isRankEqualOrHigher(referral.rank?.title, 'Royal Ambassador')) {
       qualifyingLinesOption2RoyalAmbassador++;
+      qualifyingReferralsOption2Royal.push(`${referral.username} (${referral.rank?.title})`);
     }
   }
 
@@ -417,31 +476,37 @@ async function checkHonoryShareHolderRankRequirementsOptimized(username, tx = pr
   if (option1Qualifies || option2Qualifies) {
     return { 
       qualifies: true, 
-      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} direct lines with Global Ambassador OR Option 2: ${qualifyingLinesOption2Diamond}/${requiredLinesOption2Diamond} direct lines with Diamond AND ${qualifyingLinesOption2RoyalAmbassador}/${requiredLinesOption2RoyalAmbassador} direct lines with Royal Ambassador)`,
+      reason: `Met downline requirement: (Option 1: ${qualifyingLinesOption1}/${requiredLinesOption1} Global Ambassador+ OR Option 2: ${qualifyingLinesOption2Diamond}/${requiredLinesOption2Diamond} Diamond+ AND ${qualifyingLinesOption2RoyalAmbassador}/${requiredLinesOption2RoyalAmbassador} Royal Ambassador+)`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
-        requiredLinesOption1, 
+        requiredLinesOption1,
+        qualifyingReferralsOption1,
         qualifyingLinesOption2Diamond, 
-        requiredLinesOption2Diamond, 
+        requiredLinesOption2Diamond,
+        qualifyingReferralsOption2Diamond,
         qualifyingLinesOption2RoyalAmbassador, 
-        requiredLinesOption2RoyalAmbassador 
+        requiredLinesOption2RoyalAmbassador,
+        qualifyingReferralsOption2Royal
       } 
     };
   } else {
     return { 
       qualifies: false, 
-      reason: `Insufficient qualifying lines for both options`,
+      reason: `Insufficient qualifying lines: Need 3 Global Ambassador+ OR (50 Diamond+ AND 10 Royal Ambassador+)`,
       details: { 
         points: user.points, 
         totalLines: directReferrals.length, 
         qualifyingLinesOption1, 
-        requiredLinesOption1, 
+        requiredLinesOption1,
+        qualifyingReferralsOption1,
         qualifyingLinesOption2Diamond, 
-        requiredLinesOption2Diamond, 
+        requiredLinesOption2Diamond,
+        qualifyingReferralsOption2Diamond,
         qualifyingLinesOption2RoyalAmbassador, 
-        requiredLinesOption2RoyalAmbassador 
+        requiredLinesOption2RoyalAmbassador,
+        qualifyingReferralsOption2Royal
       } 
     };
   }
