@@ -26,7 +26,7 @@ import {
   TrendingUp,
   Search,
   Download,
-  AttachMoney
+  AccountBalanceWallet
 } from '@mui/icons-material';
 import { UserContext } from '../../../../lib/userContext';
 
@@ -146,7 +146,7 @@ export default function DirectEarningsPage() {
                     {formatCurrency(totalEarnings)}
                   </Typography>
                 </Box>
-                <AttachMoney sx={{ fontSize: 40, color: 'success.main' }} />
+                <AccountBalanceWallet sx={{ fontSize: 40, color: 'success.main' }} />
               </Box>
             </CardContent>
           </Card>
