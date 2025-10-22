@@ -101,7 +101,7 @@ export default function UserManagement() {
     console.log('Admin Users page loaded - checking pagination controls...');
     fetchUsers();
     fetchRanks();
-  }, [fetchUsers, fetchRanks]);
+  }, [fetchUsers, fetchRanks, pagination]);
 
   useEffect(() => {
     console.log('Pagination state changed:', pagination);

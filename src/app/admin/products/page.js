@@ -36,7 +36,7 @@ export default function AdminProducts() {
 
   useEffect(() => {
     applyFilters();
-  }, [products, filters]);
+  }, [products, filters, applyFilters]);
 
   const applyFilters = () => {
     let filtered = [...products];

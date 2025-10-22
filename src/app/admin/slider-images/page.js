@@ -464,7 +464,7 @@ export default function SliderImagesPage() {
                 No slider images found
               </Typography>
               <Typography variant="body2" sx={{ color: '#6c757d' }}>
-                Click "Add New Image" to create your first slider image
+                Click &quot;Add New Image&quot; to create your first slider image
               </Typography>
             </Box>
           )}

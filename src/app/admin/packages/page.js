@@ -38,7 +38,7 @@ export default function AdminPackages() {
 
   useEffect(() => {
     applyFilters();
-  }, [packages, filters]);
+  }, [packages, filters, applyFilters]);
 
   const applyFilters = () => {
     let filtered = [...packages];
