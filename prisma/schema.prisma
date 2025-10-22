@@ -335,3 +335,17 @@ model PaymentMethod {
   @@map("payment_methods")
 }
 
+model SliderImage {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?  @db.Text
+  imageUrl    String   @map("image_url")
+  linkUrl     String?  @map("link_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("slider_images")
+}
+

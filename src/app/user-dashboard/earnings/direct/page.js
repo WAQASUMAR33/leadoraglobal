@@ -49,8 +49,16 @@ export default function DirectEarningsPage() {
       const fetchDirectEarnings = async () => {
         try {
           setLoading(true);
+          
+          // Get token from localStorage
+          const token = localStorage.getItem('token');
+          
           const response = await fetch('/api/user/earnings/direct', {
-            credentials: 'include'
+            credentials: 'include',
+            headers: {
+              'Authorization': token ? `Bearer ${token}` : '',
+              'Content-Type': 'application/json'
+            }
           });
           
           if (response.ok) {

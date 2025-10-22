@@ -5,7 +5,7 @@ import { checkNewRankRequirementsOptimized } from './newRankLogicOptimized.js';
 /**
  * Transaction-based version of updateUserRank
  */
-async function updateUserRankInTransaction(userId, currentPoints, tx) {
+async function updateUserRankInTransaction(userId, currentPoints, tx, skipPackageSpecific = false) {
   try {
     // Get user details
     const user = await tx.user.findUnique({
@@ -14,6 +14,7 @@ async function updateUserRankInTransaction(userId, currentPoints, tx) {
         id: true,
         username: true,
         points: true,
+        currentPackageId: true,
         rank: {
           select: { title: true }
         }
@@ -23,6 +24,12 @@ async function updateUserRankInTransaction(userId, currentPoints, tx) {
     if (!user) {
       console.log(`❌ User ${userId} not found for rank update`);
       return 'No Rank';
+    }
+
+    // Check if user has package-specific rank assignment (Package ID 7 or 8)
+    if (skipPackageSpecific && (user.currentPackageId === 7 || user.currentPackageId === 8)) {
+      console.log(`⏭️ Skipping rank update for ${user.username} - has package-specific rank assignment (Package ID: ${user.currentPackageId})`);
+      return user.rank?.title || 'No Rank';
     }
 
     // Get all ranks from database ordered by required points (descending)
@@ -633,14 +640,14 @@ export async function updateUserPackageAndRankInTransaction(packageRequestId, tx
   } else {
     // For other packages, update rank based on current points (normal logic)
     console.log(`📊 Package ID ${packageData.id} - Using normal rank update logic based on points`);
-  const updatedUser = await tx.user.findUnique({
-    where: { id: user.id },
-    select: { points: true }
-  });
+    const updatedUser = await tx.user.findUnique({
+      where: { id: user.id },
+      select: { points: true }
+    });
 
-  if (updatedUser) {
-    const newRank = await updateUserRankInTransaction(user.id, updatedUser.points, tx);
-    console.log(`Updated user ${user.username} with package ${packageData.package_name} and rank ${newRank}`);
+    if (updatedUser) {
+      const newRank = await updateUserRankInTransaction(user.id, updatedUser.points, tx);
+      console.log(`Updated user ${user.username} with package ${packageData.package_name} and rank ${newRank}`);
     }
   }
 
@@ -777,7 +784,7 @@ async function distributePointsToTreeInTransaction(username, points, tx) {
       });
       
       if (updatedUser) {
-        const newRank = await updateUserRankInTransaction(user.id, updatedUser.points, tx);
+        const newRank = await updateUserRankInTransaction(user.id, updatedUser.points, tx, true); // Skip package-specific rank updates
         console.log(`  - ${user.username}: ${newRank} (${updatedUser.points} points)`);
         return newRank;
       }

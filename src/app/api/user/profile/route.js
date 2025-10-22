@@ -6,8 +6,17 @@ const prisma = new PrismaClient();
 
 export async function GET(request) {
   try {
-    // Verify user authentication
-    const token = request.cookies.get('auth-token')?.value;
+    // Verify user authentication - check both cookie and authorization header
+    let token = request.cookies.get('auth-token')?.value;
+    
+    // If no cookie token, check authorization header
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+    
     if (!token) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
