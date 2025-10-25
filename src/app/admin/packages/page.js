@@ -36,10 +36,6 @@ export default function AdminPackages() {
     fetchRanks();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [packages, filters, applyFilters]);
-
   const applyFilters = () => {
     let filtered = [...packages];
 
@@ -76,6 +72,11 @@ export default function AdminPackages() {
 
     setFilteredPackages(filtered);
   };
+
+  useEffect(() => {
+    applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [packages, filters]);
 
   const clearFilters = () => {
     setFilters({

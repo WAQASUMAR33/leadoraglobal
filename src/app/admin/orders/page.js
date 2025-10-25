@@ -79,10 +79,6 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [orders, usernameFilter, statusFilter, paymentStatusFilter]);
-
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -127,6 +123,11 @@ export default function AdminOrdersPage() {
 
     setFilteredOrders(filtered);
   };
+
+  useEffect(() => {
+    applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, usernameFilter, statusFilter, paymentStatusFilter]);
 
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
