@@ -21,6 +21,7 @@ model User {
   status            String             @default("active")
   balance           Decimal            @default(0.00) @db.Decimal(10, 2)
   points            Int                @default(0)
+  shoppingAmount    Decimal            @default(0.00) @map("shopping_amount") @db.Decimal(10, 2)
   packageId         Int?               @map("package_id")
   rankId            Int?               @map("rank_id")
   referredBy        String?            @map("referred_by")
