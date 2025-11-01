@@ -43,6 +43,7 @@ export async function GET(request) {
         username: true,
         balance: true,
         points: true,
+        shoppingAmount: true,
         totalEarnings: true,
         referralCount: true,
         currentPackageId: true,
@@ -296,6 +297,7 @@ export async function GET(request) {
         username: user.username,
         balance: parseFloat(user.balance || 0),
         points: user.points || 0,
+        shoppingAmount: parseFloat(user.shoppingAmount || 0),
         totalEarnings: parseFloat(user.totalEarnings || 0),
         referralCount: user.referralCount || 0,
         ordersCount: ordersCount,
@@ -311,6 +313,7 @@ export async function GET(request) {
       stats: {
         balance: parseFloat(user.balance || 0),
         points: user.points || 0,
+        shoppingAmount: parseFloat(user.shoppingAmount || 0),
         totalEarnings: parseFloat(user.totalEarnings || 0),
         directEarnings: parseFloat(directEarnings._sum.amount || 0),
         indirectEarnings: parseFloat(indirectEarnings._sum.amount || 0),

@@ -179,7 +179,24 @@ export default function UserDashboardHome() {
           </div>
         </div>
 
-        {/* 3. My Rank */}
+        {/* 3. Shopping Amount */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-400">Shopping Amount</p>
+              <p className="text-lg font-bold text-white">{formatCurrency(stats.shoppingAmount)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. My Rank */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -196,7 +213,7 @@ export default function UserDashboardHome() {
           </div>
         </div>
 
-        {/* 4. Total Earnings */}
+        {/* 5. Total Earnings */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -213,7 +230,7 @@ export default function UserDashboardHome() {
           </div>
         </div>
 
-        {/* 5. Direct Earnings */}
+        {/* 6. Direct Earnings */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -230,7 +247,7 @@ export default function UserDashboardHome() {
           </div>
         </div>
 
-        {/* 6. Indirect Earnings */}
+        {/* 7. Indirect Earnings */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -247,7 +264,7 @@ export default function UserDashboardHome() {
           </div>
         </div>
 
-        {/* 7. Joining Date */}
+        {/* 8. Joining Date */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -264,7 +281,7 @@ export default function UserDashboardHome() {
           </div>
         </div>
 
-        {/* 8. Total Points */}
+        {/* 9. Total Points */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -281,7 +298,7 @@ export default function UserDashboardHome() {
           </div>
         </div>
 
-        {/* 9. Approved Withdrawals */}
+        {/* 10. Approved Withdrawals */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -298,7 +315,7 @@ export default function UserDashboardHome() {
           </div>
         </div>
 
-        {/* 10. Withdrawal Pending */}
+        {/* 11. Withdrawal Pending */}
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
