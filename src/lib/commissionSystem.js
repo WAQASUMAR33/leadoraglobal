@@ -1157,10 +1157,10 @@ export async function updateRanksForAllAffectedUsers(packageRequestId, tx) {
       }
     });
 
-    // Create a lookup map
+    // Create a lookup map (case-insensitive)
     const userMap = new Map();
     allUsers.forEach(u => {
-      userMap.set(u.username, u);
+      userMap.set(u.username.toLowerCase(), u);
     });
 
     // Build the referral chain
@@ -1171,7 +1171,7 @@ export async function updateRanksForAllAffectedUsers(packageRequestId, tx) {
     const maxLevels = 10;
 
     while (currentUsername && level < maxLevels) {
-      const currentUser = userMap.get(currentUsername);
+      const currentUser = userMap.get(currentUsername.toLowerCase());
       if (!currentUser || processedUsers.has(currentUser.id)) {
         break;
       }
