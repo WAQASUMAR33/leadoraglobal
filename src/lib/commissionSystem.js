@@ -983,10 +983,10 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
     }
   });
 
-  // Create a lookup map for faster access
+  // Create a lookup map for faster access (case-insensitive)
   const userMap = new Map();
   allUsers.forEach(user => {
-    userMap.set(user.username, user);
+    userMap.set(user.username.toLowerCase(), user);
   });
 
   // Build the referral chain starting from direct referrer's referrer
@@ -996,7 +996,7 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
   const maxLevels = 10; // Prevent infinite loops
 
   // Get the direct referrer to find their referrer
-  const directReferrer = userMap.get(directReferrerUsername);
+  const directReferrer = userMap.get(directReferrerUsername.toLowerCase());
   
   if (!directReferrer || !directReferrer.referredBy) {
     return []; // Direct referrer has no referrer, so no tree members to process
@@ -1006,7 +1006,7 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
   let currentUsername = directReferrer.referredBy;
 
   while (currentUsername && level < maxLevels) {
-    const user = userMap.get(currentUsername);
+    const user = userMap.get(currentUsername.toLowerCase());
 
     if (!user || processedUsers.has(user.id)) {
       break; // Prevent infinite loops
