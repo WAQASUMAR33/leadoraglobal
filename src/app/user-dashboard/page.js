@@ -34,7 +34,6 @@ export default function UserDashboardHome() {
 
     const fetchDashboardData = async () => {
       if (!isAuthenticated || !user) {
-        setLoading(false);
         // Redirect to login if not authenticated
         window.location.href = '/login';
         return;
