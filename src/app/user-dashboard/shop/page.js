@@ -103,7 +103,8 @@ export default function Shop() {
         return;
       }
 
-      // Check if user has active package with shopping amount limit
+      // Check if user has active package with shopping amount limit (only enforce if limit not consumed)
+      // If limit is consumed, shoppingType will be 'payment_proof_required' and shopping is allowed without limit
       if (shoppingEligibility && 
           shoppingEligibility.shopping && 
           shoppingEligibility.shopping.shoppingType === 'package_benefits' &&
@@ -135,6 +136,9 @@ export default function Shop() {
           return;
         }
       }
+      
+      // If limit is consumed (shoppingType is 'payment_proof_required'), allow shopping without limit restrictions
+      // The checkout page will require payment proof
 
       // Proceed with adding to cart
       const existingItem = cart.find(item => item.id === product.id);
@@ -225,6 +229,29 @@ export default function Shop() {
           </div>
         </div>
       </div>
+
+      {/* Info: Shopping limit consumed - payment proof required */}
+      {!eligibilityLoading && shoppingEligibility && shoppingEligibility.shopping && shoppingEligibility.shopping.shoppingType === 'payment_proof_required' && shoppingEligibility.package && (
+        <div className="bg-gradient-to-r from-orange-900 to-red-900 rounded-xl p-4 md:p-6 border border-orange-700">
+          <div className="flex items-start space-x-3">
+            <svg className="w-6 h-6 text-orange-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white mb-1">Shopping Limit Consumed</h3>
+              <p className="text-sm text-gray-300 mb-3">
+                Your shopping limit from your package ({shoppingEligibility.package.name}) has been consumed. 
+                You can continue shopping by providing payment proof at checkout.
+              </p>
+              <div className="bg-orange-800/30 border border-orange-600 rounded-lg p-3">
+                <p className="text-xs text-orange-200">
+                  <strong>Note:</strong> After placing your order, upload payment proof. Your order will be processed after admin approval.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Shopping Amount Display */}
       {!eligibilityLoading && shoppingEligibility && shoppingEligibility.shopping && shoppingEligibility.shopping.shoppingType === 'package_benefits' && shoppingEligibility.shopping.remainingAmount !== null && (

@@ -167,11 +167,16 @@ export async function GET(request) {
         });
       } else {
         // Scenario 2: Package with shopping amount - shopping within limit
+        // Check if shopping limit is consumed
+        const isLimitConsumed = remainingAmount <= 0;
+        
         return NextResponse.json({
           success: true,
           eligible: true,
-          reason: 'package_shopping',
-          message: 'You can shop with your package benefits',
+          reason: isLimitConsumed ? 'limit_consumed' : 'package_shopping',
+          message: isLimitConsumed 
+            ? 'Your shopping limit has been consumed. You can shop by providing payment proof.'
+            : 'You can shop with your package benefits',
           user: {
             id: user.id,
             fullname: user.fullname,
@@ -188,7 +193,7 @@ export async function GET(request) {
             totalSpent,
             remainingAmount: Math.max(0, remainingAmount),
             orderCount: existingOrders.length,
-            shoppingType: 'package_benefits'
+            shoppingType: isLimitConsumed ? 'payment_proof_required' : 'package_benefits'
           }
         });
       }

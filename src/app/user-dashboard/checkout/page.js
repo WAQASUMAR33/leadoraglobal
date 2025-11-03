@@ -427,7 +427,10 @@ export default function Checkout() {
                   <div>
                     <p className="text-yellow-200 text-sm md:text-base font-medium mb-1">Payment Proof Required</p>
                     <p className="text-yellow-100 text-xs md:text-sm">
-                      Since you don&apos;t have an active package, please upload your payment proof. 
+                      {shoppingEligibility?.package 
+                        ? 'Your shopping limit has been consumed. Please upload your payment proof to continue shopping. '
+                        : 'Since you don\'t have an active package, please upload your payment proof. '
+                      }
                       The order amount will be added to your account balance after admin approval.
                     </p>
                   </div>
