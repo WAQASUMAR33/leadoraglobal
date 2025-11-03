@@ -95,6 +95,11 @@ const menuItems = [
         label: "My Orders",
         href: "/user-dashboard/orders",
         description: "View your order history"
+      },
+      {
+        label: "Transfer Shopping",
+        href: "/user-dashboard/transfer-shopping",
+        description: "Transfer shopping amount to other users"
       }
     ]
   },

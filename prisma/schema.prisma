@@ -38,6 +38,8 @@ model User {
   paymentMethods    PaymentMethod[]
   transfersFrom     Transfer[]         @relation("TransferFromUser")
   transfersTo       Transfer[]         @relation("TransferToUser")
+  shoppingTransfersFrom ShoppingTransfer[] @relation("ShoppingTransferFromUser")
+  shoppingTransfersTo   ShoppingTransfer[] @relation("ShoppingTransferToUser")
   earnings          Earnings[]
   currentPackage    Package?           @relation("UserCurrentPackage", fields: [currentPackageId], references: [id])
   package           Package?           @relation("UserPackage", fields: [packageId], references: [id])
@@ -348,5 +350,23 @@ model SliderImage {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("slider_images")
+}
+
+model ShoppingTransfer {
+  id                Int       @id @default(autoincrement())
+  fromUserId        Int       @map("from_user_id")
+  toUserId          Int       @map("to_user_id")
+  amount            Decimal   @db.Decimal(10, 2)
+  description       String?
+  status            String    @default("completed")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  fromUser          User      @relation("ShoppingTransferFromUser", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser            User      @relation("ShoppingTransferToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([fromUserId], map: "shopping_transfers_from_user_id_fkey")
+  @@index([toUserId], map: "shopping_transfers_to_user_id_fkey")
+  @@map("shopping_transfers")
 }
 
