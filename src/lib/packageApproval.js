@@ -361,6 +361,7 @@ export async function approvePackageRequest(packageRequestId) {
             referredBy: true,
             points: true,
             balance: true,
+            shoppingAmount: true,
             currentPackageId: true,
             packageId: true,
             status: true,
@@ -415,11 +416,42 @@ export async function approvePackageRequest(packageRequestId) {
       console.log(`🆕 This is a new package assignment for user ${user.username}`);
     }
 
+    // Check if payment is from shopping amount
+    const isShoppingAmountPayment = packageRequest.transactionReceipt === 'Paid from shopping amount';
+    
+    // If paid from shopping amount, verify user has sufficient shopping amount
+    if (isShoppingAmountPayment) {
+      const packageAmount = parseFloat(packageData.package_amount);
+      const currentShoppingAmount = parseFloat(user.shoppingAmount || 0);
+      
+      if (currentShoppingAmount < packageAmount) {
+        throw new Error(`Insufficient shopping amount. Required: PKR ${packageAmount}, Available: PKR ${currentShoppingAmount}`);
+      }
+    }
+
     // Use database transaction to ensure all operations succeed or fail together
     // Increase timeout to 60 seconds for complex MLM calculations
     let result;
     try {
       result = await prisma.$transaction(async (tx) => {
+        // Step 0: Deduct shopping amount if payment is from shopping amount
+        if (isShoppingAmountPayment) {
+          const packageAmount = parseFloat(packageData.package_amount);
+          const currentShoppingAmount = parseFloat(user.shoppingAmount || 0);
+          const newShoppingAmount = currentShoppingAmount - packageAmount;
+          
+          console.log(`💳 Step 0: Deducting shopping amount. Current: PKR ${currentShoppingAmount}, Deducting: PKR ${packageAmount}, New: PKR ${newShoppingAmount}`);
+          
+          await tx.user.update({
+            where: { id: user.id },
+            data: {
+              shoppingAmount: newShoppingAmount,
+              updatedAt: new Date()
+            }
+          });
+          console.log(`✅ Deducted PKR ${packageAmount} from shopping amount for user ${user.username}`);
+        }
+
         // Step 1: Update user's package and rank
         console.log(`📝 Step 1: Updating user package and rank...`);
         await updateUserPackageAndRankInTransaction(requestId, tx);
@@ -449,7 +481,8 @@ export async function approvePackageRequest(packageRequestId) {
           packageAmount: packageData.package_amount,
           packagePoints: packageData.package_points,
           isRenewal: user.currentPackageId === packageData.id,
-          isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id
+          isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id,
+          shoppingAmountDeducted: isShoppingAmountPayment ? parseFloat(packageData.package_amount) : null
         };
       }, { 
         timeout: 300000, // 300 second (5 minute) timeout for complex MLM calculations
@@ -463,6 +496,24 @@ export async function approvePackageRequest(packageRequestId) {
       console.log(`🔄 Attempting fallback approach for user ${user.username}...`);
       
       try {
+        // Step 0: Deduct shopping amount if payment is from shopping amount (fallback)
+        if (isShoppingAmountPayment) {
+          const packageAmount = parseFloat(packageData.package_amount);
+          const currentShoppingAmount = parseFloat(user.shoppingAmount || 0);
+          const newShoppingAmount = currentShoppingAmount - packageAmount;
+          
+          console.log(`💳 Fallback Step 0: Deducting shopping amount. Current: PKR ${currentShoppingAmount}, Deducting: PKR ${packageAmount}, New: PKR ${newShoppingAmount}`);
+          
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              shoppingAmount: newShoppingAmount,
+              updatedAt: new Date()
+            }
+          });
+          console.log(`✅ Fallback: Deducted PKR ${packageAmount} from shopping amount for user ${user.username}`);
+        }
+
         // Step 1: Update user's package and rank (without transaction)
         console.log(`📝 Fallback Step 1: Updating user package and rank...`);
         await updateUserPackageAndRank(requestId);
@@ -493,7 +544,8 @@ export async function approvePackageRequest(packageRequestId) {
           packagePoints: packageData.package_points,
           isRenewal: user.currentPackageId === packageData.id,
           isUpgrade: user.currentPackageId && user.currentPackageId !== packageData.id,
-          fallback: true
+          fallback: true,
+          shoppingAmountDeducted: isShoppingAmountPayment ? parseFloat(packageData.package_amount) : null
         };
       } catch (fallbackError) {
         console.error('❌ Fallback approach also failed:', fallbackError);

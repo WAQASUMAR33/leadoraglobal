@@ -101,20 +101,46 @@ export default function Checkout() {
     }));
   };
 
-  const handlePaymentProofUpload = (e) => {
+  const handlePaymentProofUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      // Convert file to base64 for upload
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setPaymentProof(event.target.result);
+    if (!file) return;
+
+    // Only allow images for now (server route expects data:image/*)
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (JPG, PNG).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const base64 = event.target.result;
+
+        // Upload to server to get a URL instead of storing large base64 in DB
+        const uploadRes = await fetch('/api/upload-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64 })
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error('Upload failed');
+        }
+
+        const uploadJson = await uploadRes.json();
+        const imageUrl = uploadJson.url;
+
+        setPaymentProof(imageUrl);
         setPaymentData(prev => ({
           ...prev,
-          image: event.target.result
+          image: imageUrl
         }));
-      };
-      reader.readAsDataURL(file);
-    }
+      } catch (err) {
+        console.error('Payment proof upload error:', err);
+        alert('Failed to upload payment proof. Please try again.');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handlePaymentDataChange = (field, value) => {

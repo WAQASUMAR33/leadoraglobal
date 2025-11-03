@@ -339,30 +339,7 @@ export default function Shop() {
         </div>
       )}
 
-      {/* Info for users without package or with payment proof */}
-      {!eligibilityLoading && shoppingEligibility && shoppingEligibility.eligible && (!shoppingEligibility.package || shoppingEligibility.shopping.shoppingType === 'payment_proof_required') && (
-        <div className="bg-gradient-to-r from-green-900 to-teal-900 rounded-xl p-4 md:p-6 border border-green-700">
-          <div className="flex items-start space-x-3">
-            <svg className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Unlimited Shopping Available</h3>
-              <p className="text-sm text-gray-300">
-                {!shoppingEligibility.package 
-                  ? "You can shop for any amount. Payment proof will be required at checkout."
-                  : "You subscribed from balance. You can shop for any amount with payment proof at checkout."
-                }
-              </p>
-              <div className="mt-3 bg-green-800/30 border border-green-600 rounded-lg p-3">
-                <p className="text-xs text-green-200">
-                  <strong>Note:</strong> After placing your order, upload payment proof. Your order will be processed after admin approval.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Info for users without package or with payment proof - removed per request */}
 
       {/* Search and Filters */}
       <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">

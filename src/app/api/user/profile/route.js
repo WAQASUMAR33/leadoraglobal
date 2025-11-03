@@ -41,6 +41,7 @@ export async function GET(request) {
         packageId: true,
         rankId: true,
         balance: true,
+        shoppingAmount: true,
         points: true,
         currentPackageId: true,
         packageExpiryDate: true,
@@ -57,6 +58,7 @@ export async function GET(request) {
     const userResponse = {
       ...user,
       balance: parseFloat(user.balance || 0),
+      shoppingAmount: parseFloat(user.shoppingAmount || 0),
       totalEarnings: parseFloat(user.totalEarnings || 0),
       points: user.points || 0
     };

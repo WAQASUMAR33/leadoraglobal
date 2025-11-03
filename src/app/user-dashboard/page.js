@@ -5,17 +5,38 @@ import Link from "next/link";
 import { UserContext } from "../../lib/userContext";
 
 export default function UserDashboardHome() {
-  const { user, isAuthenticated } = useContext(UserContext);
+  const context = useContext(UserContext);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [referralLink, setReferralLink] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Safety check for context
+  if (!context) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { user, isAuthenticated, loading: contextLoading } = context;
+
   useEffect(() => {
+    // Wait for context to finish loading before fetching dashboard data
+    if (contextLoading) {
+      return;
+    }
+
     const fetchDashboardData = async () => {
       if (!isAuthenticated || !user) {
         setLoading(false);
+        // Redirect to login if not authenticated
+        window.location.href = '/login';
         return;
       }
 
@@ -45,7 +66,7 @@ export default function UserDashboardHome() {
     };
 
     fetchDashboardData();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, contextLoading]);
 
   const copyToClipboard = async () => {
     try {

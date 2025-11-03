@@ -8,6 +8,7 @@ export default function SubscribePackage() {
   const { user, isAuthenticated } = useContext(UserContext);
   const [packages, setPackages] = useState([]);
   const [userBalance, setUserBalance] = useState(0);
+  const [shoppingAmount, setShoppingAmount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('request'); // 'request' or 'balance'
@@ -47,17 +48,21 @@ export default function SubscribePackage() {
         const data = await response.json();
         console.log('🔍 Subscribe page - Balance API response data:', data);
         
-        if (data.success && data.user && data.user.balance !== undefined) {
+        if (data.success && data.user) {
           const balance = parseFloat(data.user.balance || 0);
-          console.log('🔍 Subscribe page - Parsed balance:', balance);
+          const sAmt = parseFloat(data.user.shoppingAmount || 0);
+          console.log('🔍 Subscribe page - Parsed balance:', balance, 'shoppingAmount:', sAmt);
           setUserBalance(balance);
+          setShoppingAmount(sAmt);
         } else {
           console.log('🔍 Subscribe page - No balance data found in response:', data);
           setUserBalance(0);
+          setShoppingAmount(0);
         }
       } else {
         console.error('🔍 Subscribe page - Failed to fetch user balance:', response.status);
         setUserBalance(0);
+        setShoppingAmount(0);
       }
     } catch (error) {
       console.error('🔍 Subscribe page - Error fetching user balance:', error);
@@ -75,6 +80,9 @@ export default function SubscribePackage() {
       if (user.balance !== undefined) {
         console.log('🔍 Subscribe page - Balance from user context:', user.balance);
         setUserBalance(parseFloat(user.balance || 0));
+      }
+      if (user.shoppingAmount !== undefined) {
+        setShoppingAmount(parseFloat(user.shoppingAmount || 0));
       }
     }
   }, [user, isAuthenticated, fetchUserBalance]);
@@ -119,6 +127,53 @@ export default function SubscribePackage() {
       }
     } catch (error) {
       console.error('Error subscribing to package:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleShoppingAmountPayment = async (packageId) => {
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
+
+    setProcessing(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/user/subscribe-shopping', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          userId: user.id,
+          packageId: packageId 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage('Package request submitted successfully! Admin will review and approve your request. Shopping amount will be deducted upon approval.');
+        setSelectedPackage(null);
+        setPaymentMethod('request');
+        // Refresh shopping amount from profile
+        fetchUserBalance();
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/user-dashboard/package-request';
+          }
+        }, 2000);
+      } else {
+        setError(data.error || 'Failed to subscribe to package');
+      }
+    } catch (error) {
+      console.error('Error subscribing to package (shopping amount):', error);
       setError('Network error. Please try again.');
     } finally {
       setProcessing(false);
@@ -181,6 +236,11 @@ export default function SubscribePackage() {
                 <div className="bg-green-900/20 border border-green-500/30 rounded-lg px-3 py-2">
                   <span className="text-green-300 text-sm font-medium">
                     Current Balance: PKR {userBalance ? userBalance.toLocaleString() : '0'}
+                  </span>
+                </div>
+                <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-lg px-3 py-2">
+                  <span className="text-cyan-300 text-sm font-medium">
+                    Shopping Amount: PKR {shoppingAmount ? shoppingAmount.toLocaleString() : '0'}
                   </span>
                 </div>
               </div>
@@ -279,6 +339,20 @@ export default function SubscribePackage() {
                       Insufficient Balance (Need: PKR {parseFloat(pkg.package_amount).toLocaleString()})
                     </div>
                   )}
+                  {/* Shopping Amount Payment Option */}
+                  {shoppingAmount >= parseFloat(pkg.package_amount) ? (
+                    <button
+                      onClick={() => handleShoppingAmountPayment(pkg.id)}
+                      disabled={processing}
+                      className="w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-cyan-700 text-white rounded-lg font-medium hover:from-cyan-700 hover:to-cyan-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {processing ? 'Submitting Request...' : `Request with Shopping Amount (PKR ${parseFloat(pkg.package_amount).toLocaleString()})`}
+                    </button>
+                  ) : (
+                    <div className="w-full py-2 px-4 bg-gray-600 text-gray-400 rounded-lg text-center text-sm">
+                      Insufficient Shopping Amount (Need: PKR {parseFloat(pkg.package_amount).toLocaleString()})
+                    </div>
+                  )}
                   
                   {/* Package Request Option */}
                   <button
@@ -302,7 +376,7 @@ export default function SubscribePackage() {
       {/* Payment Options Info */}
       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <h2 className="text-xl font-bold text-white mb-4">Payment Options</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
             <div className="flex items-center mb-3">
               <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mr-3">
@@ -314,6 +388,20 @@ export default function SubscribePackage() {
             </div>
             <p className="text-gray-400 text-sm">
               If you have sufficient balance, you can subscribe to a package instantly without waiting for admin approval.
+            </p>
+          </div>
+          
+          <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-lg p-4">
+            <div className="flex items-center mb-3">
+              <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center mr-3">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <h3 className="text-cyan-300 font-semibold">Request with Shopping Amount</h3>
+            </div>
+            <p className="text-gray-400 text-sm">
+              Submit a package request using your shopping amount. Admin will review and approve. Shopping amount will be deducted upon approval.
             </p>
           </div>
           
