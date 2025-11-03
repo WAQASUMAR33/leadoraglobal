@@ -30,10 +30,6 @@ export default function AdminBankAccounts() {
     fetchBankAccounts();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [bankAccounts, filters]);
-
   const applyFilters = () => {
     let filtered = [...bankAccounts];
 
@@ -63,6 +59,11 @@ export default function AdminBankAccounts() {
 
     setFilteredBankAccounts(filtered);
   };
+
+  useEffect(() => {
+    applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bankAccounts, filters]);
 
   const clearFilters = () => {
     setFilters({

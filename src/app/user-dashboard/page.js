@@ -12,23 +12,11 @@ export default function UserDashboardHome() {
   const [referralLink, setReferralLink] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // Safety check for context
-  if (!context) {
-    return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Initializing...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { user, isAuthenticated, loading: contextLoading } = context;
+  const { user, isAuthenticated, loading: contextLoading } = context || {};
 
   useEffect(() => {
     // Wait for context to finish loading before fetching dashboard data
-    if (contextLoading) {
+    if (contextLoading || !context) {
       return;
     }
 
@@ -65,7 +53,7 @@ export default function UserDashboardHome() {
     };
 
     fetchDashboardData();
-  }, [isAuthenticated, user, contextLoading]);
+  }, [isAuthenticated, user, contextLoading, context]);
 
   const copyToClipboard = async () => {
     try {
@@ -90,6 +78,18 @@ export default function UserDashboardHome() {
       day: 'numeric'
     });
   };
+
+  // Safety check for context
+  if (!context || contextLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state
   if (loading) {

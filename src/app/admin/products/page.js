@@ -34,10 +34,6 @@ export default function AdminProducts() {
     fetchProducts();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [products, filters, applyFilters]);
-
   const applyFilters = () => {
     let filtered = [...products];
     console.log('Applying filters to products:', products);
@@ -74,6 +70,11 @@ export default function AdminProducts() {
     console.log('Final filtered products:', filtered);
     setFilteredProducts(filtered);
   };
+
+  useEffect(() => {
+    applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, filters]);
 
   const clearFilters = () => {
     setFilters({

@@ -101,7 +101,8 @@ export default function UserManagement() {
     console.log('Admin Users page loaded - checking pagination controls...');
     fetchUsers();
     fetchRanks();
-  }, [fetchUsers, fetchRanks, pagination]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     console.log('Pagination state changed:', pagination);
@@ -113,7 +114,8 @@ export default function UserManagement() {
       console.log('Pagination changed, fetching users...');
       fetchUsers(pagination.page, pagination.pageSize);
     }
-  }, [pagination.page, pagination.pageSize, pagination.totalCount, fetchUsers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, pagination.pageSize, pagination.totalCount]);
 
   useEffect(() => {
     applyFilters();
