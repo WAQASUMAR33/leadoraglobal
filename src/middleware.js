@@ -36,8 +36,12 @@ function validateJWT(token) {
 export function middleware(request) {
   const { pathname } = request.nextUrl;
   
-  // Skip middleware for static files and favicon
-  if (pathname === '/favicon.ico' || pathname.startsWith('/_next/') || pathname.startsWith('/public/')) {
+  // Skip middleware for static files, favicon, and images
+  if (pathname === '/favicon.ico' || 
+      pathname.startsWith('/_next/') || 
+      pathname.startsWith('/public/') ||
+      pathname.startsWith('/images/') ||
+      pathname.startsWith('/uploads/')) {
     return NextResponse.next();
   }
   
