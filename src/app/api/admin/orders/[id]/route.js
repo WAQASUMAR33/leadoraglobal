@@ -148,10 +148,10 @@ export async function PUT(request, { params }) {
       }
     });
 
-    // NEW LOGIC: Add shopping amount ONLY when:
+    // NEW LOGIC: Add shopping amount when:
     // 1. Order was placed with payment proof (paymentProof field exists)
     // 2. Order status is changed to 'completed' OR payment status is 'paid'
-    // 3. This ensures shopping amount is only added for orders placed using payment proof
+    // 3. Applies to ALL users who shop with payment proof (regardless of package status)
     
     const wasPending = existingOrder.status === 'pending';
     const isNowCompleted = status === 'completed' || (status && status !== 'pending' && status !== 'cancelled');
@@ -160,37 +160,30 @@ export async function PUT(request, { params }) {
     // Check if order was placed with payment proof
     const hasPaymentProof = existingOrder.paymentProof && existingOrder.paymentProof.trim() !== '';
     
-    // Only add shopping amount if:
-    // - Order was placed with payment proof
+    // Add shopping amount if:
+    // - Order was placed with payment proof (regardless of package status)
     // - Order is being approved/completed
     // - Payment is approved
     if (hasPaymentProof && wasPending && (isNowCompleted || isPaymentApproved)) {
       const user = updatedOrder.user;
       
-      // Get user's package info to check shopping eligibility
-      const userWithPackage = await prisma.user.findUnique({
+      // Get user's current shopping amount
+      const userWithShoppingAmount = await prisma.user.findUnique({
         where: { id: user.id },
         select: {
           id: true,
           username: true,
-          currentPackageId: true,
-          packageExpiryDate: true,
           shoppingAmount: true
         }
       });
-      
-      // Check if user has no active package OR has consumed shopping limit
-      // (both cases require payment proof, so both should get shopping amount)
-      const hasActivePackage = userWithPackage.currentPackageId && 
-                              userWithPackage.packageExpiryDate && 
-                              new Date(userWithPackage.packageExpiryDate) > new Date();
 
-      // Add shopping amount for orders placed with payment proof
-      // This applies to:
+      // Add shopping amount for ALL orders placed with payment proof
+      // This applies to all users regardless of package status:
       // 1. Users without active packages
       // 2. Users with active packages whose shopping limit is consumed
+      // 3. Users with active packages who chose to shop with payment proof
       const orderAmount = parseFloat(updatedOrder.totalAmount);
-      const currentShoppingAmount = parseFloat(userWithPackage.shoppingAmount || 0);
+      const currentShoppingAmount = parseFloat(userWithShoppingAmount.shoppingAmount || 0);
       const newShoppingAmount = currentShoppingAmount + orderAmount;
 
       await prisma.user.update({
@@ -201,10 +194,10 @@ export async function PUT(request, { params }) {
         }
       });
 
-      console.log(`✅ Order Approved (Payment Proof): Added PKR ${orderAmount} to shopping_amount for user ${userWithPackage.username}`);
+      console.log(`✅ Order Approved (Payment Proof): Added PKR ${orderAmount} to shopping_amount for user ${userWithShoppingAmount.username}`);
       console.log(`   Previous shopping amount: PKR ${currentShoppingAmount}`);
       console.log(`   New shopping amount: PKR ${newShoppingAmount}`);
-      console.log(`   User has active package: ${hasActivePackage}`);
+      console.log(`   Order was placed with payment proof - shopping amount added regardless of package status`);
       
       return NextResponse.json({
         success: true,
