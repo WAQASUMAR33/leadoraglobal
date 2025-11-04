@@ -91,9 +91,18 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // Check if order exists
+    // Check if order exists - fetch paymentProof to check if order was placed with payment proof
     const existingOrder = await prisma.order.findUnique({
-      where: { id }
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        paymentStatus: true,
+        paymentProof: true,
+        paymentDetails: true,
+        totalAmount: true,
+        userId: true
+      }
     });
 
     if (!existingOrder) {
@@ -139,52 +148,72 @@ export async function PUT(request, { params }) {
       }
     });
 
-    // NEW LOGIC: If order status changes from pending to any other status and user has no active package, add amount to user's balance
-    const wasPending = existingOrder.status === 'pending';
-    const isNowApproved = status && status !== 'pending' && status !== 'cancelled';
-    const isPaymentApproved = paymentStatus === 'paid';
+    // NEW LOGIC: Add shopping amount ONLY when:
+    // 1. Order was placed with payment proof (paymentProof field exists)
+    // 2. Order status is changed to 'completed' OR payment status is 'paid'
+    // 3. This ensures shopping amount is only added for orders placed using payment proof
     
-    if (wasPending && isNowApproved && isPaymentApproved) {
+    const wasPending = existingOrder.status === 'pending';
+    const isNowCompleted = status === 'completed' || (status && status !== 'pending' && status !== 'cancelled');
+    const isPaymentApproved = paymentStatus === 'paid' || (paymentStatus && paymentStatus !== 'pending');
+    
+    // Check if order was placed with payment proof
+    const hasPaymentProof = existingOrder.paymentProof && existingOrder.paymentProof.trim() !== '';
+    
+    // Only add shopping amount if:
+    // - Order was placed with payment proof
+    // - Order is being approved/completed
+    // - Payment is approved
+    if (hasPaymentProof && wasPending && (isNowCompleted || isPaymentApproved)) {
       const user = updatedOrder.user;
       
-      // Get user's package expiry date to check if they have an active package
+      // Get user's package info to check shopping eligibility
       const userWithPackage = await prisma.user.findUnique({
         where: { id: user.id },
         select: {
+          id: true,
+          username: true,
           currentPackageId: true,
-          packageExpiryDate: true
+          packageExpiryDate: true,
+          shoppingAmount: true
         }
       });
       
-      // Check if user has no active package (shopping without package)
+      // Check if user has no active package OR has consumed shopping limit
+      // (both cases require payment proof, so both should get shopping amount)
       const hasActivePackage = userWithPackage.currentPackageId && 
                               userWithPackage.packageExpiryDate && 
                               new Date(userWithPackage.packageExpiryDate) > new Date();
 
-      if (!hasActivePackage) {
-        // Add shopping amount to user's shopping_amount field (separate from E-wallet/balance)
-        // Shopping amount can only be used for shopping, not for package subscription or transfers
-        const orderAmount = parseFloat(updatedOrder.totalAmount);
+      // Add shopping amount for orders placed with payment proof
+      // This applies to:
+      // 1. Users without active packages
+      // 2. Users with active packages whose shopping limit is consumed
+      const orderAmount = parseFloat(updatedOrder.totalAmount);
+      const currentShoppingAmount = parseFloat(userWithPackage.shoppingAmount || 0);
+      const newShoppingAmount = currentShoppingAmount + orderAmount;
 
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            shoppingAmount: {
-              increment: orderAmount
-            },
-            updatedAt: new Date()
-          }
-        });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          shoppingAmount: newShoppingAmount,
+          updatedAt: new Date()
+        }
+      });
 
-        console.log(`✅ Order Approved for user without package: Added PKR ${orderAmount} to shopping_amount for user ${user.username}`);
-        
-        return NextResponse.json({
-          success: true,
-          message: `Order updated successfully. Added PKR ${orderAmount} to user's shopping amount.`,
-          order: updatedOrder,
-          shoppingAmountAdded: orderAmount
-        });
-      }
+      console.log(`✅ Order Approved (Payment Proof): Added PKR ${orderAmount} to shopping_amount for user ${userWithPackage.username}`);
+      console.log(`   Previous shopping amount: PKR ${currentShoppingAmount}`);
+      console.log(`   New shopping amount: PKR ${newShoppingAmount}`);
+      console.log(`   User has active package: ${hasActivePackage}`);
+      
+      return NextResponse.json({
+        success: true,
+        message: `Order updated successfully. Added PKR ${orderAmount} to user's shopping amount (payment proof order).`,
+        order: updatedOrder,
+        shoppingAmountAdded: orderAmount,
+        previousShoppingAmount: currentShoppingAmount,
+        newShoppingAmount: newShoppingAmount
+      });
     }
 
     return NextResponse.json({
