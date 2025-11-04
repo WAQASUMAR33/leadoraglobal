@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata = {
   title: "Ledora Global",
   description: "Join the future with Ledora Global - Your gateway to exclusive packages, rewards, and e-commerce.",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({ children }) {
