@@ -903,50 +903,27 @@ async function distributeIndirectCommissionsInTransaction(username, indirectComm
     
     if (membersOfRank.length > 0) {
       // Found users with this rank - give accumulated commission to first user
+      // NOTE: For indirect commission distribution, we only check if user has the rank.
+      // Downline requirements are only for rank promotion, NOT for receiving commissions.
       const firstMember = membersOfRank[0];
       
-      // For indirect commission, we only need to check if user has the rank
-      // Higher ranks with downline requirements are checked separately
-      const HIGHER_RANKS_WITH_REQUIREMENTS = [
-        'Sapphire Diamond',
-        'Ambassador',
-        'Sapphire Ambassador', 
-        'Royal Ambassador',
-        'Global Ambassador',
-        'Honory Share Holder'
-      ];
+      // Calculate total commission: accumulated + current rank's commission
+      const totalCommission = accumulatedCommission + indirectCommission;
+      const rankDescription = accumulatedRanks.length > 0 
+        ? `${currentRank} (includes: ${accumulatedRanks.join(', ')})`
+        : currentRank;
       
-      let meetsRequirements = true;
+      await giveIndirectCommissionInTransaction(firstMember, totalCommission, packageRequestId, rankDescription, tx);
+      processedRanks.add(currentRank);
       
-      // Only check downline requirements for higher ranks
-      if (HIGHER_RANKS_WITH_REQUIREMENTS.includes(currentRank)) {
-        meetsRequirements = await checkRankRequirementsInTransaction(firstMember, currentRank, tx);
+      console.log(`✅ Gave ${totalCommission} indirect commission to ${currentRank}: ${firstMember.username}`);
+      if (accumulatedRanks.length > 0) {
+        console.log(`   Includes accumulated commissions from: ${accumulatedRanks.join(', ')}`);
       }
       
-      if (meetsRequirements) {
-        // Calculate total commission: accumulated + current rank's commission
-        const totalCommission = accumulatedCommission + indirectCommission;
-        const rankDescription = accumulatedRanks.length > 0 
-          ? `${currentRank} (includes: ${accumulatedRanks.join(', ')})`
-          : currentRank;
-        
-        await giveIndirectCommissionInTransaction(firstMember, totalCommission, packageRequestId, rankDescription, tx);
-        processedRanks.add(currentRank);
-        
-        console.log(`✅ Gave ${totalCommission} indirect commission to ${currentRank}: ${firstMember.username}`);
-        if (accumulatedRanks.length > 0) {
-          console.log(`   Includes accumulated commissions from: ${accumulatedRanks.join(', ')}`);
-        }
-        
-        // Reset accumulation since we've distributed it
-        accumulatedCommission = 0;
-        accumulatedRanks = [];
-      } else {
-        console.log(`❌ ${firstMember.username} has ${currentRank} rank but doesn't meet requirements - accumulating commission`);
-        // Accumulate this rank's commission
-        accumulatedCommission += indirectCommission;
-        accumulatedRanks.push(currentRank);
-      }
+      // Reset accumulation since we've distributed it
+      accumulatedCommission = 0;
+      accumulatedRanks = [];
     } else {
       // No users with this rank - accumulate the commission
       console.log(`❌ No users found with ${currentRank} rank - accumulating commission`);
