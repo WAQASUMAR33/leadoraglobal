@@ -775,25 +775,36 @@ async function distributePointsToTreeInTransaction(username, points, tx) {
   await Promise.all(updatePromises);
   
   // Update ranks for all users after points are updated
+  // OPTIMIZED: Batch fetch all updated points at once instead of individual queries
   console.log(`Updating ranks for ${usersToUpdate.length} users after points distribution...`);
-  const rankUpdatePromises = usersToUpdate.map(async (user) => {
-    try {
-      const updatedUser = await tx.user.findUnique({
-        where: { id: user.id },
-        select: { points: true }
-      });
-      
-      if (updatedUser) {
-        const newRank = await updateUserRankInTransaction(user.id, updatedUser.points, tx, true); // Skip package-specific rank updates
-        console.log(`  - ${user.username}: ${newRank} (${updatedUser.points} points)`);
-        return newRank;
-      }
-    } catch (error) {
-      console.error(`Failed to update rank for ${user.username}:`, error);
-    }
-  });
   
-  await Promise.all(rankUpdatePromises);
+  if (usersToUpdate.length > 0) {
+    // Batch fetch all updated points in a single query
+    const userIds = usersToUpdate.map(u => u.id);
+    const updatedUsers = await tx.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, points: true }
+    });
+    
+    // Create a map for quick lookup
+    const pointsMap = new Map(updatedUsers.map(u => [u.id, u.points]));
+    
+    // Update ranks in parallel
+    const rankUpdatePromises = usersToUpdate.map(async (user) => {
+      try {
+        const updatedPoints = pointsMap.get(user.id);
+        if (updatedPoints !== undefined) {
+          const newRank = await updateUserRankInTransaction(user.id, updatedPoints, tx, true); // Skip package-specific rank updates
+          console.log(`  - ${user.username}: ${newRank} (${updatedPoints} points)`);
+          return newRank;
+        }
+      } catch (error) {
+        console.error(`Failed to update rank for ${user.username}:`, error);
+      }
+    });
+    
+    await Promise.all(rankUpdatePromises);
+  }
   
   console.log(`Added ${points} points to ${usersToUpdate.length} users in the referral tree and updated their ranks`);
 }
@@ -944,7 +955,8 @@ async function distributeIndirectCommissionsInTransaction(username, indirectComm
 async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) {
   // First, get the new user to find their direct referrer
   const newUser = await tx.user.findUnique({
-    where: { username: username }
+    where: { username: username },
+    select: { referredBy: true }
   });
 
   if (!newUser || !newUser.referredBy) {
@@ -953,44 +965,39 @@ async function getTreeMembersExcludingDirectReferrerInTransaction(username, tx) 
 
   const directReferrerUsername = newUser.referredBy;
   
-  // Get all users first to reduce database queries
-  const allUsers = await tx.user.findMany({
-    include: {
-      rank: true
-    }
+  // Get the direct referrer to find their referrer (optimized: only fetch what we need)
+  const directReferrer = await tx.user.findUnique({
+    where: { username: directReferrerUsername },
+    select: { referredBy: true }
   });
-
-  // Create a lookup map for faster access (case-insensitive)
-  const userMap = new Map();
-  allUsers.forEach(user => {
-    userMap.set(user.username.toLowerCase(), user);
-  });
-
-  // Build the referral chain starting from direct referrer's referrer
-  const members = [];
-  const processedUsers = new Set();
-  let level = 0;
-  const maxLevels = 10; // Prevent infinite loops
-
-  // Get the direct referrer to find their referrer
-  const directReferrer = userMap.get(directReferrerUsername.toLowerCase());
   
   if (!directReferrer || !directReferrer.referredBy) {
     return []; // Direct referrer has no referrer, so no tree members to process
   }
 
-  // Start from the direct referrer's referrer
+  // Build the referral chain starting from direct referrer's referrer
+  // OPTIMIZED: Fetch users one by one as we traverse (much more efficient than loading all users)
+  const members = [];
+  const processedUserIds = new Set();
   let currentUsername = directReferrer.referredBy;
+  let level = 0;
+  const maxLevels = 10; // Prevent infinite loops
 
   while (currentUsername && level < maxLevels) {
-    const user = userMap.get(currentUsername.toLowerCase());
+    // Fetch only the current user we need (with rank for commission distribution)
+    const user = await tx.user.findUnique({
+      where: { username: currentUsername },
+      include: {
+        rank: true
+      }
+    });
 
-    if (!user || processedUsers.has(user.id)) {
+    if (!user || processedUserIds.has(user.id)) {
       break; // Prevent infinite loops
     }
 
     members.push(user);
-    processedUsers.add(user.id);
+    processedUserIds.add(user.id);
     currentUsername = user.referredBy;
     level++;
   }
