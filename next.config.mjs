@@ -14,7 +14,6 @@ const nextConfig = {
   compress: true, // Enable gzip compression
   poweredByHeader: false, // Remove X-Powered-By header for security
   reactStrictMode: true, // Enable React strict mode
-  swcMinify: true, // Use SWC minifier (faster than Terser)
   // Optimize production builds
   productionBrowserSourceMaps: false, // Disable source maps in production for faster builds
   // Experimental features for better performance
