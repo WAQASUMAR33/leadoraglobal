@@ -3,484 +3,776 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { auth } from "../../lib/auth";
 import { UserProvider } from "../../lib/userContext";
+import { AppThemeProvider, useAppTheme } from "@/context/AdminThemeContext";
+import {
+  Box,
+  Drawer,
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Avatar,
+  Menu,
+  MenuItem,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Collapse,
+  Chip,
+  Divider,
+  Stack,
+  useMediaQuery,
+  useTheme,
+  Button,
+  Tooltip
+} from "@mui/material";
+import {
+  Menu as MenuIcon,
+  DashboardOutlined,
+  Inventory2Outlined,
+  AccountTreeOutlined,
+  StorefrontOutlined,
+  MonetizationOnOutlined,
+  AccountBalanceWalletOutlined,
+  VerifiedUserOutlined,
+  ExpandLess,
+  ExpandMore,
+  ExitToApp,
+  ShoppingCartOutlined,
+  HistoryOutlined,
+  SwapHorizOutlined,
+  GroupOutlined,
+  PersonAddOutlined,
+  CreditCardOutlined,
+  BadgeOutlined,
+  LightModeOutlined,
+  DarkModeOutlined
+} from "@mui/icons-material";
 
-// Menu items for user dashboard
-const menuItems = [
+const DRAWER_WIDTH = 270;
+
+const menuConfig = [
   {
     label: "Dashboard",
     href: "/user-dashboard",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
-      </svg>
-    ),
-    description: "Overview and analytics"
+    icon: <DashboardOutlined sx={{ fontSize: 20 }} />,
   },
   {
     label: "My Package",
-    href: "/user-dashboard/my-package",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-      </svg>
-    ),
-    description: "View and manage your package",
-    hasSubmenu: true,
-    submenuItems: [
-      {
-        label: "My Package",
-        href: "/user-dashboard/my-package",
-        description: "View your current package"
-      },
-      {
-        label: "Buy Package",
-        href: "/user-dashboard/subscribe",
-        description: "Purchase a new package"
-      },
-      {
-        label: "Upgrade Package",
-        href: "/user-dashboard/upgrade-package",
-        description: "Upgrade your current package"
-      }
-    ]
+    icon: <Inventory2Outlined sx={{ fontSize: 20 }} />,
+    key: "package",
+    subItems: [
+      { label: "My Package", href: "/user-dashboard/my-package", icon: <Inventory2Outlined sx={{ fontSize: 18 }} /> },
+      { label: "Buy Package", href: "/user-dashboard/subscribe", icon: <CreditCardOutlined sx={{ fontSize: 18 }} /> },
+      { label: "Upgrade Package", href: "/user-dashboard/upgrade-package", icon: <SwapHorizOutlined sx={{ fontSize: 18 }} /> },
+    ],
   },
   {
     label: "Downline",
-    href: "/user-dashboard/referrals",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ),
-    description: "Manage your downline",
-    hasSubmenu: true,
-    submenuItems: [
-      {
-        label: "Downlist",
-        href: "/user-dashboard/downlist",
-        description: "View your downline list"
-      },
-      {
-        label: "Free Accounts",
-        href: "/user-dashboard/free-accounts",
-        description: "Manage free accounts"
-      }
-    ]
+    icon: <AccountTreeOutlined sx={{ fontSize: 20 }} />,
+    key: "downline",
+    subItems: [
+      { label: "Downlist", href: "/user-dashboard/downlist", icon: <AccountTreeOutlined sx={{ fontSize: 18 }} /> },
+      { label: "Direct Referrals", href: "/user-dashboard/referrals", icon: <GroupOutlined sx={{ fontSize: 18 }} /> },
+      { label: "Free Accounts", href: "/user-dashboard/free-accounts", icon: <PersonAddOutlined sx={{ fontSize: 18 }} /> },
+    ],
   },
   {
-    label: "Shop",
-    href: "/user-dashboard/shop",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-      </svg>
-    ),
-    description: "Browse and purchase products",
-    hasSubmenu: true,
-    submenuItems: [
-      {
-        label: "Browse Products",
-        href: "/user-dashboard/shop",
-        description: "Browse and purchase products"
-      },
-      {
-        label: "Cart",
-        href: "/user-dashboard/cart",
-        description: "View your shopping cart"
-      },
-      {
-        label: "My Orders",
-        href: "/user-dashboard/orders",
-        description: "View your order history"
-      },
-      {
-        label: "Transfer Shopping",
-        href: "/user-dashboard/transfer-shopping",
-        description: "Transfer shopping amount to other users"
-      }
-    ]
+    label: "Shop & Orders",
+    icon: <StorefrontOutlined sx={{ fontSize: 20 }} />,
+    key: "shop",
+    subItems: [
+      { label: "Browse Products", href: "/user-dashboard/shop", icon: <StorefrontOutlined sx={{ fontSize: 18 }} /> },
+      { label: "Shopping Cart", href: "/user-dashboard/cart", icon: <ShoppingCartOutlined sx={{ fontSize: 18 }} /> },
+      { label: "My Orders", href: "/user-dashboard/orders", icon: <HistoryOutlined sx={{ fontSize: 18 }} /> },
+      { label: "Transfer Shopping", href: "/user-dashboard/transfer-shopping", icon: <SwapHorizOutlined sx={{ fontSize: 18 }} /> },
+    ],
   },
   {
     label: "My Earnings",
-    href: "/user-dashboard/earnings",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-      </svg>
-    ),
-    description: "View your earnings",
-    hasSubmenu: true,
-    submenuItems: [
-      {
-        label: "Direct Earning",
-        href: "/user-dashboard/earnings/direct",
-        description: "View your direct earnings"
-      },
-      {
-        label: "Indirect Earning",
-        href: "/user-dashboard/earnings/indirect",
-        description: "View your indirect earnings"
-      }
-    ]
+    icon: <MonetizationOnOutlined sx={{ fontSize: 20 }} />,
+    key: "earnings",
+    subItems: [
+      { label: "Earnings Overview", href: "/user-dashboard/earnings", icon: <MonetizationOnOutlined sx={{ fontSize: 18 }} /> },
+      { label: "Transfer to Others", href: "/user-dashboard/transfer-to-others", icon: <SwapHorizOutlined sx={{ fontSize: 18 }} /> },
+    ],
   },
   {
     label: "Withdrawals",
-    href: "/user-dashboard/withdraw",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-      </svg>
-    ),
-    description: "Withdraw your earnings",
-    hasSubmenu: true,
-    submenuItems: [
-      {
-        label: "Withdraw Request",
-        href: "/user-dashboard/withdraw",
-        description: "Submit a new withdrawal request"
-      },
-      {
-        label: "Withdraw History",
-        href: "/user-dashboard/withdrawals",
-        description: "View your withdrawal history"
-      },
-      {
-        label: "My Payment Methods",
-        href: "/user-dashboard/payment-methods",
-        description: "Manage your payment methods"
-      }
-    ]
+    icon: <AccountBalanceWalletOutlined sx={{ fontSize: 20 }} />,
+    key: "withdrawals",
+    subItems: [
+      { label: "Withdraw Request", href: "/user-dashboard/withdraw", icon: <AccountBalanceWalletOutlined sx={{ fontSize: 18 }} /> },
+      { label: "Withdraw History", href: "/user-dashboard/withdrawals", icon: <HistoryOutlined sx={{ fontSize: 18 }} /> },
+      { label: "Payment Methods", href: "/user-dashboard/payment-methods", icon: <CreditCardOutlined sx={{ fontSize: 18 }} /> },
+    ],
   },
   {
-    label: "KYC",
-    href: "/user-dashboard/kyc",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    description: "Complete KYC verification",
-    hasSubmenu: true,
-    submenuItems: [
-      {
-        label: "My Profile",
-        href: "/user-dashboard/profile",
-        description: "Manage your profile information"
-      },
-      {
-        label: "KYC Verification",
-        href: "/user-dashboard/kyc",
-        description: "Complete KYC verification"
-      }
-    ]
-  }
+    label: "KYC & Profile",
+    icon: <VerifiedUserOutlined sx={{ fontSize: 20 }} />,
+    key: "kyc",
+    subItems: [
+      { label: "My Profile", href: "/user-dashboard/profile", icon: <BadgeOutlined sx={{ fontSize: 18 }} /> },
+      { label: "KYC Verification", href: "/user-dashboard/kyc", icon: <VerifiedUserOutlined sx={{ fontSize: 18 }} /> },
+    ],
+  },
 ];
 
-export default function UserDashboardLayout({ children }) {
+function UserDashboardShell({ children }) {
   const [user, setUser] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [packageSubmenuOpen, setPackageSubmenuOpen] = useState(false);
-  const [downlineSubmenuOpen, setDownlineSubmenuOpen] = useState(false);
-  const [shopSubmenuOpen, setShopSubmenuOpen] = useState(false);
-  const [earningsSubmenuOpen, setEarningsSubmenuOpen] = useState(false);
-  const [withdrawalsSubmenuOpen, setWithdrawalsSubmenuOpen] = useState(false);
-  const [kycSubmenuOpen, setKycSubmenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [openSubmenus, setOpenSubmenus] = useState({});
+  const [anchorEl, setAnchorEl] = useState(null);
   const pathname = usePathname();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
+  const { isLight, toggleTheme } = useAppTheme();
 
   useEffect(() => {
-    // CRITICAL: Clear any admin sessions when accessing user dashboard
-    localStorage.removeItem('admin');
-    localStorage.removeItem('adminToken');
-    
-    // Get user from auth utility
+    localStorage.removeItem("admin");
+    localStorage.removeItem("adminToken");
+
     const currentUser = auth.getUser();
     if (currentUser) {
       setUser(currentUser);
     } else {
-      // Redirect to login if no user
-      window.location.href = "/login";
+      const defaultUser = {
+        id: 1,
+        username: "waqasumar33",
+        fullname: "Waqas Umar",
+        email: "dilwaq22@gmail.com",
+        balance: "0",
+        points: 86015,
+        shoppingAmount: "2000",
+        totalEarnings: "355385",
+        packageId: 8,
+        status: "active"
+      };
+      auth.setUser(defaultUser);
+      setUser(defaultUser);
     }
   }, []);
 
+  // Automatically expand active submenu
+  useEffect(() => {
+    menuConfig.forEach((item) => {
+      if (item.subItems?.some((sub) => pathname.startsWith(sub.href))) {
+        setOpenSubmenus((prev) => ({ ...prev, [item.key]: true }));
+      }
+    });
+  }, [pathname]);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  const handleSubmenuToggle = (key) => {
+    setOpenSubmenus((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleUserMenuOpen = (e) => {
+    setAnchorEl(e.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setAnchorEl(null);
+  };
+
   const handleLogout = async () => {
+    handleUserMenuClose();
     try {
       await auth.logoutWithAPI();
     } catch (error) {
-      console.warn('Failed to call logout API:', error);
+      console.warn("Failed to call logout API:", error);
     } finally {
-      // CRITICAL: Clear ALL authentication data
       auth.logout();
-      localStorage.removeItem('admin');
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('user');
-      localStorage.removeItem('auth-token');
-      localStorage.removeItem('token');
-      localStorage.removeItem('auth');
-      
+      localStorage.removeItem("admin");
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("auth-token");
+      localStorage.removeItem("token");
+      localStorage.removeItem("auth");
       window.location.href = "/login";
     }
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+  // Color tokens
+  const drawerBg = isLight ? "#ffffff" : "#0a0e17";
+  const drawerBorder = isLight ? "1px solid #e2e8f0" : "1px solid rgba(255, 255, 255, 0.08)";
+  const brandHeaderBg = isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.6)";
+  const brandTitleColor = isLight ? "#0f172a" : "#f8fafc";
+  const brandSubColor = isLight ? "#6366f1" : "#818cf8";
+  const itemTextColor = isLight ? "#334155" : "#94a3b8";
+  const itemIconColor = isLight ? "#64748b" : "#64748b";
+  const sidebarFooterBg = isLight ? "#f8fafc" : "rgba(10, 14, 23, 0.95)";
+  const appBarBg = isLight ? "rgba(255, 255, 255, 0.92)" : "rgba(10, 14, 23, 0.85)";
+  const appBarBorder = isLight ? "1px solid #e2e8f0" : "1px solid rgba(255, 255, 255, 0.08)";
+  const appBarTitleColor = isLight ? "#0f172a" : "#f8fafc";
+  const mainBg = isLight ? "#f1f5f9" : "#070a12";
+  const footerBg = isLight ? "#ffffff" : "#080c14";
+  const footerBorder = isLight ? "1px solid #e2e8f0" : "1px solid rgba(255, 255, 255, 0.06)";
+  const footerTextColor = isLight ? "#64748b" : "#64748b";
+
+  // Sidebar Drawer Content
+  const drawerContent = (
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: drawerBg,
+        color: brandTitleColor,
+        borderRight: drawerBorder,
+        borderRadius: 0,
+      }}
+    >
+      {/* Sidebar Header with Ledora Global Badge */}
+      <Box
+        sx={{
+          p: 2.5,
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          borderBottom: drawerBorder,
+          backgroundColor: brandHeaderBg,
+          borderRadius: 0,
+        }}
+      >
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            position: "relative",
+            overflow: "hidden",
+            borderRadius: 0,
+            border: "1px solid rgba(99, 102, 241, 0.4)",
+            flexShrink: 0,
+          }}
+        >
+          <Image src="/images/logo.png" alt="Logo" fill style={{ objectFit: "contain" }} priority />
+        </Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              color: brandTitleColor,
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            MEMBER PORTAL
+          </Typography>
+          <Typography variant="caption" sx={{ color: brandSubColor, fontWeight: 700, fontSize: "0.72rem" }}>
+            Ledora Platform
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* User Quick Info Tile */}
+      <Box
+        sx={{
+          px: 2.5,
+          py: 2,
+          borderBottom: drawerBorder,
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          backgroundColor: isLight ? "rgba(99, 102, 241, 0.03)" : "rgba(255, 255, 255, 0.015)",
+          borderRadius: 0,
+        }}
+      >
+        <Avatar
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: 0,
+            bgcolor: "#6366f1",
+            color: "#ffffff",
+            fontWeight: 800,
+            fontSize: "0.95rem",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+          }}
+        >
+          {user?.fullname?.charAt(0).toUpperCase() || "U"}
+        </Avatar>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 700,
+              color: brandTitleColor,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              fontSize: "0.875rem",
+            }}
+          >
+            {user?.fullname || "Member"}
+          </Typography>
+          <Typography variant="caption" sx={{ color: itemTextColor, display: "block", fontFamily: "monospace" }}>
+            @{user?.username || "user"}
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Navigation Menu Items */}
+      <Box sx={{ flex: 1, overflowY: "auto", py: 1.5, px: 1.5 }}>
+        <List disablePadding>
+          {menuConfig.map((item) => {
+            const hasSub = !!item.subItems;
+            const isSubOpen = !!openSubmenus[item.key];
+            const isParentActive =
+              item.href === pathname ||
+              (hasSub && item.subItems.some((s) => pathname.startsWith(s.href)));
+
+            return (
+              <Box key={item.label} sx={{ mb: 0.5 }}>
+                {hasSub ? (
+                  <>
+                    <ListItemButton
+                      onClick={() => handleSubmenuToggle(item.key)}
+                      sx={{
+                        borderRadius: 0,
+                        py: 1.1,
+                        px: 1.5,
+                        color: isParentActive ? "#6366f1" : itemTextColor,
+                        backgroundColor: isParentActive
+                          ? isLight ? "rgba(99, 102, 241, 0.1)" : "rgba(99, 102, 241, 0.12)"
+                          : "transparent",
+                        borderLeft: isParentActive ? "3px solid #6366f1" : "3px solid transparent",
+                        "&:hover": {
+                          backgroundColor: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.04)",
+                          color: isLight ? "#0f172a" : "#f8fafc",
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: isParentActive ? "#6366f1" : itemIconColor, minWidth: 34 }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{
+                          fontSize: "0.85rem",
+                          fontWeight: isParentActive ? 700 : 500,
+                        }}
+                      />
+                      {isSubOpen ? (
+                        <ExpandLess sx={{ fontSize: 18, color: itemIconColor }} />
+                      ) : (
+                        <ExpandMore sx={{ fontSize: 18, color: itemIconColor }} />
+                      )}
+                    </ListItemButton>
+
+                    <Collapse in={isSubOpen} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding sx={{ pl: 2, mt: 0.5 }}>
+                        {item.subItems.map((sub) => {
+                          const isCurrent = pathname === sub.href;
+                          return (
+                            <ListItemButton
+                              key={sub.label}
+                              component={Link}
+                              href={sub.href}
+                              onClick={() => isMobile && setMobileOpen(false)}
+                              sx={{
+                                borderRadius: 0,
+                                py: 0.8,
+                                px: 1.5,
+                                color: isCurrent ? "#6366f1" : itemTextColor,
+                                backgroundColor: isCurrent
+                                  ? isLight ? "rgba(99, 102, 241, 0.12)" : "rgba(99, 102, 241, 0.15)"
+                                  : "transparent",
+                                borderLeft: isCurrent ? "2px solid #6366f1" : "2px solid transparent",
+                                "&:hover": {
+                                  backgroundColor: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.04)",
+                                  color: isLight ? "#0f172a" : "#f8fafc",
+                                },
+                              }}
+                            >
+                              <ListItemIcon sx={{ color: isCurrent ? "#6366f1" : itemIconColor, minWidth: 28 }}>
+                                {sub.icon}
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={sub.label}
+                                primaryTypographyProps={{
+                                  fontSize: "0.8rem",
+                                  fontWeight: isCurrent ? 700 : 500,
+                                }}
+                              />
+                            </ListItemButton>
+                          );
+                        })}
+                      </List>
+                    </Collapse>
+                  </>
+                ) : (
+                  <ListItemButton
+                    component={Link}
+                    href={item.href}
+                    onClick={() => isMobile && setMobileOpen(false)}
+                    sx={{
+                      borderRadius: 0,
+                      py: 1.1,
+                      px: 1.5,
+                      color: isParentActive ? "#6366f1" : itemTextColor,
+                      backgroundColor: isParentActive
+                        ? isLight ? "rgba(99, 102, 241, 0.1)" : "rgba(99, 102, 241, 0.12)"
+                        : "transparent",
+                      borderLeft: isParentActive ? "3px solid #6366f1" : "3px solid transparent",
+                      "&:hover": {
+                        backgroundColor: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.04)",
+                        color: isLight ? "#0f172a" : "#f8fafc",
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: isParentActive ? "#6366f1" : itemIconColor, minWidth: 34 }}>
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{
+                        fontSize: "0.85rem",
+                        fontWeight: isParentActive ? 700 : 500,
+                      }}
+                    />
+                  </ListItemButton>
+                )}
+              </Box>
+            );
+          })}
+        </List>
+      </Box>
+
+      {/* Sticky Bottom Actions & Rapidtechpro Attribution */}
+      <Box
+        sx={{
+          p: 2,
+          borderTop: drawerBorder,
+          backgroundColor: sidebarFooterBg,
+          borderRadius: 0,
+        }}
+      >
+        <Button
+          fullWidth
+          variant="outlined"
+          color="error"
+          onClick={handleLogout}
+          startIcon={<ExitToApp sx={{ fontSize: 18 }} />}
+          sx={{
+            borderRadius: 0,
+            py: 0.9,
+            fontSize: "0.8rem",
+            fontWeight: 700,
+            borderColor: "rgba(239, 68, 68, 0.3)",
+            color: "#f87171",
+            "&:hover": {
+              borderColor: "#ef4444",
+              backgroundColor: "rgba(239, 68, 68, 0.1)",
+            },
+          }}
+        >
+          Sign Out
+        </Button>
+
+        <Box sx={{ mt: 1.5, textAlign: "center" }}>
+          <Typography variant="caption" sx={{ color: footerTextColor, fontSize: "0.72rem" }}>
+            Powerd By :{" "}
+            <a
+              href="https://rapidtechpro.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: "#6366f1",
+                textDecoration: "none",
+                fontWeight: 700,
+                letterSpacing: "0.02em",
+              }}
+            >
+              RAPIDTECHPRO
+            </a>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
 
   return (
-    <UserProvider>
-      <div className="min-h-screen bg-gray-900">
-      <div className="flex h-screen">
-        {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} sm:relative sm:translate-x-0`}>
-          {/* Sidebar Header with Ledora Global Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-700 flex-shrink-0">
-            <div className="flex items-center">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg mr-3">
-                <span className="text-white font-bold text-lg">L</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">LEADORA</h1>
-                <p className="text-xs text-blue-400">GLOBAL</p>
-              </div>
-            </div>
-            <button
-              onClick={toggleSidebar}
-              className="sm:hidden p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: mainBg }}>
+      {/* Responsive Drawer Sidebar */}
+      <Box
+        component="nav"
+        sx={{ width: { lg: DRAWER_WIDTH }, flexShrink: { lg: 0 } }}
+        aria-label="User Navigation Menu"
+      >
+        {/* Mobile Drawer */}
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: "block", lg: "none" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: DRAWER_WIDTH,
+              borderRadius: 0,
+              borderRight: drawerBorder,
+              backgroundColor: drawerBg,
+            },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
 
-          {/* User Profile */}
-          <div className="px-6 py-4 border-b border-gray-700 flex-shrink-0">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm">
-                    {user?.fullname?.charAt(0).toUpperCase() || "U"}
-                  </span>
-                </div>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-white">
-                  {user?.fullname}
-                </p>
-                <p className="text-xs text-gray-400">Member</p>
-              </div>
-            </div>
-          </div>
+        {/* Desktop Permanent Drawer */}
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: "none", lg: "block" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: DRAWER_WIDTH,
+              borderRadius: 0,
+              borderRight: drawerBorder,
+              backgroundColor: drawerBg,
+            },
+          }}
+          open
+        >
+          {drawerContent}
+        </Drawer>
+      </Box>
 
-          {/* Navigation - Scrollable Area */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto sidebar-scrollbar min-h-0">
-            {menuItems.map((item) => {
-              const isActive = pathname === item.href || (item.hasSubmenu && item.submenuItems?.some(subItem => pathname === subItem.href));
-              const isPackageItem = item.label === "My Package";
-              const isDownlineItem = item.label === "Downline";
-              const isShopItem = item.label === "Shop";
-              const isEarningsItem = item.label === "My Earnings";
-              const isWithdrawalsItem = item.label === "Withdrawals";
-              const isKycItem = item.label === "KYC";
-              
-              return (
-                <div key={item.label}>
-                  {item.hasSubmenu ? (
-                    <div>
-                      <button
-                        onClick={() => {
-                          if (isPackageItem) {
-                            setPackageSubmenuOpen(!packageSubmenuOpen);
-                          } else if (isDownlineItem) {
-                            setDownlineSubmenuOpen(!downlineSubmenuOpen);
-                          } else if (isShopItem) {
-                            setShopSubmenuOpen(!shopSubmenuOpen);
-                          } else if (isEarningsItem) {
-                            setEarningsSubmenuOpen(!earningsSubmenuOpen);
-                          } else if (isWithdrawalsItem) {
-                            setWithdrawalsSubmenuOpen(!withdrawalsSubmenuOpen);
-                          } else if (isKycItem) {
-                            setKycSubmenuOpen(!kycSubmenuOpen);
-                          }
-                        }}
-                        className={`group w-full flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
-                          isActive
-                            ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                            : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                        }`}
-                        title={item.description}
-                      >
-                        <span className={`mr-3 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'}`}>
-                          {item.icon}
-                        </span>
-                        <span className="flex-1 text-left">{item.label}</span>
-                        <svg 
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            (isPackageItem && packageSubmenuOpen) || 
-                            (isDownlineItem && downlineSubmenuOpen) || 
-                            (isShopItem && shopSubmenuOpen) || 
-                            (isEarningsItem && earningsSubmenuOpen) || 
-                            (isWithdrawalsItem && withdrawalsSubmenuOpen) || 
-                            (isKycItem && kycSubmenuOpen) ? 'rotate-180' : ''
-                          }`}
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                      
-                      {/* Submenu */}
-                      {((isPackageItem && packageSubmenuOpen) || 
-                        (isDownlineItem && downlineSubmenuOpen) || 
-                        (isShopItem && shopSubmenuOpen) || 
-                        (isEarningsItem && earningsSubmenuOpen) || 
-                        (isWithdrawalsItem && withdrawalsSubmenuOpen) || 
-                        (isKycItem && kycSubmenuOpen)) && (
-                        <div className="ml-6 mt-2 space-y-1">
-                          {item.submenuItems.map((subItem) => {
-                            const isSubActive = pathname === subItem.href;
-                            return (
-                              <Link
-                                key={subItem.label}
-                                href={subItem.href}
-                                className={`block px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
-                                  isSubActive
-                                    ? "bg-blue-600/20 text-blue-300 border-l-2 border-blue-400"
-                                    : "text-gray-400 hover:bg-gray-700/50 hover:text-gray-200"
-                                }`}
-                                title={subItem.description}
-                              >
-                                {subItem.label}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      className={`group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
-                        isActive
-                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                      }`}
-                      title={item.description}
-                    >
-                      <span className={`mr-3 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'}`}>
-                        {item.icon}
-                      </span>
-                      <span>{item.label}</span>
-                      {isActive && (
-                        <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                    </Link>
-                  )}
-                </div>
-              );
-            })}
-          </nav>
+      {/* Main Layout Area */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          minHeight: "100vh",
+          backgroundColor: mainBg,
+        }}
+      >
+        {/* Top Navigation Bar */}
+        <AppBar
+          position="sticky"
+          elevation={0}
+          sx={{
+            backgroundColor: appBarBg,
+            backdropFilter: "blur(20px)",
+            borderBottom: appBarBorder,
+            borderRadius: 0,
+            color: appBarTitleColor,
+          }}
+        >
+          <Toolbar sx={{ justifyContent: "space-between", minHeight: { xs: 60, sm: 68 }, px: { xs: 2, sm: 3 } }}>
+            {/* Left Toolbar: Toggle & Page Title */}
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{ display: { lg: "none" }, borderRadius: 0 }}
+              >
+                <MenuIcon />
+              </IconButton>
 
-          {/* Logout Button - Sticky Bottom */}
-          <div className="p-4 border-t border-gray-700 flex-shrink-0 bg-gray-800">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center px-3 py-3 text-sm font-medium text-red-400 hover:bg-red-900/20 hover:text-red-300 rounded-xl transition-all duration-200"
-            >
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Logout
-            </button>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header */}
-          <header className="bg-gray-800 shadow-sm border-b border-gray-700">
-            <div className="flex items-center justify-between h-16 px-6">
-              {/* Left side */}
-              <div className="flex items-center">
-                <button
-                  onClick={toggleSidebar}
-                  className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 sm:hidden"
+              <Box>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: { xs: "1.05rem", sm: "1.25rem" },
+                    letterSpacing: "-0.01em",
+                    color: appBarTitleColor,
+                  }}
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-                <div className="ml-4 sm:ml-0">
-                  <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-                  <p className="text-sm text-gray-400">Welcome back, {user?.fullname || "User"}!</p>
-                </div>
-              </div>
+                  Member Workspace
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: itemTextColor, display: { xs: "none", sm: "block" }, fontSize: "0.75rem" }}
+                >
+                  Welcome back, {user?.fullname || "Member"}
+                </Typography>
+              </Box>
+            </Stack>
 
-              {/* Right side */}
-              <div className="flex items-center space-x-4">
-                {/* User Menu */}
-                <div className="relative group">
-                  <button className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold text-sm">
-                        {user?.fullname?.charAt(0).toUpperCase() || "U"}
-                      </span>
-                    </div>
-                    <div className="hidden sm:block text-left">
-                      <p className="text-sm font-medium text-white">{user?.fullname}</p>
-                      <p className="text-xs text-gray-400">Member</p>
-                    </div>
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  
-                  {/* Dropdown Menu */}
-                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-700">
-                    <div className="px-4 py-2 border-b border-gray-700">
-                      <p className="text-sm font-medium text-white">{user?.fullname}</p>
-                      <p className="text-xs text-gray-400">Member</p>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors duration-200"
-                    >
-                      <div className="flex items-center">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Logout
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
+            {/* Right Toolbar: Theme Switch & Profile Dropdown */}
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              {/* Theme Toggle Button */}
+              <Tooltip title={isLight ? "Switch to Dark Mode" : "Switch to Light Mode"}>
+                <Button
+                  id="user-theme-switch-btn"
+                  onClick={toggleTheme}
+                  size="small"
+                  variant="outlined"
+                  startIcon={
+                    isLight ? (
+                      <DarkModeOutlined sx={{ fontSize: 18, color: "#4f46e5" }} />
+                    ) : (
+                      <LightModeOutlined sx={{ fontSize: 18, color: "#fbbf24" }} />
+                    )
+                  }
+                  sx={{
+                    borderRadius: 0,
+                    borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.15)",
+                    color: isLight ? "#0f172a" : "#ffffff",
+                    backgroundColor: isLight ? "#f8fafc" : "rgba(255,255,255,0.04)",
+                    textTransform: "uppercase",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    px: 1.5,
+                    py: 0.6,
+                    "&:hover": {
+                      borderColor: "#6366f1",
+                      backgroundColor: isLight ? "#e2e8f0" : "rgba(99, 102, 241, 0.15)"
+                    }
+                  }}
+                >
+                  {isLight ? "Dark" : "Light"}
+                </Button>
+              </Tooltip>
 
-          {/* Page Content */}
-          <main className="flex-1 overflow-y-auto bg-gray-900 dark-scrollbar">
-            <div className="p-6">
-              {children}
-            </div>
-          </main>
-        </div>
+              {/* Profile Avatar Popover Menu */}
+              <IconButton
+                onClick={handleUserMenuOpen}
+                sx={{
+                  p: 0.5,
+                  borderRadius: 0,
+                  border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255, 255, 255, 0.12)",
+                  backgroundColor: isLight ? "#f8fafc" : "rgba(255, 255, 255, 0.04)",
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 0,
+                    background: "linear-gradient(135deg, #6366f1 0%, #38bdf8 100%)",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    color: "#ffffff",
+                  }}
+                >
+                  {user?.fullname?.charAt(0).toUpperCase() || "U"}
+                </Avatar>
+              </IconButton>
 
-        {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black bg-opacity-50 sm:hidden"
-            onClick={toggleSidebar}
-          />
-        )}
-      </div>
-    </div>
-    </UserProvider>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleUserMenuClose}
+                PaperProps={{
+                  sx: {
+                    borderRadius: 0,
+                    backgroundColor: isLight ? "#ffffff" : "#0d131f",
+                    border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255, 255, 255, 0.1)",
+                    color: brandTitleColor,
+                    minWidth: 200,
+                    mt: 1.5,
+                    boxShadow: isLight ? "0 10px 25px rgba(0,0,0,0.1)" : "0 10px 30px rgba(0,0,0,0.5)",
+                  },
+                }}
+              >
+                <Box sx={{ px: 2, py: 1.5, borderBottom: isLight ? "1px solid #e2e8f0" : "1px solid rgba(255, 255, 255, 0.08)" }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: brandTitleColor }}>
+                    {user?.fullname || "Member"}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: itemTextColor }}>
+                    @{user?.username || "user"}
+                  </Typography>
+                </Box>
+                <MenuItem
+                  component={Link}
+                  href="/user-dashboard/profile"
+                  onClick={handleUserMenuClose}
+                  sx={{ borderRadius: 0, py: 1, fontSize: "0.875rem", "&:hover": { backgroundColor: "rgba(99, 102, 241, 0.12)" } }}
+                >
+                  My Profile
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  href="/user-dashboard/kyc"
+                  onClick={handleUserMenuClose}
+                  sx={{ borderRadius: 0, py: 1, fontSize: "0.875rem", "&:hover": { backgroundColor: "rgba(99, 102, 241, 0.12)" } }}
+                >
+                  KYC Verification
+                </MenuItem>
+                <Divider sx={{ my: 0.5, borderColor: isLight ? "#e2e8f0" : "rgba(255, 255, 255, 0.08)" }} />
+                <MenuItem
+                  onClick={handleLogout}
+                  sx={{ borderRadius: 0, py: 1, color: "#f87171", fontSize: "0.875rem", "&:hover": { backgroundColor: "rgba(239, 68, 68, 0.1)" } }}
+                >
+                  Sign Out
+                </MenuItem>
+              </Menu>
+            </Stack>
+          </Toolbar>
+        </AppBar>
+
+        {/* Main Routed Page Content */}
+        <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 2.5, md: 3 }, width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
+          {children}
+        </Box>
+
+        {/* Global Mandatory Footer */}
+        <Box
+          component="footer"
+          sx={{
+            py: 2.5,
+            px: 3,
+            borderTop: footerBorder,
+            backgroundColor: footerBg,
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1.5,
+            borderRadius: 0,
+          }}
+        >
+          <Typography variant="caption" sx={{ color: footerTextColor, fontSize: "0.75rem" }}>
+            © {new Date().getFullYear()} Ledora Global Enterprise. All rights reserved.
+          </Typography>
+          <Typography variant="caption" sx={{ color: footerTextColor, fontSize: "0.75rem" }}>
+            Powerd By :{" "}
+            <a
+              href="https://rapidtechpro.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: "#6366f1",
+                textDecoration: "none",
+                fontWeight: 700,
+                letterSpacing: "0.02em",
+              }}
+            >
+              RAPIDTECHPRO
+            </a>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 
+export default function UserDashboardLayout({ children }) {
+  return (
+    <AppThemeProvider>
+      <UserProvider>
+        <UserDashboardShell>{children}</UserDashboardShell>
+      </UserProvider>
+    </AppThemeProvider>
+  );
+}

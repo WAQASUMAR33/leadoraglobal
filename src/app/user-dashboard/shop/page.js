@@ -2,13 +2,68 @@
 
 import { useState, useEffect, useContext } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { UserContext } from '../../../lib/userContext';
+import { useAppTheme } from "@/context/AdminThemeContext";
+import {
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
+  Typography,
+  Button,
+  TextField,
+  Chip,
+  IconButton,
+  InputAdornment,
+  CircularProgress,
+  Alert,
+  Paper,
+  Divider,
+  Stack,
+  Badge
+} from "@mui/material";
+import {
+  Search as SearchIcon,
+  ShoppingCart as ShoppingCartIcon,
+  AddShoppingCart as AddShoppingCartIcon,
+  Storefront as StorefrontIcon,
+  CheckCircle as CheckCircleIcon,
+  WarningAmber as WarningAmberIcon,
+  LocalOffer as LocalOfferIcon,
+  ArrowForward as ArrowForwardIcon
+} from "@mui/icons-material";
 
-export default function Shop() {
+export default function ShopPage() {
   const context = useContext(UserContext);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { isLight } = useAppTheme();
+  const [products, setProducts] = useState([
+    {
+      id: 1,
+      title: "Hair Regrow Shampoo",
+      image: "https://steelblue-cod-355377.hostingersite.com/uploads/68ccd1509a0f2.jpeg",
+      price: "3000",
+      description: "100% Organic Hair Re-Grow Shampoo",
+      status: "active"
+    },
+    {
+      id: 7,
+      title: "Leadora Elixir Perfume For Women's",
+      image: "https://steelblue-cod-355377.hostingersite.com/uploads/6ab77cf8a5042.jpeg",
+      price: "9500",
+      description: "Timeless Fragrance of Elegance",
+      status: "active"
+    },
+    {
+      id: 9,
+      title: "Leadora Creed Perfume for Men's",
+      image: "https://steelblue-cod-355377.hostingersite.com/uploads/6ab77cc79c029.jpeg",
+      price: "9500",
+      description: "Signature Premium Masculine Fragrance",
+      status: "active"
+    }
+  ]);
+  const [loading, setLoading] = useState(false);
   const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -17,46 +72,63 @@ export default function Shop() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted) {
-      fetchProducts();
-      fetchShoppingEligibility();
-      // Load cart from localStorage only after mounting
-      try {
-        const savedCart = localStorage.getItem('cart');
-        if (savedCart) {
-          setCart(JSON.parse(savedCart));
-        }
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+    fetchProducts();
+    fetchShoppingEligibility();
+    try {
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        setCart(JSON.parse(savedCart));
       }
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error);
     }
-  }, [mounted]);
-
-  // Safety check for context
-  if (!context) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <p className="text-gray-400 mt-4">Loading...</p>
-      </div>
-    );
-  }
+    const timer = setTimeout(() => setLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const fetchProducts = async () => {
     try {
       const response = await fetch('/api/products');
       if (response.ok) {
         const data = await response.json();
-        setProducts(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setProducts(data);
+          return;
+        }
       }
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
+
+    // Default products fallback
+    setProducts([
+      {
+        id: 1,
+        title: "Hair Regrow Shampoo",
+        image: "https://steelblue-cod-355377.hostingersite.com/uploads/68ccd1509a0f2.jpeg",
+        price: "3000",
+        description: "100% Organic Hair Re-Grow Shampoo",
+        status: "active"
+      },
+      {
+        id: 7,
+        title: "Leadora Elixir Perfume For Women's",
+        image: "https://steelblue-cod-355377.hostingersite.com/uploads/6ab77cf8a5042.jpeg",
+        price: "9500",
+        description: "Timeless Fragrance of Elegance",
+        status: "active"
+      },
+      {
+        id: 9,
+        title: "Leadora Creed Perfume for Men's",
+        image: "https://steelblue-cod-355377.hostingersite.com/uploads/6ab77cc79c029.jpeg",
+        price: "9500",
+        description: "Signature Premium Masculine Fragrance",
+        status: "active"
+      }
+    ]);
   };
 
   const fetchShoppingEligibility = async () => {
@@ -70,7 +142,6 @@ export default function Shop() {
         const data = await response.json();
         setShoppingEligibility(data);
       } else {
-        console.error('Failed to fetch shopping eligibility');
         setShoppingEligibility({
           success: false,
           eligible: false,
@@ -91,9 +162,15 @@ export default function Shop() {
     }
   };
 
+  const getCartTotal = () => {
+    return cart.reduce((total, item) => {
+      const price = parseFloat(item.sale_price || item.price);
+      return total + (price * item.quantity);
+    }, 0);
+  };
+
   const addToCart = (product) => {
     try {
-      // Check if shopping is not allowed (Student package with 0 shopping amount)
       if (shoppingEligibility && !shoppingEligibility.eligible) {
         alert(
           `Shopping Not Available!\n\n` +
@@ -103,399 +180,276 @@ export default function Shop() {
         return;
       }
 
-      // Check if user has active package with shopping amount limit (only enforce if limit not consumed)
-      // If limit is consumed, shoppingType will be 'payment_proof_required' and shopping is allowed without limit
       if (shoppingEligibility && 
           shoppingEligibility.shopping && 
           shoppingEligibility.shopping.shoppingType === 'package_benefits' &&
           shoppingEligibility.shopping.remainingAmount !== null) {
         
-        // Calculate current cart total
         const currentCartTotal = getCartTotal();
-        
-        // Calculate new cart total if we add this product
         const productPrice = parseFloat(product.sale_price || product.price);
-        const existingItem = cart.find(item => item.id === product.id);
-        const newItemTotal = existingItem 
-          ? productPrice // Adding 1 more
-          : productPrice; // Adding new item
-        
-        const newCartTotal = currentCartTotal + newItemTotal;
+        const newCartTotal = currentCartTotal + productPrice;
         const remainingAmount = shoppingEligibility.shopping.remainingAmount;
         
-        // Check if new cart total exceeds available shopping amount
         if (newCartTotal > remainingAmount) {
           const maxCanAdd = Math.max(0, remainingAmount - currentCartTotal);
           alert(
             `Shopping amount limit reached!\n\n` +
-            `Available shopping amount: PKR ${remainingAmount.toFixed(2)}\n` +
-            `Current cart total: PKR ${currentCartTotal.toFixed(2)}\n` +
-            `You can add products worth: PKR ${maxCanAdd.toFixed(2)}\n\n` +
-            `This product costs: PKR ${productPrice.toFixed(2)}`
+            `Available shopping amount: $${remainingAmount.toFixed(2)}\n` +
+            `Current cart total: $${currentCartTotal.toFixed(2)}\n` +
+            `You can add products worth: $${maxCanAdd.toFixed(2)}\n\n` +
+            `This product costs: $${productPrice.toFixed(2)}`
           );
           return;
         }
       }
-      
-      // If limit is consumed (shoppingType is 'payment_proof_required'), allow shopping without limit restrictions
-      // The checkout page will require payment proof
 
-      // Proceed with adding to cart
       const existingItem = cart.find(item => item.id === product.id);
+      let updatedCart;
       if (existingItem) {
-        const updatedCart = cart.map(item =>
+        updatedCart = cart.map(item =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
-        setCart(updatedCart);
-        if (mounted) {
-          localStorage.setItem('cart', JSON.stringify(updatedCart));
-        }
       } else {
-        const updatedCart = [...cart, { ...product, quantity: 1 }];
-        setCart(updatedCart);
-        if (mounted) {
-          localStorage.setItem('cart', JSON.stringify(updatedCart));
-        }
+        updatedCart = [...cart, { ...product, quantity: 1 }];
       }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
+      setCart(updatedCart);
+      if (mounted) {
+        localStorage.setItem('cart', JSON.stringify(updatedCart));
+      }
+    } catch (err) {
+      console.error('Error adding to cart:', err);
     }
   };
 
-  const getCartCount = () => {
-    return cart.reduce((total, item) => total + item.quantity, 0);
-  };
+  const filteredProducts = products.filter(p =>
+    (p.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const getCartTotal = () => {
-    return cart.reduce((total, item) => {
-      const price = parseFloat(item.sale_price || item.price);
-      return total + (price * item.quantity);
-    }, 0);
-  };
+  // Color tokens
+  const cardBg = isLight ? "#ffffff" : "#0c1220";
+  const cardBorder = isLight ? "1px solid #e2e8f0" : "1px solid #1e293b";
+  const textPrimary = isLight ? "#0f172a" : "#f8fafc";
+  const textSecondary = isLight ? "#475569" : "#94a3b8";
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
-
-  // Prevent hydration mismatch by showing loading until mounted
-  if (!mounted) {
+  if (loading && products.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <p className="text-gray-400 mt-4">Loading shop...</p>
-      </div>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 350, gap: 2 }}>
+        <CircularProgress size={44} sx={{ color: '#6366f1' }} />
+        <Typography sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>
+          LOADING PRODUCT CATALOG...
+        </Typography>
+      </Box>
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <p className="text-gray-400 mt-4">Loading products...</p>
-      </div>
-    );
-  }
+  const totalCartCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
 
   return (
-    <div key={mounted ? 'mounted' : 'loading'} className="space-y-2 p-1">
-      {/* Header */}
-      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white">Shop Products</h1>
-            <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base">Browse and purchase products from our catalog</p>
-          </div>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-            <Link
-              href="/user-dashboard/orders"
-              className="px-3 md:px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 text-sm md:text-base text-center"
-            >
-              My Orders
-            </Link>
-            <Link
-              href="/user-dashboard/cart"
-              className="relative px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base text-center"
-            >
-              Cart
-              {mounted && getCartCount() > 0 && (
-                <span className="absolute -top-2 -right-2 w-5 h-5 md:w-6 md:h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {getCartCount()}
-                </span>
-              )}
-            </Link>
-          </div>
-        </div>
-      </div>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3.5 }}>
+      {/* Catalog Header */}
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, gap: 2 }}>
+        <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+            <StorefrontIcon sx={{ color: "#6366f1", fontSize: 28 }} />
+            <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: "-0.02em" }}>
+              Member Merchandise Catalog
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ color: textSecondary }}>
+            Redeem products using your Shopping Wallet balance or direct package allocations.
+          </Typography>
+        </Box>
 
-      {/* Info: Shopping limit consumed - payment proof required */}
-      {!eligibilityLoading && shoppingEligibility && shoppingEligibility.shopping && shoppingEligibility.shopping.shoppingType === 'payment_proof_required' && shoppingEligibility.package && (
-        <div className="bg-gradient-to-r from-orange-900 to-red-900 rounded-xl p-4 md:p-6 border border-orange-700">
-          <div className="flex items-start space-x-3">
-            <svg className="w-6 h-6 text-orange-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-1">Shopping Limit Consumed</h3>
-              <p className="text-sm text-gray-300 mb-3">
-                Your shopping limit from your package ({shoppingEligibility.package.name}) has been consumed. 
-                You can continue shopping by providing payment proof at checkout.
-              </p>
-              <div className="bg-orange-800/30 border border-orange-600 rounded-lg p-3">
-                <p className="text-xs text-orange-200">
-                  <strong>Note:</strong> After placing your order, upload payment proof. Your order will be processed after admin approval.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Button
+          component={Link}
+          href="/user-dashboard/cart"
+          variant="contained"
+          startIcon={
+            <Badge badgeContent={totalCartCount} color="error" sx={{ '& .MuiBadge-badge': { borderRadius: 0 } }}>
+              <ShoppingCartIcon sx={{ fontSize: 18 }} />
+            </Badge>
+          }
+          sx={{
+            borderRadius: 0,
+            backgroundColor: "#6366f1",
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: "0.82rem",
+            px: 2.5,
+            py: 1,
+            "&:hover": { backgroundColor: "#4f46e5" },
+          }}
+        >
+          View Cart (${getCartTotal().toFixed(2)})
+        </Button>
+      </Box>
+
+      {/* Shopping Benefit Allocation Status Card */}
+      {!eligibilityLoading && shoppingEligibility && shoppingEligibility.shopping && (
+        <Card sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder, borderLeft: "4px solid #10b981", p: 2.5 }}>
+          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", md: "center" }} spacing={2}>
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: textPrimary }}>
+                Active Shopping Allowance: {shoppingEligibility.package?.name || 'Standard Tier'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: textSecondary }}>
+                Available shopping credits allocated from your package subscription.
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: "flex", gap: 3 }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: textSecondary, display: "block" }}>Package Total</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: textPrimary }}>
+                  ${parseFloat(shoppingEligibility.package?.shoppingAmount || 0).toFixed(2)}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" sx={{ color: textSecondary, display: "block" }}>Consumed</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#f87171" }}>
+                  ${parseFloat(shoppingEligibility.shopping.totalSpent || 0).toFixed(2)}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" sx={{ color: textSecondary, display: "block" }}>Available</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#10b981" }}>
+                  ${parseFloat(shoppingEligibility.shopping.remainingAmount || 0).toFixed(2)}
+                </Typography>
+              </Box>
+            </Box>
+          </Stack>
+        </Card>
       )}
 
-      {/* Shopping Amount Display */}
-      {!eligibilityLoading && shoppingEligibility && shoppingEligibility.shopping && shoppingEligibility.shopping.shoppingType === 'package_benefits' && shoppingEligibility.shopping.remainingAmount !== null && (
-        <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-xl p-4 md:p-6 border border-blue-700">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-2">
-                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                <h3 className="text-lg font-semibold text-white">Shopping Amount</h3>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Total Limit</p>
-                  <p className="text-lg font-bold text-white">PKR {shoppingEligibility.package.shoppingAmount.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Already Spent</p>
-                  <p className="text-lg font-bold text-red-400">PKR {shoppingEligibility.shopping.totalSpent.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Current Cart</p>
-                  <p className="text-lg font-bold text-yellow-400">PKR {getCartTotal().toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Remaining</p>
-                  <p className="text-lg font-bold text-green-400">PKR {Math.max(0, shoppingEligibility.shopping.remainingAmount - getCartTotal()).toLocaleString()}</p>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
-                <div className="flex h-full">
-                  {/* Already Spent */}
-                  {shoppingEligibility.shopping.totalSpent > 0 && (
-                    <div 
-                      className="bg-red-500 h-full transition-all duration-300"
-                      style={{ 
-                        width: `${Math.min(100, (shoppingEligibility.shopping.totalSpent / shoppingEligibility.package.shoppingAmount) * 100)}%` 
-                      }}
-                    />
-                  )}
-                  
-                  {/* Current Cart */}
-                  {getCartTotal() > 0 && (
-                    <div 
-                      className="bg-yellow-500 h-full transition-all duration-300"
-                      style={{ 
-                        width: `${Math.min(100 - (shoppingEligibility.shopping.totalSpent / shoppingEligibility.package.shoppingAmount) * 100, (getCartTotal() / shoppingEligibility.package.shoppingAmount) * 100)}%` 
-                      }}
-                    />
-                  )}
-                  
-                  {/* Remaining */}
-                  <div 
-                    className="bg-green-500 h-full transition-all duration-300"
-                    style={{ 
-                      width: `${Math.max(0, ((shoppingEligibility.shopping.remainingAmount - getCartTotal()) / shoppingEligibility.package.shoppingAmount) * 100)}%` 
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-3 mt-3 text-xs">
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 bg-red-500 rounded"></div>
-                  <span className="text-gray-300">Spent</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-                  <span className="text-gray-300">In Cart</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 bg-green-500 rounded"></div>
-                  <span className="text-gray-300">Available</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Warning if close to limit */}
-            {(shoppingEligibility.shopping.remainingAmount - getCartTotal()) < (shoppingEligibility.package.shoppingAmount * 0.1) && (
-              <div className="flex items-start space-x-2 bg-yellow-900/30 border border-yellow-600 rounded-lg p-3">
-                <svg className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-semibold text-yellow-400">Nearly at limit!</p>
-                  <p className="text-xs text-yellow-300 mt-1">You have limited shopping amount remaining.</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Warning for users with package but no shopping amount (Student package) */}
-      {!eligibilityLoading && shoppingEligibility && shoppingEligibility.shopping && shoppingEligibility.shopping.shoppingType === 'no_shopping_allowed' && (
-        <div className="bg-gradient-to-r from-red-900 to-orange-900 rounded-xl p-4 md:p-6 border border-red-700">
-          <div className="flex items-start space-x-3">
-            <svg className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-1">Shopping Not Available</h3>
-              <p className="text-sm text-gray-300">
-                Your current package ({shoppingEligibility.package?.name}) does not include shopping benefits.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Info for users without package or with payment proof - removed per request */}
-
-      {/* Search and Filters */}
-      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Search products..."
+      {/* Search Filter Card */}
+      <Card sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder }}>
+        <CardContent sx={{ p: 2 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search merchandise catalog by product title, specs, or category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 md:px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-sm md:text-base"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: textSecondary, fontSize: 20 }} />
+                </InputAdornment>
+              )
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 0,
+                backgroundColor: isLight ? "#f8fafc" : "rgba(255, 255, 255, 0.02)",
+                color: textPrimary,
+              }
+            }}
           />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-6">
-        {filteredProducts.map((product) => (
-          <div key={product.id} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-gray-600 transition-all duration-200">
-            {/* Product Image */}
-            <div className="relative h-40 sm:h-48 bg-gray-700">
-              <Image
-                src={product.image}
-                alt={product.title}
-                fill
-                className="object-cover"
-                onError={(e) => {
-                  e.target.src = '/placeholder-product.jpg';
+      <Grid container spacing={3}>
+        {filteredProducts.map((product) => {
+          const price = parseFloat(product.price || 0);
+          const salePrice = product.sale_price ? parseFloat(product.sale_price) : null;
+          const discount = product.discount;
+
+          return (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
+              <Card
+                sx={{
+                  borderRadius: 0,
+                  backgroundColor: cardBg,
+                  border: cardBorder,
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  transition: "transform 0.15s, border-color 0.15s",
+                  "&:hover": {
+                    transform: "translateY(-2px)",
+                    borderColor: "#6366f1",
+                  }
                 }}
-              />
-              {product.discount && (
-                <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                  -{product.discount}%
-                </div>
-              )}
-            </div>
-
-            {/* Product Info */}
-            <div className="p-2 md:p-4">
-              <h3 className="text-white font-semibold mb-1 md:mb-2 line-clamp-2 text-xs md:text-base">{product.title}</h3>
-              <p className="text-gray-400 text-xs md:text-sm mb-2 md:mb-3 line-clamp-2">{product.description}</p>
-              
-              {/* Price */}
-              <div className="mb-2 md:mb-4">
-                <div className="flex flex-col space-y-1">
-                  {product.discount ? (
-                    <>
-                      <span className="text-sm md:text-lg font-bold text-white">
-                        PKR {parseFloat(product.sale_price).toFixed(2)}
-                      </span>
-                      <span className="text-xs md:text-sm text-gray-400 line-through">
-                        PKR {parseFloat(product.price).toFixed(2)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-sm md:text-lg font-bold text-white">
-                      PKR {parseFloat(product.price).toFixed(2)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Button - No Restrictions */}
-              <button
-                onClick={() => addToCart(product)}
-                className="w-full py-1.5 md:py-2 px-2 md:px-4 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 text-xs md:text-base"
               >
-                {shoppingEligibility?.shopping?.shoppingType === 'payment_proof_required' ? 'Add to Cart (Payment Proof)' : 'Add to Cart'}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+                {/* Product Image Box */}
+                <Box sx={{ position: "relative", height: 180, width: "100%", backgroundColor: isLight ? "#f1f5f9" : "#080d19", borderBottom: cardBorder }}>
+                  <img
+                    src={product.image || '/placeholder-product.jpg'}
+                    alt={product.title}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    onError={(e) => {
+                      e.target.src = '/placeholder-product.jpg';
+                    }}
+                  />
+                  {discount && (
+                    <Chip
+                      icon={<LocalOfferIcon sx={{ fontSize: '12px !important', color: '#fff' }} />}
+                      label={discount}
+                      size="small"
+                      sx={{
+                        position: "absolute",
+                        top: 8,
+                        left: 8,
+                        borderRadius: 0,
+                        backgroundColor: "#ef4444",
+                        color: "#fff",
+                        fontWeight: 800,
+                        fontSize: "0.68rem"
+                      }}
+                    />
+                  )}
+                </Box>
 
-      {/* Empty State */}
-      {filteredProducts.length === 0 && (
-        <div className="bg-gray-800 rounded-xl p-6 md:p-12 border border-gray-700 text-center">
-          <svg className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
-          <h3 className="text-lg md:text-xl font-semibold text-white mb-2">No products found</h3>
-          <p className="text-gray-400 text-sm md:text-base">Try adjusting your search or filter criteria</p>
-        </div>
-      )}
+                <CardContent sx={{ p: 2, flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary, fontSize: "0.95rem", lineHeight: 1.3, mb: 0.5 }}>
+                      {product.title}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: textSecondary, fontSize: "0.8rem", height: 38, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                      {product.description || "Premium Ledora corporate catalog product."}
+                    </Typography>
+                  </Box>
 
-      
+                  <Box>
+                    <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, mb: 1.5 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 800, color: "#10b981", fontSize: "1.1rem" }}>
+                        ${(salePrice || price).toFixed(2)}
+                      </Typography>
+                      {salePrice && (
+                        <Typography variant="caption" sx={{ color: textSecondary, textDecoration: "line-through" }}>
+                          ${price.toFixed(2)}
+                        </Typography>
+                      )}
+                    </Box>
 
-      {/* Shopping Benefits */}
-      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
-        <h2 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">Why Shop With Us?</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          <div className="flex items-center">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3 md:mr-4">
-              <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold text-sm md:text-base">Quality Products</h3>
-              <p className="text-gray-400 text-xs md:text-sm">Premium quality products at competitive prices</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3 md:mr-4">
-              <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold text-sm md:text-base">Fast Delivery</h3>
-              <p className="text-gray-400 text-xs md:text-sm">Quick and reliable shipping to your doorstep</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center sm:col-span-2 lg:col-span-1">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-3 md:mr-4">
-              <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold text-sm md:text-base">Secure Shopping</h3>
-              <p className="text-gray-400 text-xs md:text-sm">Safe and secure payment processing</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={() => addToCart(product)}
+                      startIcon={<AddShoppingCartIcon sx={{ fontSize: 16 }} />}
+                      sx={{
+                        borderRadius: 0,
+                        backgroundColor: "#6366f1",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                        py: 0.9,
+                        "&:hover": { backgroundColor: "#4f46e5" },
+                      }}
+                    >
+                      Add to Cart
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          );
+        })}
+      </Grid>
+    </Box>
   );
 }
-
-

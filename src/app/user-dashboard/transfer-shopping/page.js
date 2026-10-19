@@ -1,10 +1,44 @@
 "use client";
 
 import { useState, useEffect, useContext } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  Divider,
+  Button,
+  TextField,
+  Alert,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
+} from '@mui/material';
+import {
+  ShoppingBag,
+  Send,
+  Refresh,
+  SwapHoriz,
+  CheckCircle,
+  AccountBalanceWallet
+} from '@mui/icons-material';
 import { UserContext } from "../../../lib/userContext";
+import { useAppTheme } from "../../../context/AdminThemeContext";
 
 export default function TransferShoppingPage() {
   const { user, isAuthenticated } = useContext(UserContext) || {};
+  const { isLight } = useAppTheme();
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -16,51 +50,44 @@ export default function TransferShoppingPage() {
     description: ''
   });
   const [shoppingAmount, setShoppingAmount] = useState(0);
+  const [filterType, setFilterType] = useState('all');
 
-  // Filters
-  const [filterType, setFilterType] = useState('all'); // 'all', 'sent', 'received'
+  const bgCard = isLight ? '#ffffff' : '#0c1220';
+  const borderCard = isLight ? '#e2e8f0' : '#1e293b';
+  const textPrimary = isLight ? '#0f172a' : '#f8fafc';
+  const textSecondary = isLight ? '#64748b' : '#94a3b8';
+  const bgSubtle = isLight ? '#f8fafc' : '#070a12';
 
-  // Fetch shopping transfers
   const fetchTransfers = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        type: filterType
-      });
-
-      const response = await fetch(`/api/user/shopping-transfers?${params}`, {
-        credentials: 'include'
-      });
-
+      const params = new URLSearchParams({ type: filterType });
+      const response = await fetch(`/api/user/shopping-transfers?${params}`, { credentials: 'include' });
       if (response.ok) {
         const result = await response.json();
-        setTransfers(result.data.transfers);
+        setTransfers(result.data?.transfers || []);
       } else {
         setError('Failed to fetch transfer history');
       }
-    } catch (error) {
-      console.error('Error fetching transfers:', error);
+    } catch (err) {
+      console.error('Error fetching transfers:', err);
       setError('Error loading transfer history');
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch user shopping amount
   const fetchShoppingAmount = async () => {
     try {
-      const response = await fetch('/api/user/profile', {
-        credentials: 'include'
-      });
-      
+      const response = await fetch('/api/user/profile', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.user) {
           setShoppingAmount(parseFloat(data.user.shoppingAmount || 0));
         }
       }
-    } catch (error) {
-      console.error('Error fetching shopping amount:', error);
+    } catch (err) {
+      console.error('Error fetching shopping amount:', err);
     }
   };
 
@@ -69,10 +96,8 @@ export default function TransferShoppingPage() {
       fetchShoppingAmount();
       fetchTransfers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, filterType]);
 
-  // Handle transfer form submission
   const handleTransferSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -81,301 +106,332 @@ export default function TransferShoppingPage() {
     try {
       const response = await fetch('/api/user/shopping-transfers', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(transferForm)
       });
 
       const result = await response.json();
-
       if (response.ok) {
-        setMessage(result.message);
+        setMessage(result.message || 'Shopping funds transferred successfully');
         setTransferDialog(false);
         setTransferForm({ username: '', amount: '', description: '' });
-        fetchShoppingAmount(); // Refresh shopping amount
-        fetchTransfers(); // Refresh the list
+        fetchShoppingAmount();
+        fetchTransfers();
+        setTimeout(() => setMessage(null), 5000);
       } else {
         setError(result.error || 'Transfer failed');
       }
-    } catch (error) {
-      console.error('Transfer error:', error);
+    } catch (err) {
+      console.error('Transfer error:', err);
       setError('Error processing transfer');
     } finally {
       setLoading(false);
     }
   };
 
-  // Format date
+  const formatCurrency = (amount) => `PKR ${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <p className="text-gray-400">Please log in to access this page</p>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress size={32} sx={{ color: '#2563eb' }} />
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Header */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Transfer Shopping Amount</h1>
-            <p className="text-gray-400 mt-2">Send shopping amount to other users</p>
-          </div>
-          <button
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: { xs: 2.5, md: 3 } }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <ShoppingBag sx={{ color: '#06b6d4', fontSize: 32 }} />
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
+                Transfer Shopping Amount
+              </Typography>
+              <Typography variant="body2" sx={{ color: textSecondary }}>
+                Send accumulated shopping credits to other registered community members instantly.
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<Send />}
             onClick={() => setTransferDialog(true)}
-            className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors duration-200 flex items-center gap-2"
+            sx={{
+              borderRadius: 0,
+              bgcolor: '#06b6d4',
+              color: '#ffffff',
+              fontWeight: 800,
+              textTransform: 'none',
+              px: 2.5,
+              '&:hover': { bgcolor: '#0891b2' }
+            }}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-            Send Shopping Amount
-          </button>
-        </div>
-      </div>
+            Send Shopping Credit
+          </Button>
+        </Box>
+      </Card>
 
-      {/* Current Shopping Amount */}
-      <div className="bg-gradient-to-r from-cyan-900 to-blue-900 rounded-xl p-6 border border-cyan-700">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-cyan-300 font-semibold mb-1">Current Shopping Amount</h3>
-            <p className="text-3xl font-bold text-white">
-              PKR {shoppingAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-          </div>
-          <div className="w-16 h-16 bg-cyan-500 rounded-lg flex items-center justify-center">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-          </div>
-        </div>
-      </div>
+      {/* Balance Card */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
+                Your Available Shopping Balance
+              </Typography>
+              <Typography variant="h3" sx={{ fontWeight: 900, color: '#06b6d4', mt: 0.5 }}>
+                {formatCurrency(shoppingAmount)}
+              </Typography>
+            </Box>
+            <AccountBalanceWallet sx={{ fontSize: 48, color: '#06b6d4' }} />
+          </Box>
+        </CardContent>
+      </Card>
 
-      {/* Messages */}
       {message && (
-        <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="text-green-300">{message}</span>
-          </div>
-        </div>
+        <Alert severity="success" sx={{ borderRadius: 0, border: '1px solid #10b981', bgcolor: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.1)' }}>
+          {message}
+        </Alert>
       )}
-
       {error && (
-        <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            <span className="text-red-300">{error}</span>
-          </div>
-        </div>
+        <Alert severity="error" sx={{ borderRadius: 0, border: '1px solid #ef4444', bgcolor: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.1)' }}>
+          {error}
+        </Alert>
       )}
 
-      {/* Filters */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setFilterType('all')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              filterType === 'all' 
-                ? 'bg-cyan-600 text-white' 
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
+      {/* Filter and Action Bar */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {['all', 'sent', 'received'].map((type) => (
+              <Button
+                key={type}
+                variant={filterType === type ? 'contained' : 'outlined'}
+                onClick={() => setFilterType(type)}
+                size="small"
+                sx={{
+                  borderRadius: 0,
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  bgcolor: filterType === type ? '#06b6d4' : 'transparent',
+                  borderColor: borderCard,
+                  color: filterType === type ? '#ffffff' : textPrimary,
+                  '&:hover': { bgcolor: filterType === type ? '#0891b2' : bgSubtle }
+                }}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Button>
+            ))}
+          </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Refresh />}
+            onClick={() => { fetchShoppingAmount(); fetchTransfers(); }}
+            sx={{
+              borderRadius: 0,
+              borderColor: borderCard,
+              color: textPrimary,
+              fontWeight: 700,
+              textTransform: 'none'
+            }}
           >
-            All Transfers
-          </button>
-          <button
-            onClick={() => setFilterType('sent')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              filterType === 'sent' 
-                ? 'bg-cyan-600 text-white' 
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            Sent
-          </button>
-          <button
-            onClick={() => setFilterType('received')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              filterType === 'received' 
-                ? 'bg-cyan-600 text-white' 
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            Received
-          </button>
-          <button
-            onClick={fetchTransfers}
-            className="ml-auto px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
             Refresh
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Box>
+      </Card>
 
-      {/* Transfer History Table */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-4">Transfer History</h2>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-700">
-            <thead className="bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">From</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">To</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700">
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-400">Loading...</td>
-                </tr>
-              ) : transfers.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-400">No transfers found</td>
-                </tr>
-              ) : (
-                transfers.map((transfer) => {
-                  const isSent = transfer.fromUserId === user?.id;
+      {/* Transfers Table */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+        <Box sx={{ p: 2.5, pb: 1.5 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>
+            Shopping Credit Activity ({transfers.length})
+          </Typography>
+        </Box>
+        <Divider sx={{ borderColor: borderCard }} />
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress size={32} sx={{ color: '#06b6d4' }} />
+          </Box>
+        ) : transfers.length > 0 ? (
+          <TableContainer component={Paper} sx={{ borderRadius: 0, bgcolor: 'transparent', boxShadow: 'none' }}>
+            <Table>
+              <TableHead sx={{ bgcolor: bgSubtle }}>
+                <TableRow>
+                  <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Type</TableCell>
+                  <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Counterparty</TableCell>
+                  <TableCell align="right" sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Amount</TableCell>
+                  <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Description</TableCell>
+                  <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Date & Time</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {transfers.map((t) => {
+                  const isSent = t.type === 'sent' || t.fromUserId === user?.id;
                   return (
-                    <tr key={transfer.id} className="hover:bg-gray-700/50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">#{transfer.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          isSent ? 'bg-red-900 text-red-200' : 'bg-green-900 text-green-200'
-                        }`}>
-                          {isSent ? 'Sent' : 'Received'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        <div>
-                          <div className="font-medium">{transfer.fromUser?.fullname || 'N/A'}</div>
-                          <div className="text-gray-400">@{transfer.fromUser?.username || 'N/A'}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        <div>
-                          <div className="font-medium">{transfer.toUser?.fullname || 'N/A'}</div>
-                          <div className="text-gray-400">@{transfer.toUser?.username || 'N/A'}</div>
-                        </div>
-                      </td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                        isSent ? 'text-red-400' : 'text-green-400'
-                      }`}>
-                        {isSent ? '-' : '+'}PKR {parseFloat(transfer.amount).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{transfer.description || 'No description'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          transfer.status === 'completed' ? 'bg-green-900 text-green-200' : 'bg-yellow-900 text-yellow-200'
-                        }`}>
-                          {transfer.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{formatDate(transfer.createdAt)}</td>
-                    </tr>
+                    <TableRow key={t.id} hover sx={{ '&:hover': { bgcolor: bgSubtle } }}>
+                      <TableCell>
+                        <Chip
+                          label={isSent ? 'SENT' : 'RECEIVED'}
+                          size="small"
+                          sx={{
+                            borderRadius: 0,
+                            fontWeight: 800,
+                            fontSize: '0.7rem',
+                            bgcolor: isSent ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                            color: isSent ? '#ef4444' : '#10b981'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary }}>
+                          {isSent ? `To: ${t.toUser || t.recipientUsername || '-'}` : `From: ${t.fromUser || t.senderUsername || '-'}`}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" sx={{ fontWeight: 900, color: isSent ? '#ef4444' : '#10b981' }}>
+                          {isSent ? '-' : '+'}{formatCurrency(t.amount)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ color: textSecondary, fontSize: '0.82rem' }}>
+                        {t.description || '-'}
+                      </TableCell>
+                      <TableCell sx={{ color: textSecondary, fontSize: '0.82rem' }}>
+                        {formatDate(t.createdAt)}
+                      </TableCell>
+                    </TableRow>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 6 }}>
+            <ShoppingBag sx={{ fontSize: 40, color: textSecondary, mb: 1 }} />
+            <Typography variant="subtitle1" sx={{ color: textPrimary, fontWeight: 700 }}>
+              No Shopping Transfers Found
+            </Typography>
+            <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5 }}>
+              Transfers of shopping credits to and from other members will be recorded here.
+            </Typography>
+          </Box>
+        )}
+      </Card>
 
       {/* Transfer Dialog */}
-      {transferDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 w-full max-w-md">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-              Send Shopping Amount
-            </h2>
-            <form onSubmit={handleTransferSubmit}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Recipient Username</label>
-                  <input
-                    type="text"
-                    value={transferForm.username}
-                    onChange={(e) => setTransferForm(prev => ({ ...prev, username: e.target.value }))}
-                    required
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"
-                    placeholder="Enter username"
-                  />
-                </div>
+      <Dialog
+        open={transferDialog}
+        onClose={() => setTransferDialog(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            bgcolor: bgCard,
+            border: `1px solid ${borderCard}`,
+            backgroundImage: 'none'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: textPrimary, fontWeight: 800 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Send sx={{ color: '#06b6d4' }} />
+            Send Shopping Credit
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers sx={{ borderColor: borderCard }}>
+          <form id="transferShoppingForm" onSubmit={handleTransferSubmit}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 1 }}>
+              <Paper sx={{ p: 2, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+                <Typography variant="caption" sx={{ color: textSecondary, textTransform: 'uppercase', fontWeight: 700 }}>
+                  Available Shopping Balance
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: '#06b6d4', mt: 0.5 }}>
+                  {formatCurrency(shoppingAmount)}
+                </Typography>
+              </Paper>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Amount (PKR)</label>
-                  <input
-                    type="number"
-                    value={transferForm.amount}
-                    onChange={(e) => setTransferForm(prev => ({ ...prev, amount: e.target.value }))}
-                    required
-                    min="0"
-                    step="0.01"
-                    max={shoppingAmount}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"
-                    placeholder="Enter amount"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Available: PKR {shoppingAmount.toFixed(2)}</p>
-                </div>
+              <TextField
+                label="Recipient Username *"
+                required
+                size="small"
+                fullWidth
+                value={transferForm.username}
+                onChange={(e) => setTransferForm(prev => ({ ...prev, username: e.target.value }))}
+                placeholder="Enter member username"
+                InputLabelProps={{ sx: { color: textSecondary } }}
+                InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+              />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Description (Optional)</label>
-                  <textarea
-                    value={transferForm.description}
-                    onChange={(e) => setTransferForm(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"
-                    placeholder="Enter description"
-                  />
-                </div>
-              </div>
+              <TextField
+                label="Transfer Amount (PKR) *"
+                type="number"
+                required
+                size="small"
+                fullWidth
+                value={transferForm.amount}
+                onChange={(e) => setTransferForm(prev => ({ ...prev, amount: e.target.value }))}
+                placeholder="0.00"
+                InputLabelProps={{ sx: { color: textSecondary } }}
+                InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+              />
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setTransferDialog(false)}
-                  className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50"
-                >
-                  {loading ? 'Processing...' : 'Send'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+              <TextField
+                label="Description / Note (Optional)"
+                size="small"
+                fullWidth
+                multiline
+                rows={2}
+                value={transferForm.description}
+                onChange={(e) => setTransferForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Reason or invoice note"
+                InputLabelProps={{ sx: { color: textSecondary } }}
+                InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+              />
+            </Box>
+          </form>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setTransferDialog(false)}
+            sx={{ borderRadius: 0, color: textSecondary, textTransform: 'none', fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="transferShoppingForm"
+            variant="contained"
+            disabled={loading}
+            sx={{
+              borderRadius: 0,
+              bgcolor: '#06b6d4',
+              color: '#ffffff',
+              fontWeight: 800,
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#0891b2' }
+            }}
+          >
+            {loading ? 'Processing...' : 'Send Credit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }
-

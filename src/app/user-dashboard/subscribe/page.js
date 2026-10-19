@@ -2,88 +2,112 @@
 
 import { useState, useEffect, useContext, useCallback } from "react";
 import Link from "next/link";
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  Divider,
+  Button,
+  Alert,
+  CircularProgress,
+  Chip,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Paper
+} from '@mui/material';
+import {
+  WorkspacePremium,
+  AccountBalanceWallet,
+  ShoppingBag,
+  CheckCircle,
+  Payment,
+  ReceiptLong,
+  TrendingUp,
+  Group,
+  Security,
+  FlashOn
+} from '@mui/icons-material';
 import { UserContext } from "../../../lib/userContext";
+import { useAppTheme } from "../../../context/AdminThemeContext";
 
 export default function SubscribePackage() {
   const { user, isAuthenticated } = useContext(UserContext);
-  const [packages, setPackages] = useState([]);
+  const { isLight } = useAppTheme();
+  const [packages, setPackages] = useState([
+    { id: 1, package_name: "Student Package", package_amount: "2000", package_points: 25 },
+    { id: 2, package_name: "Distributer Package", package_amount: "6000", package_points: 75 },
+    { id: 3, package_name: "Personal Package", package_amount: "10000", package_points: 150 },
+    { id: 4, package_name: "Professional Package", package_amount: "15000", package_points: 250 },
+    { id: 5, package_name: "Elite Package", package_amount: "30000", package_points: 500 },
+    { id: 6, package_name: "Pro Max", package_amount: "50000", package_points: 1000 },
+    { id: 7, package_name: "Master Package", package_amount: "100000", package_points: 2000 },
+    { id: 8, package_name: "Combo Package", package_amount: "400000", package_points: 8000 }
+  ]);
   const [userBalance, setUserBalance] = useState(0);
-  const [shoppingAmount, setShoppingAmount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [shoppingAmount, setShoppingAmount] = useState(2000);
+  const [loading, setLoading] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('request'); // 'request' or 'balance'
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
+  const bgCard = isLight ? '#ffffff' : '#0c1220';
+  const borderCard = isLight ? '#e2e8f0' : '#1e293b';
+  const textPrimary = isLight ? '#0f172a' : '#f8fafc';
+  const textSecondary = isLight ? '#64748b' : '#94a3b8';
+  const bgSubtle = isLight ? '#f8fafc' : '#070a12';
+
   const fetchPackages = async () => {
     try {
-      const response = await fetch('/api/packages');
+      const response = await fetch('/api/packages', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setPackages(data.packages || []);
       } else {
-        console.error('Failed to fetch packages:', response.status);
         setPackages([]);
       }
-    } catch (error) {
-      console.error('Error fetching packages:', error);
+    } catch (err) {
+      console.error('Error fetching packages:', err);
       setPackages([]);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchPackages();
+    const fallbackTimer = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+    return () => clearTimeout(fallbackTimer);
+  }, []);
+
   const fetchUserBalance = useCallback(async () => {
     if (!user?.id) return;
-    
     try {
-      console.log('🔍 Subscribe page - Fetching user balance for user:', user.id);
-      const response = await fetch('/api/user/profile', {
-        credentials: 'include'
-      });
-      console.log('🔍 Subscribe page - Balance API response status:', response.status);
-      
+      const response = await fetch('/api/user/profile', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        console.log('🔍 Subscribe page - Balance API response data:', data);
-        
         if (data.success && data.user) {
-          const balance = parseFloat(data.user.balance || 0);
-          const sAmt = parseFloat(data.user.shoppingAmount || 0);
-          console.log('🔍 Subscribe page - Parsed balance:', balance, 'shoppingAmount:', sAmt);
-          setUserBalance(balance);
-          setShoppingAmount(sAmt);
-        } else {
-          console.log('🔍 Subscribe page - No balance data found in response:', data);
-          setUserBalance(0);
-          setShoppingAmount(0);
+          setUserBalance(parseFloat(data.user.balance || 0));
+          setShoppingAmount(parseFloat(data.user.shoppingAmount || 0));
         }
-      } else {
-        console.error('🔍 Subscribe page - Failed to fetch user balance:', response.status);
-        setUserBalance(0);
-        setShoppingAmount(0);
       }
-    } catch (error) {
-      console.error('🔍 Subscribe page - Error fetching user balance:', error);
-      setUserBalance(0);
+    } catch (err) {
+      console.error('Error fetching balance:', err);
     }
   }, [user?.id]);
 
   useEffect(() => {
-    // Fetch packages and user balance from API
     fetchPackages();
     if (user && isAuthenticated) {
       fetchUserBalance();
-      
-      // Also check if balance is available in user context
-      if (user.balance !== undefined) {
-        console.log('🔍 Subscribe page - Balance from user context:', user.balance);
-        setUserBalance(parseFloat(user.balance || 0));
-      }
-      if (user.shoppingAmount !== undefined) {
-        setShoppingAmount(parseFloat(user.shoppingAmount || 0));
-      }
+      if (user.balance !== undefined) setUserBalance(parseFloat(user.balance || 0));
+      if (user.shoppingAmount !== undefined) setShoppingAmount(parseFloat(user.shoppingAmount || 0));
     }
   }, [user, isAuthenticated, fetchUserBalance]);
 
@@ -100,33 +124,26 @@ export default function SubscribePackage() {
     try {
       const response = await fetch('/api/user/subscribe-balance', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ 
-          userId: user.id,
-          packageId: packageId 
-        }),
+        body: JSON.stringify({ userId: user.id, packageId }),
       });
 
       const data = await response.json();
-
       if (response.ok) {
         setMessage('Package subscribed successfully using your balance!');
         setUserBalance(data.data.newBalance);
         setSelectedPackage(null);
-        setPaymentMethod('request');
         setTimeout(() => {
           if (typeof window !== 'undefined') {
             window.location.href = '/user-dashboard/my-package';
           }
-        }, 2000);
+        }, 1800);
       } else {
         setError(data.error || 'Failed to subscribe to package');
       }
-    } catch (error) {
-      console.error('Error subscribing to package:', error);
+    } catch (err) {
+      console.error('Error subscribing:', err);
       setError('Network error. Please try again.');
     } finally {
       setProcessing(false);
@@ -146,34 +163,26 @@ export default function SubscribePackage() {
     try {
       const response = await fetch('/api/user/subscribe-shopping', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ 
-          userId: user.id,
-          packageId: packageId 
-        }),
+        body: JSON.stringify({ userId: user.id, packageId }),
       });
 
       const data = await response.json();
-
       if (response.ok) {
-        setMessage('Package request submitted successfully! Admin will review and approve your request. Shopping amount will be deducted upon approval.');
+        setMessage('Package request submitted successfully! Admin will review and approve your request.');
         setSelectedPackage(null);
-        setPaymentMethod('request');
-        // Refresh shopping amount from profile
         fetchUserBalance();
         setTimeout(() => {
           if (typeof window !== 'undefined') {
             window.location.href = '/user-dashboard/package-request';
           }
-        }, 2000);
+        }, 1800);
       } else {
-        setError(data.error || 'Failed to subscribe to package');
+        setError(data.error || 'Failed to subscribe with shopping amount');
       }
-    } catch (error) {
-      console.error('Error subscribing to package (shopping amount):', error);
+    } catch (err) {
+      console.error('Error:', err);
       setError('Network error. Please try again.');
     } finally {
       setProcessing(false);
@@ -181,7 +190,6 @@ export default function SubscribePackage() {
   };
 
   const handlePackageRequest = (packageId) => {
-    // Redirect to package request page
     if (typeof window !== 'undefined') {
       window.location.href = `/user-dashboard/package-request?packageId=${packageId}`;
     }
@@ -189,279 +197,391 @@ export default function SubscribePackage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (!packages || packages.length === 0) {
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-white">Subscribe to a Package</h1>
-              <p className="text-gray-400 mt-2">Choose a package that suits your needs and start earning</p>
-            </div>
-            <Link
-              href="/user-dashboard/my-package"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-            >
-              My Package
-            </Link>
-          </div>
-        </div>
-        
-        {/* No Packages Message */}
-        <div className="bg-gray-800 rounded-xl p-12 border border-gray-700 text-center">
-          <p className="text-gray-400 text-lg mb-4">No packages available at the moment.</p>
-          <p className="text-gray-500 text-sm">Please check back later or contact support for assistance.</p>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 320, gap: 2 }}>
+        <CircularProgress size={36} sx={{ color: '#2563eb' }} />
+        <Typography variant="body2" sx={{ color: textSecondary }}>Loading available subscription tiers...</Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Subscribe to a Package</h1>
-            <p className="text-gray-400 mt-2">Choose a package that suits your needs and start earning</p>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Header Banner */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: { xs: 2.5, md: 3 } }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, gap: 2 }}>
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+              <WorkspacePremium sx={{ color: '#3b82f6', fontSize: 28 }} />
+              <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
+                Subscribe to a Package
+              </Typography>
+            </Box>
+            <Typography variant="body2" sx={{ color: textSecondary }}>
+              Choose a tier that matches your investment goals to unlock direct and indirect commissions.
+            </Typography>
+
             {user && (
-              <div className="mt-3 flex items-center gap-4">
-                <div className="bg-green-900/20 border border-green-500/30 rounded-lg px-3 py-2">
-                  <span className="text-green-300 text-sm font-medium">
-                    Current Balance: PKR {userBalance ? userBalance.toLocaleString() : '0'}
-                  </span>
-                </div>
-                <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-lg px-3 py-2">
-                  <span className="text-cyan-300 text-sm font-medium">
-                    Shopping Amount: PKR {shoppingAmount ? shoppingAmount.toLocaleString() : '0'}
-                  </span>
-                </div>
-              </div>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
+                <Chip
+                  icon={<AccountBalanceWallet sx={{ fontSize: '18px !important', color: '#10b981 !important' }} />}
+                  label={`E-Wallet Balance: PKR ${userBalance.toLocaleString()}`}
+                  sx={{
+                    borderRadius: 0,
+                    bgcolor: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.12)',
+                    color: isLight ? '#065f46' : '#6ee7b7',
+                    border: `1px solid ${isLight ? '#a7f3d0' : 'rgba(16, 185, 129, 0.3)'}`,
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    height: 32
+                  }}
+                />
+                <Chip
+                  icon={<ShoppingBag sx={{ fontSize: '18px !important', color: '#06b6d4 !important' }} />}
+                  label={`Shopping Wallet: PKR ${shoppingAmount.toLocaleString()}`}
+                  sx={{
+                    borderRadius: 0,
+                    bgcolor: isLight ? '#ecfeff' : 'rgba(6, 182, 212, 0.12)',
+                    color: isLight ? '#0e7490' : '#67e8f9',
+                    border: `1px solid ${isLight ? '#a5f3fc' : 'rgba(6, 182, 212, 0.3)'}`,
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    height: 32
+                  }}
+                />
+              </Box>
             )}
-          </div>
-          <Link
+          </Box>
+
+          <Button
+            component={Link}
             href="/user-dashboard/my-package"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            variant="outlined"
+            sx={{
+              borderRadius: 0,
+              borderColor: '#3b82f6',
+              color: '#3b82f6',
+              fontWeight: 700,
+              textTransform: 'none',
+              px: 2.5,
+              py: 1,
+              '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.08)', borderColor: '#2563eb' }
+            }}
           >
-            My Package
-          </Link>
-        </div>
-      </div>
+            View Active Package
+          </Button>
+        </Box>
+      </Card>
 
-      {/* Messages */}
+      {/* Notifications */}
       {message && (
-        <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="text-green-300">{message}</span>
-          </div>
-        </div>
+        <Alert severity="success" sx={{ borderRadius: 0, border: '1px solid #10b981', bgcolor: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.1)' }}>
+          {message}
+        </Alert>
       )}
-
       {error && (
-        <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            <span className="text-red-300">{error}</span>
-          </div>
-        </div>
+        <Alert severity="error" sx={{ borderRadius: 0, border: '1px solid #ef4444', bgcolor: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.1)' }}>
+          {error}
+        </Alert>
       )}
 
       {/* Packages Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {packages && packages.length > 0 ? packages.map((pkg) => (
-          <div
-            key={pkg.id}
-            className={`bg-gray-800 rounded-xl p-6 border-2 transition-all duration-200 ${
-              selectedPackage?.id === pkg.id
-                ? 'border-blue-500 bg-gray-750'
-                : 'border-gray-700 hover:border-gray-600'
-            }`}
-          >
-            {/* Package Header */}
-            <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-white mb-2">{pkg.package_name}</h3>
-              <div className="text-3xl font-bold text-blue-400 mb-1">
-                ₨{parseFloat(pkg.package_amount).toFixed(2)}
-              </div>
-              <p className="text-sm text-gray-400">One-time payment</p>
-            </div>
+      {packages.length === 0 ? (
+        <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 6, textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ color: textPrimary, mb: 1, fontWeight: 700 }}>No Packages Available</Typography>
+          <Typography variant="body2" sx={{ color: textSecondary }}>
+            There are currently no active package tiers. Please contact support.
+          </Typography>
+        </Card>
+      ) : (
+        <Grid container spacing={3}>
+          {packages.map((pkg) => {
+            const isSelected = selectedPackage?.id === pkg.id;
+            const price = parseFloat(pkg.package_amount || 0);
+            const canPayBalance = userBalance >= price;
+            const canPayShopping = shoppingAmount >= price;
 
-            {/* Package Features */}
-            <div className="space-y-3 mb-6">
-              {pkg.rank && (
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-gray-300">Rank: {pkg.rank.title}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <button
-                onClick={() => setSelectedPackage(pkg)}
-                className={`w-full py-2 px-4 rounded-lg font-medium transition-colors duration-200 ${
-                  selectedPackage?.id === pkg.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-                }`}
-              >
-                {selectedPackage?.id === pkg.id ? 'Selected' : 'Select Package'}
-              </button>
-              
-              {selectedPackage?.id === pkg.id && (
-                <div className="space-y-2">
-                  {/* Balance Payment Option */}
-                  {userBalance >= parseFloat(pkg.package_amount) ? (
-                    <button
-                      onClick={() => handleBalancePayment(pkg.id)}
-                      disabled={processing}
-                      className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            return (
+              <Grid item xs={12} md={6} lg={4} key={pkg.id}>
+                <Card
+                  sx={{
+                    bgcolor: bgCard,
+                    border: isSelected ? '2px solid #3b82f6' : `1px solid ${borderCard}`,
+                    borderRadius: 0,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'border-color 0.15s ease-in-out',
+                    position: 'relative'
+                  }}
+                >
+                  {isSelected && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        bgcolor: '#3b82f6',
+                        color: '#ffffff',
+                        fontSize: '0.7rem',
+                        fontWeight: 800,
+                        px: 1.5,
+                        py: 0.4,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}
                     >
-                      {processing ? 'Processing...' : `Pay from Balance (PKR ${parseFloat(pkg.package_amount).toLocaleString()})`}
-                    </button>
-                  ) : (
-                    <div className="w-full py-2 px-4 bg-gray-600 text-gray-400 rounded-lg text-center text-sm">
-                      Insufficient Balance (Need: PKR {parseFloat(pkg.package_amount).toLocaleString()})
-                    </div>
+                      Selected
+                    </Box>
                   )}
-                  {/* Shopping Amount Payment Option */}
-                  {shoppingAmount >= parseFloat(pkg.package_amount) ? (
-                    <button
-                      onClick={() => handleShoppingAmountPayment(pkg.id)}
-                      disabled={processing}
-                      className="w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-cyan-700 text-white rounded-lg font-medium hover:from-cyan-700 hover:to-cyan-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {processing ? 'Submitting Request...' : `Request with Shopping Amount (PKR ${parseFloat(pkg.package_amount).toLocaleString()})`}
-                    </button>
-                  ) : (
-                    <div className="w-full py-2 px-4 bg-gray-600 text-gray-400 rounded-lg text-center text-sm">
-                      Insufficient Shopping Amount (Need: PKR {parseFloat(pkg.package_amount).toLocaleString()})
-                    </div>
-                  )}
-                  
-                  {/* Package Request Option */}
-                  <button
-                    onClick={() => handlePackageRequest(pkg.id)}
-                    className="w-full py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
-                  >
-                    Send Payment Proof
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )) : (
-          <div className="col-span-full text-center py-12">
-            <p className="text-gray-400 text-lg">No packages available at the moment.</p>
-          </div>
-        )}
-      </div>
 
+                  <CardContent sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="overline" sx={{ color: '#3b82f6', fontWeight: 800, letterSpacing: '0.1em' }}>
+                        Tier Tier
+                      </Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary }}>
+                        {pkg.package_name}
+                      </Typography>
+                    </Box>
 
-      {/* Payment Options Info */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-4">Payment Options</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
-            <div className="flex items-center mb-3">
-              <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mr-3">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-              <h3 className="text-green-300 font-semibold">Pay from Balance</h3>
-            </div>
-            <p className="text-gray-400 text-sm">
-              If you have sufficient balance, you can subscribe to a package instantly without waiting for admin approval.
-            </p>
-          </div>
-          
-          <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-lg p-4">
-            <div className="flex items-center mb-3">
-              <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center mr-3">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              </div>
-              <h3 className="text-cyan-300 font-semibold">Request with Shopping Amount</h3>
-            </div>
-            <p className="text-gray-400 text-sm">
-              Submit a package request using your shopping amount. Admin will review and approve. Shopping amount will be deducted upon approval.
-            </p>
-          </div>
-          
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-            <div className="flex items-center mb-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h3 className="text-blue-300 font-semibold">Send Payment Proof</h3>
-            </div>
-            <p className="text-gray-400 text-sm">
-              Make payment through bank transfer and send proof to admin for manual approval and activation.
-            </p>
-          </div>
-        </div>
-      </div>
+                    <Box sx={{ my: 2, p: 2, bgcolor: bgSubtle, border: `1px solid ${borderCard}` }}>
+                      <Typography variant="caption" sx={{ color: textSecondary, textTransform: 'uppercase', fontWeight: 700 }}>
+                        One-Time Price
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 900, color: '#3b82f6', mt: 0.5 }}>
+                        ₨{price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </Typography>
+                    </Box>
 
-      {/* Benefits Section */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-6">Why Subscribe to a Package?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="flex items-start">
-            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold mb-2">Earn Commissions</h3>
-              <p className="text-gray-400 text-sm">Start earning direct and indirect commissions from your referrals</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start">
-            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold mb-2">Build Network</h3>
-              <p className="text-gray-400 text-sm">Grow your referral network and increase your earning potential</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start">
-            <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold mb-2">Exclusive Benefits</h3>
-              <p className="text-gray-400 text-sm">Access exclusive products and special discounts</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+                    <List sx={{ py: 0, my: 1, flexGrow: 1 }}>
+                      <ListItem disableGutters sx={{ py: 0.75 }}>
+                        <ListItemIcon sx={{ minWidth: 28 }}>
+                          <CheckCircle sx={{ fontSize: 18, color: '#10b981' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={`Direct Commission: PKR ${pkg.package_direct_commission || 0}`}
+                          primaryTypographyProps={{ variant: 'body2', sx: { color: textPrimary, fontWeight: 600 } }}
+                        />
+                      </ListItem>
+                      <ListItem disableGutters sx={{ py: 0.75 }}>
+                        <ListItemIcon sx={{ minWidth: 28 }}>
+                          <CheckCircle sx={{ fontSize: 18, color: '#10b981' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={`Indirect Commission: PKR ${pkg.package_indirect_commission || 0}`}
+                          primaryTypographyProps={{ variant: 'body2', sx: { color: textPrimary, fontWeight: 600 } }}
+                        />
+                      </ListItem>
+                      {pkg.shopping_amount && (
+                        <ListItem disableGutters sx={{ py: 0.75 }}>
+                          <ListItemIcon sx={{ minWidth: 28 }}>
+                            <CheckCircle sx={{ fontSize: 18, color: '#06b6d4' }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={`Shopping Credit: PKR ${pkg.shopping_amount}`}
+                            primaryTypographyProps={{ variant: 'body2', sx: { color: textPrimary, fontWeight: 600 } }}
+                          />
+                        </ListItem>
+                      )}
+                      {pkg.rank && (
+                        <ListItem disableGutters sx={{ py: 0.75 }}>
+                          <ListItemIcon sx={{ minWidth: 28 }}>
+                            <WorkspacePremium sx={{ fontSize: 18, color: '#f59e0b' }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={`Rank: ${pkg.rank.title}`}
+                            primaryTypographyProps={{ variant: 'body2', sx: { color: textPrimary, fontWeight: 600 } }}
+                          />
+                        </ListItem>
+                      )}
+                    </List>
+
+                    <Divider sx={{ my: 2, borderColor: borderCard }} />
+
+                    {/* Action buttons */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      {!isSelected ? (
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          onClick={() => setSelectedPackage(pkg)}
+                          sx={{
+                            borderRadius: 0,
+                            borderColor: borderCard,
+                            color: textPrimary,
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            py: 1.2,
+                            '&:hover': { bgcolor: isLight ? '#f1f5f9' : '#1e293b', borderColor: '#3b82f6' }
+                          }}
+                        >
+                          Select Package
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            disabled={!canPayBalance || processing}
+                            onClick={() => handleBalancePayment(pkg.id)}
+                            startIcon={<FlashOn />}
+                            sx={{
+                              borderRadius: 0,
+                              bgcolor: '#10b981',
+                              color: '#ffffff',
+                              fontWeight: 800,
+                              textTransform: 'none',
+                              py: 1.2,
+                              '&:hover': { bgcolor: '#059669' },
+                              '&.Mui-disabled': { bgcolor: isLight ? '#e2e8f0' : '#1e293b', color: textSecondary }
+                            }}
+                          >
+                            {processing ? 'Processing...' : canPayBalance ? 'Pay from E-Wallet Balance' : 'Insufficient E-Wallet'}
+                          </Button>
+
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            disabled={!canPayShopping || processing}
+                            onClick={() => handleShoppingAmountPayment(pkg.id)}
+                            startIcon={<ShoppingBag />}
+                            sx={{
+                              borderRadius: 0,
+                              bgcolor: '#06b6d4',
+                              color: '#ffffff',
+                              fontWeight: 800,
+                              textTransform: 'none',
+                              py: 1.2,
+                              '&:hover': { bgcolor: '#0891b2' },
+                              '&.Mui-disabled': { bgcolor: isLight ? '#e2e8f0' : '#1e293b', color: textSecondary }
+                            }}
+                          >
+                            {canPayShopping ? 'Pay via Shopping Wallet' : 'Insufficient Shopping Wallet'}
+                          </Button>
+
+                          <Button
+                            variant="outlined"
+                            fullWidth
+                            onClick={() => handlePackageRequest(pkg.id)}
+                            startIcon={<ReceiptLong />}
+                            sx={{
+                              borderRadius: 0,
+                              borderColor: '#3b82f6',
+                              color: '#3b82f6',
+                              fontWeight: 700,
+                              textTransform: 'none',
+                              py: 1,
+                              '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.08)' }
+                            }}
+                          >
+                            Submit Bank Deposit Proof
+                          </Button>
+                        </>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
+
+      {/* Payment Options Overview */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary, mb: 2 }}>
+          Payment & Activation Channels
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 2.5, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                <FlashOn sx={{ color: '#10b981' }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: textPrimary }}>
+                  Instant Balance
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ color: textSecondary }}>
+                Activates your package immediately using earnings or deposited balance in your E-Wallet.
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 2.5, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                <ShoppingBag sx={{ color: '#06b6d4' }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: textPrimary }}>
+                  Shopping Wallet
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ color: textSecondary }}>
+                Submit package request using accumulated shopping wallet reserves. Verified and approved by admin.
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 2.5, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                <ReceiptLong sx={{ color: '#3b82f6' }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: textPrimary }}>
+                  Bank Transfer / Proof
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ color: textSecondary }}>
+                Direct bank transfer to official accounts with receipt screenshot upload for manual admin confirmation.
+              </Typography>
+            </Paper>
+          </Grid>
+        </Grid>
+      </Card>
+
+      {/* Package Perks */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary, mb: 2 }}>
+          Why Upgrade Your Tier?
+        </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TrendingUp sx={{ color: '#3b82f6', fontSize: 32 }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: textPrimary }}>
+                  Maximized Commissions
+                </Typography>
+                <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5 }}>
+                  Higher packages yield higher direct reward rates and deep indirect team commissions.
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Group sx={{ color: '#10b981', fontSize: 32 }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: textPrimary }}>
+                  Full Downline Unlocks
+                </Typography>
+                <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5 }}>
+                  Grow unlimited binary & unilevel downlines and receive team bonuses across multiple tiers.
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Security sx={{ color: '#8b5cf6', fontSize: 32 }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: textPrimary }}>
+                  Official Rank Badges
+                </Typography>
+                <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5 }}>
+                  Qualify for company leadership ranks, exclusive merchandise, and pool profit distributions.
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
+      </Card>
+    </Box>
   );
 }

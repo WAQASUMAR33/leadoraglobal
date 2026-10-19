@@ -20,8 +20,11 @@ import {
   Divider,
   IconButton,
   InputAdornment,
+  Paper,
+  CircularProgress
 } from '@mui/material';
 import { UserContext } from '../../../lib/userContext';
+import { useAppTheme } from '../../../context/AdminThemeContext';
 import {
   Person,
   Email,
@@ -32,11 +35,15 @@ import {
   Edit,
   CheckCircle,
   PendingActions,
-  Warning,
+  WarningAmber,
+  VerifiedUser,
+  Badge,
+  CreditCard
 } from '@mui/icons-material';
 
 export default function KYCPage() {
   const { user, isAuthenticated } = useContext(UserContext);
+  const { isLight } = useAppTheme();
   const [kycData, setKycData] = useState({
     fullname: "",
     father_name: "",
@@ -68,11 +75,13 @@ export default function KYCPage() {
   const [countries, setCountries] = useState([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [mounted, setMounted] = useState(false);
-  
-  // File upload states
-  const [idCardFrontFile, setIdCardFrontFile] = useState(null);
-  const [idCardBackFile, setIdCardBackFile] = useState(null);
   const [uploadingImages, setUploadingImages] = useState(false);
+
+  const bgCard = isLight ? '#ffffff' : '#0c1220';
+  const borderCard = isLight ? '#e2e8f0' : '#1e293b';
+  const textPrimary = isLight ? '#0f172a' : '#f8fafc';
+  const textSecondary = isLight ? '#64748b' : '#94a3b8';
+  const bgSubtle = isLight ? '#f8fafc' : '#070a12';
 
   useEffect(() => {
     setMounted(true);
@@ -80,21 +89,11 @@ export default function KYCPage() {
 
   const fetchKYCData = useCallback(async () => {
     try {
-      // Check if user is authenticated
       if (!isAuthenticated || !user) return;
-
-      const response = await fetch('/api/user/kyc', {
-        credentials: 'include' // Include cookies for authentication
-      });
-
+      const response = await fetch('/api/user/kyc', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         if (data.kyc) {
-          console.log('KYC data retrieved:', data.kyc);
-          console.log('Profile image URL:', data.kyc.profile_image);
-          console.log('ID card front URL:', data.kyc.id_card_front);
-          console.log('ID card back URL:', data.kyc.id_card_back);
-          
           setExistingKYC(data.kyc);
           setKycStatus(data.kyc.kyc_status);
           setKycData({
@@ -102,14 +101,14 @@ export default function KYCPage() {
             father_name: data.kyc.father_name || "",
             email: data.kyc.email || "",
             phoneNumber: data.kyc.phoneNumber || "",
-            date_of_birth: data.kyc.date_of_birth || "",
+            date_of_birth: data.kyc.date_of_birth ? data.kyc.date_of_birth.substring(0, 10) : "",
             city: data.kyc.city || "",
             country: data.kyc.country || "",
             current_address: data.kyc.current_address || "",
             permanent_address: data.kyc.permanent_address || "",
             gender: data.kyc.gender || "",
             cnic_number: data.kyc.cnic_number || "",
-            cnic_expiry_date: data.kyc.cnic_expiry_date || "",
+            cnic_expiry_date: data.kyc.cnic_expiry_date ? data.kyc.cnic_expiry_date.substring(0, 10) : "",
             profile_image: data.kyc.profile_image || "",
             id_card_front: data.kyc.id_card_front || "",
             id_card_back: data.kyc.id_card_back || "",
@@ -120,10 +119,36 @@ export default function KYCPage() {
           });
         }
       }
-    } catch (error) {
-      console.error('Error fetching KYC data:', error);
+    } catch (err) {
+      console.error('Error fetching KYC:', err);
     }
   }, [isAuthenticated, user]);
+
+  const fetchCountries = async () => {
+    setLoadingCountries(true);
+    try {
+      const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2');
+      if (response.ok) {
+        const data = await response.json();
+        const sorted = data.map(c => ({ name: c.name.common, code: c.cca2 })).sort((a, b) => a.name.localeCompare(b.name));
+        setCountries(sorted);
+      } else {
+        throw new Error('API failed');
+      }
+    } catch {
+      setCountries([
+        { name: "Pakistan", code: "PK" },
+        { name: "United States", code: "US" },
+        { name: "United Kingdom", code: "GB" },
+        { name: "United Arab Emirates", code: "AE" },
+        { name: "Saudi Arabia", code: "SA" },
+        { name: "Canada", code: "CA" },
+        { name: "Australia", code: "AU" }
+      ]);
+    } finally {
+      setLoadingCountries(false);
+    }
+  };
 
   useEffect(() => {
     if (mounted && isAuthenticated && user) {
@@ -132,138 +157,32 @@ export default function KYCPage() {
     }
   }, [mounted, isAuthenticated, user, fetchKYCData]);
 
-  const fetchCountries = async () => {
-    setLoadingCountries(true);
-    try {
-      // Try the main API first
-      const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2');
-      if (response.ok) {
-        const data = await response.json();
-        const sortedCountries = data
-          .map(country => ({
-            name: country.name.common,
-            code: country.cca2
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name));
-        console.log('Countries fetched from API:', sortedCountries);
-        setCountries(sortedCountries);
-      } else {
-        console.log('API response not ok, using fallback countries');
-        // Fallback to a smaller list of common countries
-        const fallbackCountries = [
-          { name: "Pakistan", code: "PK" },
-          { name: "United States", code: "US" },
-          { name: "United Kingdom", code: "GB" },
-          { name: "Canada", code: "CA" },
-          { name: "Australia", code: "AU" },
-          { name: "Germany", code: "DE" },
-          { name: "France", code: "FR" },
-          { name: "India", code: "IN" },
-          { name: "China", code: "CN" },
-          { name: "Japan", code: "JP" },
-          { name: "Saudi Arabia", code: "SA" },
-          { name: "UAE", code: "AE" },
-          { name: "Turkey", code: "TR" },
-          { name: "Malaysia", code: "MY" },
-          { name: "Singapore", code: "SG" },
-          { name: "Thailand", code: "TH" },
-          { name: "Vietnam", code: "VN" },
-          { name: "Indonesia", code: "ID" },
-          { name: "Philippines", code: "PH" },
-          { name: "South Korea", code: "KR" }
-        ];
-                setCountries(fallbackCountries);
-      }
-    } catch (error) {
-      console.error('Error fetching countries:', error);
-      console.log('Using fallback countries due to API error');
-      // Use fallback countries if API fails
-      const fallbackCountries = [
-        { name: "Pakistan", code: "PK" },
-        { name: "United States", code: "US" },
-        { name: "United Kingdom", code: "GB" },
-        { name: "Canada", code: "CA" },
-        { name: "Australia", code: "AU" },
-        { name: "Germany", code: "DE" },
-        { name: "France", code: "FR" },
-        { name: "India", code: "IN" },
-        { name: "China", code: "CN" },
-        { name: "Japan", code: "JP" },
-        { name: "Saudi Arabia", code: "SA" },
-        { name: "UAE", code: "AE" },
-        { name: "Turkey", code: "TR" },
-        { name: "Malaysia", code: "MY" },
-        { name: "Singapore", code: "SG" },
-        { name: "Thailand", code: "TH" },
-        { name: "Vietnam", code: "VN" },
-        { name: "Indonesia", code: "ID" },
-        { name: "Philippines", code: "PH" },
-        { name: "South Korea", code: "KR" }
-      ];
-      setCountries(fallbackCountries);
-    } finally {
-      setLoadingCountries(false);
-    }
-  };
-
   const handleInputChange = (field, value) => {
-    setKycData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setKycData(prev => ({ ...prev, [field]: value }));
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'approved': return 'success';
-      case 'pending': return 'warning';
-      case 'rejected': return 'error';
-      default: return 'default';
-    }
+  const getImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('/') || url.startsWith('data:image/')) return url;
+    return `/uploads/${url}`;
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'approved': return <CheckCircle />;
-      case 'pending': return <PendingActions />;
-      case 'rejected': return <Warning />;
-      default: return <PendingActions />;
+  const uploadImageToAPI = async (base64Data) => {
+    try {
+      const response = await fetch('https://steelblue-cod-355377.hostingersite.com/uploadImage.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Data })
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const img = result.url || result.imageUrl || result.image_url;
+        if (img) return img.startsWith('http') ? img : `https://steelblue-cod-355377.hostingersite.com/uploads/${img}`;
+      }
+    } catch (e) {
+      console.warn('External upload failed, using fallback:', e);
     }
-  };
-
-  // Helper function to get proper image URL
-  const getImageUrl = (imageUrl, imageType = '') => {
-    if (!imageUrl) return '';
-    
-    console.log(`Processing ${imageType} image URL:`, imageUrl);
-    
-    // If it's already a full URL (starts with http), return as is
-    if (imageUrl.startsWith('http')) {
-      console.log(`Using full URL for ${imageType}:`, imageUrl);
-      return imageUrl;
-    }
-    
-    // If it's a relative path (starts with /), return as is
-    if (imageUrl.startsWith('/')) {
-      console.log(`Using relative path for ${imageType}:`, imageUrl);
-      return imageUrl;
-    }
-    
-    // If it's a base64 data URL, return as is
-    if (imageUrl.startsWith('data:image/')) {
-      console.log(`Using base64 data URL for ${imageType}`);
-      return imageUrl;
-    }
-    
-    // If it's just a filename, assume it's in the uploads folder
-    if (imageUrl && !imageUrl.includes('/')) {
-      const fullUrl = `/uploads/${imageUrl}`;
-      console.log(`Constructing uploads path for ${imageType}:`, fullUrl);
-      return fullUrl;
-    }
-    
-    console.log(`Returning original URL for ${imageType}:`, imageUrl);
-    return imageUrl;
+    return base64Data;
   };
 
   const handleSubmit = async (e) => {
@@ -274,74 +193,42 @@ export default function KYCPage() {
     setError(null);
 
     try {
-      // Check if user is authenticated
       if (!isAuthenticated || !user) {
-        setError('Authentication required. Please log in again.');
+        setError('Authentication required');
         return;
       }
 
-      // Prepare KYC data for submission
       let submissionData = { ...kycData };
 
-      // Upload profile image if it exists and is a base64 data URL
       if (kycData.profile_image && kycData.profile_image.startsWith('data:image/')) {
-        try {
-          const profileImageUrl = await uploadImageToAPI(kycData.profile_image);
-          submissionData.profile_image = profileImageUrl;
-        } catch (error) {
-          console.error('Error uploading profile image:', error);
-          setError('Failed to upload profile image. Please try again.');
-          return;
-        }
+        submissionData.profile_image = await uploadImageToAPI(kycData.profile_image);
       }
-
-      // Upload ID card images if they exist and are base64 data URLs
       if (kycData.id_card_front && kycData.id_card_front.startsWith('data:image/')) {
-        try {
-          const frontImageUrl = await uploadImageToAPI(kycData.id_card_front);
-          submissionData.id_card_front = frontImageUrl;
-        } catch (error) {
-          console.error('Error uploading ID card front:', error);
-          setError('Failed to upload ID card front image. Please try again.');
-          return;
-        }
+        submissionData.id_card_front = await uploadImageToAPI(kycData.id_card_front);
       }
-
       if (kycData.id_card_back && kycData.id_card_back.startsWith('data:image/')) {
-        try {
-          const backImageUrl = await uploadImageToAPI(kycData.id_card_back);
-          submissionData.id_card_back = backImageUrl;
-        } catch (error) {
-          console.error('Error uploading ID card back:', error);
-          setError('Failed to upload ID card back image. Please try again.');
-          return;
-        }
+        submissionData.id_card_back = await uploadImageToAPI(kycData.id_card_back);
       }
-
-      setUploadingImages(false);
 
       const response = await fetch('/api/user/kyc', {
         method: existingKYC ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include', // Include cookies for authentication
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(submissionData)
       });
 
       const data = await response.json();
-
       if (response.ok) {
-        setMessage(existingKYC ? 'KYC updated successfully!' : 'KYC submitted successfully!');
+        setMessage(existingKYC ? 'KYC profile updated successfully!' : 'KYC documentation submitted successfully!');
         setExistingKYC(data.kyc);
         setKycStatus(data.kyc.kyc_status);
         setIsEditing(false);
         setTimeout(() => setMessage(null), 5000);
       } else {
-        setError(data.message || 'Failed to submit KYC');
+        setError(data.message || 'Failed to submit KYC verification');
       }
-    } catch (error) {
-      console.error('Error submitting KYC:', error);
+    } catch (err) {
+      console.error('Error submitting KYC:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -349,669 +236,509 @@ export default function KYCPage() {
     }
   };
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
+  const handleFileUpload = (e, field) => {
+    const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setKycData(prev => ({
-          ...prev,
-          profile_image: e.target.result
-        }));
+      reader.onload = (event) => {
+        setKycData(prev => ({ ...prev, [field]: event.target.result }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleIdCardFrontUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setIdCardFrontFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setKycData(prev => ({
-          ...prev,
-          id_card_front: e.target.result
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleIdCardBackUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setIdCardBackFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setKycData(prev => ({
-          ...prev,
-          id_card_back: e.target.result
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const uploadImageToAPI = async (base64Data) => {
-    // Try external server first
-    try {
-      console.log('Starting image upload to external server...');
-      
-      const response = await fetch('https://steelblue-cod-355377.hostingersite.com/uploadImage.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: base64Data
-        })
-      });
-
-      console.log('External upload response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`External server error: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('External upload result:', result);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      const imageUrl = result.url || result.imageUrl || result.image_url;
-        // If the response is just a filename, construct the full URL
-        if (imageUrl && !imageUrl.startsWith('http')) {
-        const fullUrl = `https://steelblue-cod-355377.hostingersite.com/uploads/${imageUrl}`;
-        console.log('External server success:', fullUrl);
-        return fullUrl;
-        }
-      console.log('External server success:', imageUrl);
-        return imageUrl;
-    } catch (externalError) {
-      console.warn('External server failed, trying local upload:', externalError.message);
-      
-      // Fallback to local upload
-      try {
-        console.log('Starting local image upload...');
-        
-        const localResponse = await fetch('/api/upload-image', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            image: base64Data
-          })
-        });
-
-        console.log('Local upload response status:', localResponse.status);
-
-        if (!localResponse.ok) {
-          const errorText = await localResponse.text();
-          throw new Error(`Local upload failed: ${localResponse.status} - ${errorText}`);
-        }
-
-        const localResult = await localResponse.json();
-        console.log('Local upload result:', localResult);
-        
-        if (localResult.error) {
-          throw new Error(localResult.error);
-        }
-
-        console.log('Local upload success:', localResult.url);
-        return localResult.url;
-      } catch (localError) {
-        console.error('Both external and local upload failed:', localError.message);
-        throw new Error(`Image upload failed: External server unavailable and local upload failed - ${localError.message}`);
-      }
-    }
-  };
-
-  // Prevent hydration mismatch by showing loading until mounted
   if (!mounted) {
     return (
-      <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto', textAlign: 'center' }}>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-        <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
-          Loading KYC form...
-        </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress size={32} sx={{ color: '#2563eb' }} />
       </Box>
     );
   }
 
-  return (
-    <Box key={mounted ? 'mounted' : 'loading'} sx={{ p: 1, maxWidth: '100%', mx: 'auto' }}>
-      {/* Header */}
-      <Box sx={{ mb: 2, textAlign: 'center' }}>
-        <Typography variant="h3" component="h1" sx={{ 
-          fontWeight: 'bold', 
-          mb: 2,
-          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-          backgroundClip: 'text',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          fontSize: { xs: '1.8rem', sm: '2.5rem', md: '3rem' }
-        }}>
-          KYC Verification
-        </Typography>
-        <Typography variant="h6" color="text.secondary" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.2rem' } }}>
-          Complete your Know Your Customer verification
-        </Typography>
-        
-        <Chip
-          icon={getStatusIcon(kycStatus)}
-          label={kycStatus.charAt(0).toUpperCase() + kycStatus.slice(1)}
-          color={getStatusColor(kycStatus)}
-          variant="filled"
-          sx={{ fontSize: '1rem', px: 2, py: 1 }}
-        />
-      </Box>
+  const statusColor = kycStatus === 'approved' ? '#10b981' : kycStatus === 'rejected' ? '#ef4444' : '#f59e0b';
 
-      {/* KYC Form */}
-      <Card sx={{ 
-        borderRadius: 3, 
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(10px)'
-      }}>
-        <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            mb: 2,
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 }
-          }}>
-            <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', fontSize: { xs: '1.3rem', sm: '1.5rem' } }}>
-              Personal Information
-            </Typography>
-            {existingKYC && (
-              <Button
-                variant={isEditing ? "outlined" : "contained"}
-                startIcon={isEditing ? <Save /> : <Edit />}
-                onClick={() => setIsEditing(!isEditing)}
-                sx={{
-                  background: isEditing ? 'transparent' : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                  '&:hover': {
-                    background: isEditing ? 'rgba(59, 130, 246, 0.1)' : 'linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%)',
-                  }
-                }}
-              >
-                {isEditing ? "Cancel Edit" : "Edit Information"}
-              </Button>
-            )}
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Header */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: { xs: 2.5, md: 3 } }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <VerifiedUser sx={{ color: statusColor, fontSize: 36 }} />
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
+                  KYC Verification Center
+                </Typography>
+                <Chip
+                  label={kycStatus.toUpperCase()}
+                  size="small"
+                  sx={{
+                    borderRadius: 0,
+                    fontWeight: 800,
+                    fontSize: '0.7rem',
+                    bgcolor: `${statusColor}20`,
+                    color: statusColor,
+                    border: `1px solid ${statusColor}40`
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5 }}>
+                Complete identity verification to unlock full payout processing and compliance validation.
+              </Typography>
+            </Box>
           </Box>
 
-          {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {existingKYC && (
+            <Button
+              variant={isEditing ? 'outlined' : 'contained'}
+              startIcon={isEditing ? null : <Edit />}
+              onClick={() => setIsEditing(!isEditing)}
+              sx={{
+                borderRadius: 0,
+                bgcolor: isEditing ? 'transparent' : '#3b82f6',
+                borderColor: borderCard,
+                color: isEditing ? textPrimary : '#ffffff',
+                fontWeight: 800,
+                textTransform: 'none',
+                px: 2.5,
+                '&:hover': { bgcolor: isEditing ? bgSubtle : '#2563eb' }
+              }}
+            >
+              {isEditing ? 'Cancel Edit' : 'Edit Information'}
+            </Button>
+          )}
+        </Box>
+      </Card>
 
-          <Box component="form" onSubmit={handleSubmit}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Profile Image */}
-              <Box sx={{ textAlign: 'center', mb: 2 }}>
-                <Box sx={{ position: 'relative', display: 'inline-block' }}>
+      {message && (
+        <Alert severity="success" sx={{ borderRadius: 0, border: '1px solid #10b981', bgcolor: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.1)' }}>
+          {message}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ borderRadius: 0, border: '1px solid #ef4444', bgcolor: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.1)' }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Main KYC Form */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+        <CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
+          <form onSubmit={handleSubmit}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
+              {/* Profile Image Avatar Section */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, p: 2.5, bgcolor: bgSubtle, border: `1px solid ${borderCard}` }}>
+                <Box sx={{ position: 'relative' }}>
                   <Avatar
-                    src={getImageUrl(kycData.profile_image, 'profile')}
-                    onError={(e) => {
-                      console.error('Profile image failed to load:', e);
-                      console.log('Profile image URL that failed:', getImageUrl(kycData.profile_image, 'profile'));
-                    }}
-                    sx={{ 
-                      width: { xs: 80, sm: 100, md: 120 }, 
-                      height: { xs: 80, sm: 100, md: 120 }, 
-                      border: '4px solid #e5e7eb',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                      backgroundColor: 'primary.main'
-                    }}
+                    src={getImageUrl(kycData.profile_image)}
+                    sx={{ width: 84, height: 84, borderRadius: 0, bgcolor: '#3b82f6', border: `2px solid ${borderCard}` }}
                   >
-                    {!kycData.profile_image && <Person sx={{ fontSize: 40 }} />}
+                    {!kycData.profile_image && <Person sx={{ fontSize: 44 }} />}
                   </Avatar>
                   <input
                     accept="image/*"
                     style={{ display: 'none' }}
-                    id="profile-image-upload"
+                    id="profile-img-input"
                     type="file"
-                    onChange={handleImageUpload}
+                    onChange={(e) => handleFileUpload(e, 'profile_image')}
                     disabled={!isEditing && existingKYC}
                   />
-                  <label htmlFor="profile-image-upload">
+                  <label htmlFor="profile-img-input">
                     <IconButton
                       component="span"
+                      size="small"
+                      disabled={!isEditing && existingKYC}
                       sx={{
                         position: 'absolute',
-                        bottom: 0,
-                        right: 0,
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        '&:hover': { bgcolor: 'primary.dark' }
+                        bottom: -4,
+                        right: -4,
+                        bgcolor: '#3b82f6',
+                        color: '#fff',
+                        borderRadius: 0,
+                        p: 0.5,
+                        '&:hover': { bgcolor: '#2563eb' }
                       }}
-                      disabled={!isEditing && existingKYC}
                     >
-                      <PhotoCamera />
+                      <PhotoCamera sx={{ fontSize: 16 }} />
                     </IconButton>
                   </label>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>
+                    Passport-Size Profile Photo
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: textSecondary, display: 'block' }}>
+                    Upload a recent frontal photograph against a clear background (JPG/PNG, max 5MB).
+                  </Typography>
                 </Box>
               </Box>
 
               {/* Personal Details */}
               <Box>
-                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                  Personal Details
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary, mb: 1, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  1. Personal Details
                 </Typography>
-              </Box>
+                <Divider sx={{ mb: 2.5, borderColor: borderCard }} />
 
-              {/* Full Name and Father's Name */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  label="Full Name"
-                  value={kycData.fullname}
-                  onChange={(e) => handleInputChange('fullname', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Person /></InputAdornment>,
-                  }}
-                />
-                <TextField
-                  label="Father's Name"
-                  value={kycData.father_name}
-                  onChange={(e) => handleInputChange('father_name', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Person /></InputAdornment>,
-                  }}
-                />
-              </Box>
-
-              {/* Email and Phone Number */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  label="Email"
-                  type="email"
-                  value={kycData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Email /></InputAdornment>,
-                  }}
-                />
-                <TextField
-                  label="Phone Number"
-                  value={kycData.phoneNumber}
-                  onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Phone /></InputAdornment>,
-                  }}
-                />
-              </Box>
-
-              {/* Date of Birth and City */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  label="Date of Birth"
-                  type="date"
-                  value={kycData.date_of_birth || ''}
-                  onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{ 
-                    flex: 1, 
-                    minWidth: { xs: '100%', sm: '250px' },
-                    '& .MuiInputBase-root': { 
-                      height: '56px',
-                      '& .MuiInputLabel-root': { 
-                        transform: 'translate(14px, 16px) scale(1)' 
-                      }
-                    }
-                  }}
-                />
-                <TextField
-                  label="City"
-                  value={kycData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment>,
-                  }}
-                />
-              </Box>
-
-              {/* Country and Gender */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <FormControl required disabled={!isEditing && existingKYC} sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}>
-                  <InputLabel>Country</InputLabel>
-                  <Select
-                    value={kycData.country}
-                  label="Country"
-                  onChange={(e) => handleInputChange('country', e.target.value)}
-                    sx={{ 
-                      height: '56px',
-                      '& .MuiSelect-select': { 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        height: '100%'
-                      }
-                    }}
-                  >
-                    {loadingCountries ? (
-                      <MenuItem disabled>Loading countries...</MenuItem>
-                    ) : countries.length > 0 ? (
-                      countries.map((country) => (
-                        <MenuItem key={country.code} value={country.name}>
-                          {country.name}
-                        </MenuItem>
-                      ))
-                    ) : (
-                      <MenuItem disabled>No countries available</MenuItem>
-                    )}
-                  </Select>
-                </FormControl>
-
-                <FormControl required disabled={!isEditing && existingKYC} sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}>
-                  <InputLabel>Gender</InputLabel>
-                  <Select
-                    value={kycData.gender}
-                    label="Gender"
-                    onChange={(e) => handleInputChange('gender', e.target.value)}
-                    sx={{ 
-                      height: '56px',
-                      '& .MuiSelect-select': { 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        height: '100%'
-                      }
-                    }}
-                  >
-                    <MenuItem value="male">Male</MenuItem>
-                    <MenuItem value="female">Female</MenuItem>
-                    <MenuItem value="other">Other</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              {/* CNIC Number and Expiry Date */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  label="CNIC Number"
-                  value={kycData.cnic_number}
-                  onChange={(e) => handleInputChange('cnic_number', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  placeholder="00000-0000000-0"
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                />
-                <TextField
-                  label="CNIC Expiry Date"
-                  type="date"
-                  value={kycData.cnic_expiry_date || ''}
-                  onChange={(e) => handleInputChange('cnic_expiry_date', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{ 
-                    flex: 1, 
-                    minWidth: { xs: '100%', sm: '250px' },
-                    '& .MuiInputBase-root': { 
-                      height: '56px',
-                      '& .MuiInputLabel-root': { 
-                        transform: 'translate(14px, 16px) scale(1)' 
-                      }
-                    }
-                  }}
-                />
-              </Box>
-
-              {/* Current and Permanent Address */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  label="Current Address"
-                  multiline
-                  rows={3}
-                  value={kycData.current_address}
-                  onChange={(e) => handleInputChange('current_address', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment>,
-                  }}
-                />
-                <TextField
-                  label="Permanent Address"
-                  multiline
-                  rows={3}
-                  value={kycData.permanent_address}
-                  onChange={(e) => handleInputChange('permanent_address', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment>,
-                  }}
-                />
-              </Box>
-
-              <Divider sx={{ width: '100%', my: 2 }} />
-
-              {/* Beneficiary Information */}
-              <Box>
-                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                  Beneficiary Information
-                </Typography>
-              </Box>
-
-              {/* Beneficiary Name and Phone */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  label="Beneficiary Name"
-                  value={kycData.beneficiary_name}
-                  onChange={(e) => handleInputChange('beneficiary_name', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Person /></InputAdornment>,
-                  }}
-                />
-                <TextField
-                  label="Beneficiary Phone/Mobile"
-                  value={kycData.beneficiary_phone_mobile}
-                  onChange={(e) => handleInputChange('beneficiary_phone_mobile', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Phone /></InputAdornment>,
-                  }}
-                />
-              </Box>
-
-              {/* Beneficiary Relation */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  label="Beneficiary Relation"
-                  value={kycData.beneficiary_relation}
-                  onChange={(e) => handleInputChange('beneficiary_relation', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  placeholder="e.g., Spouse, Child, Parent"
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                />
-              </Box>
-
-              {/* Beneficiary Address */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  label="Beneficiary Address"
-                  multiline
-                  rows={3}
-                  value={kycData.beneficiary_address}
-                  onChange={(e) => handleInputChange('beneficiary_address', e.target.value)}
-                  required
-                  disabled={!isEditing && existingKYC}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: '250px' } }}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><LocationOn /></InputAdornment>,
-                  }}
-                />
-              </Box>
-
-              {/* ID Card Upload Section */}
-              <Box>
-                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                  ID Card Documents
-                </Typography>
-              </Box>
-
-              {/* ID Card Upload Fields */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                {/* ID Card Front */}
-                <Box sx={{ flex: 1, minWidth: { xs: '100%', sm: '300px' } }}>
-                  <Box sx={{ textAlign: 'center', p: 2, border: '2px dashed #e5e7eb', borderRadius: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
-                      ID Card Front
-                    </Typography>
-                    {kycData.id_card_front ? (
-                      <Box sx={{ mb: 2 }}>
-                        <Image 
-                          src={getImageUrl(kycData.id_card_front, 'ID card front')} 
-                          alt="ID Card Front" 
-                          width={300}
-                          height={200}
-                          onError={(e) => {
-                            console.error('ID card front image failed to load:', e);
-                            console.log('ID card front URL that failed:', getImageUrl(kycData.id_card_front, 'ID card front'));
-                          }}
-                          style={{ 
-                            maxWidth: '100%', 
-                            maxHeight: '200px', 
-                            borderRadius: '8px',
-                            border: '1px solid #e5e7eb',
-                            objectFit: 'contain'
-                          }} 
-                        />
-                      </Box>
-                    ) : (
-                      <Box sx={{ mb: 2, color: 'text.secondary' }}>
-                        <PhotoCamera sx={{ fontSize: { xs: 36, sm: 48 }, mb: 1 }} />
-                        <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>No image selected</Typography>
-                      </Box>
-                    )}
-                    <input
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      id="id-card-front-upload"
-                      type="file"
-                      onChange={handleIdCardFrontUpload}
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Full Legal Name *"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.fullname}
+                      onChange={(e) => handleInputChange('fullname', e.target.value)}
                       disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
                     />
-                    <label htmlFor="id-card-front-upload">
-                      <Button
-                        component="span"
-                        variant="outlined"
-                        disabled={!isEditing && existingKYC}
-                        sx={{ minWidth: { xs: 100, sm: 120 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
-                      >
-                        {kycData.id_card_front ? 'Change Image' : 'Upload Image'}
-                      </Button>
-                    </label>
-                  </Box>
-                </Box>
-
-                {/* ID Card Back */}
-                <Box sx={{ flex: 1, minWidth: { xs: '100%', sm: '300px' } }}>
-                  <Box sx={{ textAlign: 'center', p: 2, border: '2px dashed #e5e7eb', borderRadius: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
-                      ID Card Back
-                    </Typography>
-                    {kycData.id_card_back ? (
-                      <Box sx={{ mb: 2 }}>
-                        <Image 
-                          src={getImageUrl(kycData.id_card_back, 'ID card back')} 
-                          alt="ID Card Back" 
-                          width={300}
-                          height={200}
-                          onError={(e) => {
-                            console.error('ID card back image failed to load:', e);
-                            console.log('ID card back URL that failed:', getImageUrl(kycData.id_card_back, 'ID card back'));
-                          }}
-                          style={{ 
-                            maxWidth: '100%', 
-                            maxHeight: '200px', 
-                            borderRadius: '8px',
-                            border: '1px solid #e5e7eb',
-                            objectFit: 'contain'
-                          }} 
-                        />
-                      </Box>
-                    ) : (
-                      <Box sx={{ mb: 2, color: 'text.secondary' }}>
-                        <PhotoCamera sx={{ fontSize: { xs: 36, sm: 48 }, mb: 1 }} />
-                        <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>No image selected</Typography>
-                      </Box>
-                    )}
-                    <input
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      id="id-card-back-upload"
-                      type="file"
-                      onChange={handleIdCardBackUpload}
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Father / Guardian Name *"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.father_name}
+                      onChange={(e) => handleInputChange('father_name', e.target.value)}
                       disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
                     />
-                    <label htmlFor="id-card-back-upload">
-                      <Button
-                        component="span"
-                        variant="outlined"
-                        disabled={!isEditing && existingKYC}
-                        sx={{ minWidth: { xs: 100, sm: 120 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Email Address *"
+                      type="email"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Contact Phone Number *"
+                      type="tel"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.phoneNumber}
+                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      label="Date of Birth *"
+                      type="date"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.date_of_birth}
+                      onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ shrink: true, sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      label="City *"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.city}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <FormControl fullWidth size="small" required disabled={!isEditing && existingKYC}>
+                      <InputLabel sx={{ color: textSecondary }}>Country *</InputLabel>
+                      <Select
+                        value={kycData.country}
+                        label="Country *"
+                        onChange={(e) => handleInputChange('country', e.target.value)}
+                        sx={{ borderRadius: 0, color: textPrimary }}
                       >
-                        {kycData.id_card_back ? 'Change Image' : 'Upload Image'}
-                      </Button>
-                    </label>
-                  </Box>
-                </Box>
+                        {countries.map((c) => (
+                          <MenuItem key={c.code} value={c.name}>{c.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <FormControl fullWidth size="small" required disabled={!isEditing && existingKYC}>
+                      <InputLabel sx={{ color: textSecondary }}>Gender *</InputLabel>
+                      <Select
+                        value={kycData.gender}
+                        label="Gender *"
+                        onChange={(e) => handleInputChange('gender', e.target.value)}
+                        sx={{ borderRadius: 0, color: textPrimary }}
+                      >
+                        <MenuItem value="male">Male</MenuItem>
+                        <MenuItem value="female">Female</MenuItem>
+                        <MenuItem value="other">Other</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      label="National ID / CNIC Number *"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.cnic_number}
+                      onChange={(e) => handleInputChange('cnic_number', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      placeholder="00000-0000000-0"
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      label="CNIC Expiry Date *"
+                      type="date"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.cnic_expiry_date}
+                      onChange={(e) => handleInputChange('cnic_expiry_date', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ shrink: true, sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Current Residential Address *"
+                      multiline
+                      rows={2}
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.current_address}
+                      onChange={(e) => handleInputChange('current_address', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Permanent Address *"
+                      multiline
+                      rows={2}
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.permanent_address}
+                      onChange={(e) => handleInputChange('permanent_address', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Beneficiary Details */}
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary, mb: 1, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  2. Next-of-Kin / Beneficiary Details
+                </Typography>
+                <Divider sx={{ mb: 2.5, borderColor: borderCard }} />
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      label="Beneficiary Full Name *"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.beneficiary_name}
+                      onChange={(e) => handleInputChange('beneficiary_name', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      label="Beneficiary Phone / Mobile *"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.beneficiary_phone_mobile}
+                      onChange={(e) => handleInputChange('beneficiary_phone_mobile', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      label="Relationship with Member *"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.beneficiary_relation}
+                      onChange={(e) => handleInputChange('beneficiary_relation', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      placeholder="e.g. Spouse, Son, Father, Sibling"
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Beneficiary Permanent Address *"
+                      fullWidth
+                      size="small"
+                      required
+                      value={kycData.beneficiary_address}
+                      onChange={(e) => handleInputChange('beneficiary_address', e.target.value)}
+                      disabled={!isEditing && existingKYC}
+                      InputLabelProps={{ sx: { color: textSecondary } }}
+                      InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* ID Card Scans */}
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary, mb: 1, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  3. Identity Card Document Scans
+                </Typography>
+                <Divider sx={{ mb: 2.5, borderColor: borderCard }} />
+
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <Paper sx={{ p: 2.5, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0, textAlign: 'center' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: textPrimary, mb: 1.5 }}>
+                        CNIC Front Image
+                      </Typography>
+                      {kycData.id_card_front ? (
+                        <Box sx={{ mb: 2, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Image
+                            src={getImageUrl(kycData.id_card_front)}
+                            alt="CNIC Front"
+                            width={260}
+                            height={160}
+                            style={{ objectFit: 'contain', maxHeight: '160px' }}
+                          />
+                        </Box>
+                      ) : (
+                        <Box sx={{ py: 4, color: textSecondary }}>
+                          <CreditCard sx={{ fontSize: 44, mb: 1 }} />
+                          <Typography variant="caption" sx={{ display: 'block' }}>No image uploaded</Typography>
+                        </Box>
+                      )}
+                      <input
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        id="cnic-front-input"
+                        type="file"
+                        onChange={(e) => handleFileUpload(e, 'id_card_front')}
+                        disabled={!isEditing && existingKYC}
+                      />
+                      <label htmlFor="cnic-front-input">
+                        <Button
+                          component="span"
+                          variant="outlined"
+                          size="small"
+                          disabled={!isEditing && existingKYC}
+                          sx={{ borderRadius: 0, textTransform: 'none', fontWeight: 700 }}
+                        >
+                          {kycData.id_card_front ? 'Replace Front Scan' : 'Upload Front Scan'}
+                        </Button>
+                      </label>
+                    </Paper>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Paper sx={{ p: 2.5, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0, textAlign: 'center' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: textPrimary, mb: 1.5 }}>
+                        CNIC Back Image
+                      </Typography>
+                      {kycData.id_card_back ? (
+                        <Box sx={{ mb: 2, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Image
+                            src={getImageUrl(kycData.id_card_back)}
+                            alt="CNIC Back"
+                            width={260}
+                            height={160}
+                            style={{ objectFit: 'contain', maxHeight: '160px' }}
+                          />
+                        </Box>
+                      ) : (
+                        <Box sx={{ py: 4, color: textSecondary }}>
+                          <CreditCard sx={{ fontSize: 44, mb: 1 }} />
+                          <Typography variant="caption" sx={{ display: 'block' }}>No image uploaded</Typography>
+                        </Box>
+                      )}
+                      <input
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        id="cnic-back-input"
+                        type="file"
+                        onChange={(e) => handleFileUpload(e, 'id_card_back')}
+                        disabled={!isEditing && existingKYC}
+                      />
+                      <label htmlFor="cnic-back-input">
+                        <Button
+                          component="span"
+                          variant="outlined"
+                          size="small"
+                          disabled={!isEditing && existingKYC}
+                          sx={{ borderRadius: 0, textTransform: 'none', fontWeight: 700 }}
+                        >
+                          {kycData.id_card_back ? 'Replace Back Scan' : 'Upload Back Scan'}
+                        </Button>
+                      </label>
+                    </Paper>
+                  </Grid>
+                </Grid>
               </Box>
 
               {/* Submit Button */}
               {(!existingKYC || isEditing) && (
-                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
                     type="submit"
                     variant="contained"
                     size="large"
                     disabled={loading || uploadingImages}
+                    startIcon={<Save />}
                     sx={{
-                      px: { xs: 4, sm: 6 },
-                      py: 1.5,
-                      fontSize: { xs: '1rem', sm: '1.1rem' },
-                      fontWeight: 'bold',
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%)',
-                      }
+                      borderRadius: 0,
+                      bgcolor: '#3b82f6',
+                      color: '#ffffff',
+                      fontWeight: 800,
+                      px: 4,
+                      py: 1.2,
+                      textTransform: 'none',
+                      '&:hover': { bgcolor: '#2563eb' }
                     }}
                   >
-                    {uploadingImages ? "Uploading Images..." : loading ? "Saving..." : (existingKYC ? "Update KYC" : "Submit KYC")}
+                    {uploadingImages ? 'Uploading Scans...' : loading ? 'Saving Profile...' : existingKYC ? 'Save KYC Changes' : 'Submit KYC Documentation'}
                   </Button>
                 </Box>
               )}
             </Box>
-          </Box>
+          </form>
         </CardContent>
       </Card>
     </Box>

@@ -4,31 +4,38 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { auth } from "../../lib/auth";
 import {
   Box,
-  Grid,
   Card,
   CardContent,
   TextField,
   Button,
   Typography,
   Alert,
-  Avatar,
   Stack,
   InputAdornment,
   IconButton,
-} from '@mui/material';
+  CircularProgress,
+  Collapse,
+  Divider,
+} from "@mui/material";
 import {
-  Person,
-  Group,
-  Lock,
-  Email,
-  Phone,
+  PersonOutline,
+  LockOutlined,
+  EmailOutlined,
+  PhoneOutlined,
+  GroupOutlined,
   Visibility,
   VisibilityOff,
   ArrowForward,
-} from '@mui/icons-material';
+  TrendingUp,
+  Storefront,
+  AccountBalanceWallet,
+  CheckCircle,
+  AdminPanelSettings,
+  ShieldOutlined,
+  VerifiedUser,
+} from "@mui/icons-material";
 
 function SignupForm() {
   const router = useRouter();
@@ -57,8 +64,8 @@ function SignupForm() {
   const [referralValidation, setReferralValidation] = useState({
     isValidating: false,
     isValid: false,
-    referrerName: '',
-    message: ''
+    referrerName: "",
+    message: "",
   });
 
   // Auto-focus full name field on mount
@@ -69,73 +76,65 @@ function SignupForm() {
     }
   }, []);
 
-  // Define validateReferralCode function first
+  // Validate referral code
   const validateReferralCode = useCallback(async (referralCode) => {
     if (!referralCode || referralCode.length < 3) return;
 
-    console.log('Validating referral code:', referralCode);
-    setReferralValidation(prev => ({ ...prev, isValidating: true }));
+    setReferralValidation((prev) => ({ ...prev, isValidating: true }));
 
     try {
-      const response = await fetch('/api/validate-referral', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("/api/validate-referral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ referralCode }),
       });
 
-      console.log('Validation response status:', response.status);
       const data = await response.json();
-      console.log('Validation response data:', data);
 
       if (data.valid) {
         setReferralValidation({
           isValidating: false,
           isValid: true,
           referrerName: data.referrer.fullname,
-          message: data.message
+          message: data.message,
         });
-        // Clear any referral code errors
-        setErrors(prev => ({ ...prev, referralCode: "" }));
+        setErrors((prev) => ({ ...prev, referralCode: "" }));
       } else {
         setReferralValidation({
           isValidating: false,
           isValid: false,
-          referrerName: '',
-          message: data.message
+          referrerName: "",
+          message: data.message,
         });
-        // Set referral code error
-        setErrors(prev => ({ ...prev, referralCode: data.message }));
+        setErrors((prev) => ({ ...prev, referralCode: data.message }));
       }
-    } catch (error) {
-      console.error('Error validating referral code:', error);
+    } catch (err) {
+      console.error("Error validating referral code:", err);
       setReferralValidation({
         isValidating: false,
         isValid: false,
-        referrerName: '',
-        message: 'Error validating referral code. Please check your connection.'
+        referrerName: "",
+        message: "Error validating referral code. Please check your connection.",
       });
     }
   }, []);
 
   // Check for referral code in URL params
   useEffect(() => {
-    const refCode = searchParams.get('ref');
+    const refCode = searchParams.get("ref");
     if (refCode) {
-      setForm(prev => ({ ...prev, referralCode: refCode }));
-      // Auto-validate the referral code from URL
+      setForm((prev) => ({ ...prev, referralCode: refCode }));
       validateReferralCode(refCode.toLowerCase());
     }
   }, [searchParams, validateReferralCode]);
 
-  // Clear messages after 5 seconds
+  // Clear messages after 6 seconds
   useEffect(() => {
     if (message || error) {
       const timer = setTimeout(() => {
         setMessage(null);
         setError(null);
-      }, 5000);
+      }, 6000);
       return () => clearTimeout(timer);
     }
   }, [message, error]);
@@ -144,21 +143,19 @@ function SignupForm() {
   const updateField = (field) => (e) => {
     const value = e.target.value;
     setForm({ ...form, [field]: value });
-    
-    // Clear error for this field when user starts typing
+
     if (errors[field]) {
       setErrors({ ...errors, [field]: "" });
     }
 
-    // Validate referral code in real-time
-    if (field === 'referralCode' && value.length >= 3) {
+    if (field === "referralCode" && value.length >= 3) {
       validateReferralCode(value.toLowerCase());
-    } else if (field === 'referralCode' && value.length < 3) {
+    } else if (field === "referralCode" && value.length < 3) {
       setReferralValidation({
         isValidating: false,
         isValid: false,
-        referrerName: '',
-        message: ''
+        referrerName: "",
+        message: "",
       });
     }
   };
@@ -167,51 +164,49 @@ function SignupForm() {
   const validateField = (field, value) => {
     switch (field) {
       case "fullName":
-        if (!value) return "Full name is required";
-        if (value.length < 2) return "Full name must be at least 2 characters";
+        if (!value || !value.trim()) return "Full name is required";
+        if (value.trim().length < 2) return "Full name must be at least 2 characters";
         return "";
-      
+
       case "username":
-        if (!value) return "Username is required";
-        if (value.length < 3) return "Username must be at least 3 characters";
-        if (!/^[a-zA-Z0-9_]+$/.test(value)) return "Username can only contain letters, numbers, and underscores";
+        if (!value || !value.trim()) return "Username is required";
+        if (value.trim().length < 3) return "Username must be at least 3 characters";
+        if (!/^[a-zA-Z0-9_]+$/.test(value)) return "Only letters, numbers, and underscores allowed";
         return "";
-      
+
       case "email":
-        if (!value) return "Email is required";
+        if (!value || !value.trim()) return "Email is required";
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Please enter a valid email address";
         return "";
-      
+
       case "phoneNumber":
-        if (!value) return "Phone number is required";
+        if (!value || !value.trim()) return "Phone number is required";
         if (!/^[\+]?[0-9\s\-\(\)]{10,15}$/.test(value)) return "Please enter a valid phone number";
         return "";
-      
+
       case "password":
         if (!value) return "Password is required";
         if (value.length < 6) return "Password must be at least 6 characters";
         return "";
-      
+
       case "confirmPassword":
         if (!value) return "Please confirm your password";
         if (value !== form.password) return "Passwords do not match";
         return "";
-      
+
       case "referralCode":
-        if (!value) return "Referral code is required";
-        if (value.length < 3) return "Referral code must be at least 3 characters";
-        if (!/^[a-zA-Z0-9_]+$/.test(value)) return "Referral code can only contain letters, numbers, and underscores";
+        if (!value || !value.trim()) return "Referral sponsor is required";
+        if (value.trim().length < 3) return "Referral code must be at least 3 characters";
         return "";
-      
+
       default:
         return "";
     }
   };
 
-  // Validate all fields
   const validateForm = () => {
     const newErrors = {};
-    Object.keys(form).forEach(field => {
+    Object.keys(form).forEach((field) => {
       const error = validateField(field, form[field]);
       if (error) newErrors[field] = error;
     });
@@ -219,7 +214,6 @@ function SignupForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form submission
   async function onSubmit(e) {
     e.preventDefault();
     setMessage(null);
@@ -229,9 +223,8 @@ function SignupForm() {
       return;
     }
 
-    // Check if referral code is valid
     if (!referralValidation.isValid) {
-      setError("Please enter a valid referral code.");
+      setError("Please provide a valid verified referral sponsor code to continue.");
       return;
     }
 
@@ -242,11 +235,11 @@ function SignupForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: form.fullName,
-          username: form.username,
-          email: form.email,
-          phoneNumber: form.phoneNumber,
-          referralCode: form.referralCode.toLowerCase(),
+          fullName: form.fullName.trim(),
+          username: form.username.trim(),
+          email: form.email.trim(),
+          phoneNumber: form.phoneNumber.trim(),
+          referralCode: form.referralCode.trim().toLowerCase(),
           password: form.password,
         }),
       });
@@ -254,11 +247,10 @@ function SignupForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data?.message || "Signup failed. Please try again.");
+        setError(data?.message || "Registration failed. Please check your data and try again.");
       } else {
-        setMessage("Account created successfully! Please check your email for verification instructions.");
-        
-        // Clear form
+        setMessage("Account created successfully! Redirecting you to login...");
+
         setForm({
           fullName: "",
           username: "",
@@ -269,463 +261,866 @@ function SignupForm() {
           confirmPassword: "",
         });
 
-        // Redirect to login after a delay
         setTimeout(() => {
           router.push("/login");
-        }, 3000);
+        }, 2000);
       }
     } catch (err) {
       console.error("Signup error:", err);
-      setError("Network error. Please check your connection and try again.");
+      setError("Network error. Please check your internet connection and try again.");
     } finally {
       setLoading(false);
     }
   }
 
-
-
   return (
-    <Box sx={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      display: 'flex'
-    }}>
-      {/* Left Half - Logo and Branding */}
-      <Box sx={{ 
-        width: '50%',
-        display: { xs: 'none', lg: 'flex' },
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        px: 4
-      }}>
-        {/* Ledora Global Image */}
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        background: "linear-gradient(135deg, #070a12 0%, #0d1322 50%, #131c30 100%)",
+        position: "relative",
+        overflowX: "hidden",
+      }}
+    >
+      {/* Left Half - Logo, Branding & Value Proposition */}
+      <Box
+        sx={{
+          width: "50%",
+          display: { xs: "none", lg: "flex" },
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white",
+          px: { lg: 6, xl: 8 },
+          py: 6,
+          position: "relative",
+        }}
+      >
+        {/* Ledora Global Image - Sharp Corners */}
         <Box sx={{ mb: 4 }}>
-          <Image 
-            src="/leadora_global.jpg" 
-            alt="Ledora Global" 
-            width={300}
-            height={200}
-            style={{ 
-              maxWidth: '300px', 
-              height: 'auto',
-              borderRadius: '12px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+          <Image
+            src="/leadora_global.jpg"
+            alt="Ledora Global"
+            width={340}
+            height={220}
+            style={{
+              maxWidth: "340px",
+              height: "auto",
+              borderRadius: "0px",
+              boxShadow: "0 16px 40px rgba(0, 0, 0, 0.7)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
             }}
             priority
           />
         </Box>
-        
-        {/* Tagline */}
-        <Typography variant="h6" sx={{ mb: 6, opacity: 0.9, lineHeight: 1.6, textAlign: 'center' }}>
-          Create your account and start your journey with Ledora Global. 
-          Access exclusive packages, earn rewards, and grow with our community.
-        </Typography>
-        
 
+        {/* Tagline */}
+
+        <Typography
+          variant="h6"
+          sx={{
+            mb: 5,
+            opacity: 0.85,
+            lineHeight: 1.6,
+            textAlign: "center",
+            maxWidth: 480,
+            fontSize: "1.05rem",
+            color: "#94a3b8",
+          }}
+        >
+          Create your verified account and start your journey with Ledora Global. Access exclusive packages,
+          earn multi-level rewards, and build a rewarding business network.
+        </Typography>
+
+        {/* 3 Value Cards - Sharp Corners */}
+        <Stack spacing={2} sx={{ width: "100%", maxWidth: 440 }}>
+          <Box
+            sx={{
+              p: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              borderRadius: 0,
+              backgroundColor: "rgba(30, 41, 59, 0.5)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderLeft: "3px solid #6366f1",
+            }}
+          >
+            <TrendingUp sx={{ color: "#818cf8", fontSize: 24 }} />
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
+                Multi-Tier Commission Engine
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                Automatic calculation and upline distribution on activations.
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              p: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              borderRadius: 0,
+              backgroundColor: "rgba(30, 41, 59, 0.5)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderLeft: "3px solid #06b6d4",
+            }}
+          >
+            <Storefront sx={{ color: "#22d3ee", fontSize: 24 }} />
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
+                Integrated E-Commerce Wallet
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                Redeem shopping credits for physical products seamlessly.
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              p: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              borderRadius: 0,
+              backgroundColor: "rgba(30, 41, 59, 0.5)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderLeft: "3px solid #10b981",
+            }}
+          >
+            <AccountBalanceWallet sx={{ color: "#34d399", fontSize: 24 }} />
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
+                Verified PKR Withdrawals
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                Fast cashouts via JazzCash, EasyPaisa, or Direct Bank Wire.
+              </Typography>
+            </Box>
+          </Box>
+        </Stack>
       </Box>
 
-      {/* Right Half - Signup Form */}
-      <Box sx={{ 
-        width: { xs: '100%', lg: '50%' },
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        pr: { lg: 4 }
-      }}>
-        <Box sx={{ 
-          width: '100%',
-          maxWidth: { xs: '100%', sm: '600px', md: '700px' },
-          mx: 'auto'
-        }}>
-          {/* Mobile Logo */}
-          <Box sx={{ 
-            display: { xs: 'flex', lg: 'none' }, 
-            flexDirection: 'column',
-            alignItems: 'center',
-            mb: 4
-          }}>
-            <Box sx={{ mb: 2 }}>
-              <Image 
-                src="/leadora_global.jpg" 
-                alt="Ledora Global" 
-                width={200}
-                height={133}
-                style={{ 
-                  maxWidth: '200px', 
-                  height: 'auto',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-                }}
-              />
-            </Box>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Create your account
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Join us and start your journey today
+      {/* Right Half - Ultra-Beautiful Modern Signup Form */}
+      <Box
+        sx={{
+          width: { xs: "100%", lg: "50%" },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          px: { xs: 2, sm: 4, md: 6, xl: 8 },
+          py: { xs: 4, md: 6 },
+          position: "relative",
+        }}
+      >
+        <Box sx={{ width: "100%", maxWidth: 560 }}>
+          {/* Mobile Header Branding */}
+          <Box
+            sx={{
+              display: { xs: "flex", lg: "none" },
+              flexDirection: "column",
+              alignItems: "center",
+              mb: 3,
+              textAlign: "center",
+            }}
+          >
+            <Image
+              src="/leadora_global.jpg"
+              alt="Ledora Global"
+              width={160}
+              height={100}
+              style={{
+                borderRadius: "0px",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                marginBottom: "14px",
+              }}
+              priority
+            />
+            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              Create your account to get started
             </Typography>
           </Box>
 
-          {/* Signup Card */}
-          <Card sx={{ 
-            width: '100%',
-            maxWidth: { xs: '100%', sm: '600px', md: '700px' },
-            borderRadius: 3,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            my: 2,
-            mx: 'auto'
-          }}>
-            <CardContent sx={{ py: 3, px: 3 }}>
-              {/* Card Title */}
-              <Typography variant="h4" component="h1" sx={{ 
-                textAlign: 'left', 
-                mb: 3, 
-                fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>
-                SignUp
-              </Typography>
-              
-              {/* Success/Error Messages */}
-              {message && (
-                <Alert severity="success" sx={{ mb: 3 }}>
-                  {message}
-                </Alert>
-              )}
-              
-              {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                  {error}
-                </Alert>
-              )}
+          {/* Premium Signup Card - Sharp Corners & Rich Aesthetics */}
+          <Card
+            sx={{
+              width: "100%",
+              borderRadius: 0,
+              backgroundColor: "rgba(13, 19, 33, 0.85)",
+              backdropFilter: "blur(24px)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              position: "relative",
+              overflow: "hidden",
+              boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 45px -10px rgba(99, 102, 241, 0.18)",
+            }}
+          >
+            {/* Top Multi-Color Accent Gradient Bar */}
+            <Box
+              sx={{
+                height: 3,
+                width: "100%",
+                background: "linear-gradient(90deg, #6366f1 0%, #06b6d4 50%, #a855f7 100%)",
+              }}
+            />
 
-              {/* Signup Form */}
-              <Box component="form" onSubmit={onSubmit} noValidate sx={{ width: '100%' }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: 3,
-                  width: '100%' 
-                }}>
-                  {/* Row 1: Full Name and Username */}
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 2, 
-                    width: '100%',
-                    flexDirection: { xs: 'column', sm: 'row' }
-                  }}>
-                    <TextField
-                      id="fullName"
-                      name="fullName"
-                      label="Full Name"
-                      value={form.fullName}
-                      onChange={updateField("fullName")}
-                      required
-                      fullWidth
-                      error={!!errors.fullName}
-                      helperText={errors.fullName}
-                      sx={{ 
-                        flex: 1,
-                        '& .MuiOutlinedInput-root': {
-                          height: '56px'
-                        }
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Person />
-                          </InputAdornment>
-                        ),
+            <CardContent sx={{ p: { xs: 3, sm: 4.5 } }}>
+              {/* Card Header with Pill Badge */}
+              <Box sx={{ mb: 3.5 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
+                  <Box
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 0.75,
+                      px: 1.25,
+                      py: 0.4,
+                      backgroundColor: "rgba(99, 102, 241, 0.12)",
+                      border: "1px solid rgba(99, 102, 241, 0.3)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        backgroundColor: "#818cf8",
+                        borderRadius: 0,
+                        boxShadow: "0 0 8px #818cf8",
                       }}
                     />
-                    <TextField
-                      id="username"
-                      name="username"
-                      label="Username"
-                      value={form.username}
-                      onChange={updateField("username")}
-                      required
-                      fullWidth
-                      error={!!errors.username}
-                      helperText={errors.username || "This will be your login username and referral code"}
-                      sx={{ 
-                        flex: 1,
-                        '& .MuiOutlinedInput-root': {
-                          height: '56px'
-                        }
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "#818cf8",
+                        fontWeight: 700,
+                        fontSize: "0.72rem",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
                       }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Person />
-                          </InputAdornment>
-                        ),
+                    >
+                      Member Registration
+                    </Typography>
+                  </Box>
+                </Stack>
+
+                <Typography
+                  variant="h4"
+                  component="h1"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: { xs: "1.75rem", sm: "2rem" },
+                    letterSpacing: "-0.02em",
+                    background: "linear-gradient(135deg, #ffffff 0%, #e2e8f0 70%, #94a3b8 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    mb: 0.5,
+                  }}
+                >
+                  Create Account
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: "0.925rem" }}>
+                  Join thousands of members growing with Ledora Global.
+                </Typography>
+              </Box>
+
+              {/* Feedback Alerts */}
+              <Collapse in={!!message || !!error}>
+                <Box sx={{ mb: 3 }}>
+                  {message && (
+                    <Alert
+                      severity="success"
+                      icon={<CheckCircle fontSize="inherit" />}
+                      sx={{
+                        borderRadius: 0,
+                        backgroundColor: "rgba(16, 185, 129, 0.12)",
+                        color: "#34d399",
+                        border: "1px solid rgba(16, 185, 129, 0.3)",
+                        borderLeft: "4px solid #10b981",
                       }}
-                    />
+                    >
+                      {message}
+                    </Alert>
+                  )}
+                  {error && (
+                    <Alert
+                      severity="error"
+                      sx={{
+                        borderRadius: 0,
+                        backgroundColor: "rgba(239, 68, 68, 0.12)",
+                        color: "#f87171",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        borderLeft: "4px solid #ef4444",
+                      }}
+                    >
+                      {error}
+                    </Alert>
+                  )}
+                </Box>
+              </Collapse>
+
+              {/* Form Controls */}
+              <Box component="form" onSubmit={onSubmit} noValidate>
+                <Stack spacing={2.25}>
+                  {/* Row 1: Full Name & Username */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      flexDirection: { xs: "column", sm: "row" },
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          mb: 0.65,
+                          fontWeight: 600,
+                          color: "#cbd5e1",
+                          fontSize: "0.8rem",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        Full Name
+                      </Typography>
+                      <TextField
+                        id="fullName"
+                        name="fullName"
+                        placeholder="John Doe"
+                        value={form.fullName}
+                        onChange={updateField("fullName")}
+                        fullWidth
+                        disabled={loading}
+                        error={!!errors.fullName}
+                        helperText={errors.fullName}
+                        slotProps={{
+                          input: {
+                            sx: {
+                              borderRadius: 0,
+                              backgroundColor: "rgba(15, 23, 42, 0.65)",
+                              transition: "all 0.2s ease",
+                              "&:hover": {
+                                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                              },
+                            },
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <PersonOutline
+                                  sx={{
+                                    color: errors.fullName ? "error.main" : "#818cf8",
+                                    fontSize: 20,
+                                  }}
+                                />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                      />
+                    </Box>
+
+                    <Box sx={{ flex: 1 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          mb: 0.65,
+                          fontWeight: 600,
+                          color: "#cbd5e1",
+                          fontSize: "0.8rem",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        Username
+                      </Typography>
+                      <TextField
+                        id="username"
+                        name="username"
+                        placeholder="johndoe77"
+                        value={form.username}
+                        onChange={updateField("username")}
+                        fullWidth
+                        disabled={loading}
+                        error={!!errors.username}
+                        helperText={errors.username || "Login ID & referral code"}
+                        slotProps={{
+                          input: {
+                            sx: {
+                              borderRadius: 0,
+                              backgroundColor: "rgba(15, 23, 42, 0.65)",
+                              transition: "all 0.2s ease",
+                              "&:hover": {
+                                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                              },
+                            },
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <PersonOutline
+                                  sx={{
+                                    color: errors.username ? "error.main" : "#818cf8",
+                                    fontSize: 20,
+                                  }}
+                                />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                      />
+                    </Box>
                   </Box>
 
-                  {/* Row 2: Email and Phone Number */}
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 2, 
-                    width: '100%',
-                    flexDirection: { xs: 'column', sm: 'row' }
-                  }}>
-                    <TextField
-                      id="email"
-                      name="email"
-                      label="Email Address"
-                      type="email"
-                      value={form.email}
-                      onChange={updateField("email")}
-                      required
-                      fullWidth
-                      error={!!errors.email}
-                      helperText={errors.email || "We'll send you a verification email"}
-                      sx={{ 
-                        flex: 1,
-                        '& .MuiOutlinedInput-root': {
-                          height: '56px'
-                        }
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Email />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                    <TextField
-                      id="phoneNumber"
-                      name="phoneNumber"
-                      label="Phone Number"
-                      type="tel"
-                      value={form.phoneNumber}
-                      onChange={updateField("phoneNumber")}
-                      required
-                      fullWidth
-                      error={!!errors.phoneNumber}
-                      helperText={errors.phoneNumber || "Enter your mobile phone number"}
-                      sx={{ 
-                        flex: 1,
-                        '& .MuiOutlinedInput-root': {
-                          height: '56px'
-                        }
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Phone />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
+                  {/* Row 2: Email & Phone Number */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      flexDirection: { xs: "column", sm: "row" },
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          mb: 0.65,
+                          fontWeight: 600,
+                          color: "#cbd5e1",
+                          fontSize: "0.8rem",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        Email Address
+                      </Typography>
+                      <TextField
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="john@example.com"
+                        value={form.email}
+                        onChange={updateField("email")}
+                        fullWidth
+                        disabled={loading}
+                        error={!!errors.email}
+                        helperText={errors.email}
+                        slotProps={{
+                          input: {
+                            sx: {
+                              borderRadius: 0,
+                              backgroundColor: "rgba(15, 23, 42, 0.65)",
+                              transition: "all 0.2s ease",
+                              "&:hover": {
+                                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                              },
+                            },
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <EmailOutlined
+                                  sx={{
+                                    color: errors.email ? "error.main" : "#818cf8",
+                                    fontSize: 20,
+                                  }}
+                                />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                      />
+                    </Box>
+
+                    <Box sx={{ flex: 1 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          mb: 0.65,
+                          fontWeight: 600,
+                          color: "#cbd5e1",
+                          fontSize: "0.8rem",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        Phone Number
+                      </Typography>
+                      <TextField
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        placeholder="03001234567"
+                        value={form.phoneNumber}
+                        onChange={updateField("phoneNumber")}
+                        fullWidth
+                        disabled={loading}
+                        error={!!errors.phoneNumber}
+                        helperText={errors.phoneNumber}
+                        slotProps={{
+                          input: {
+                            sx: {
+                              borderRadius: 0,
+                              backgroundColor: "rgba(15, 23, 42, 0.65)",
+                              transition: "all 0.2s ease",
+                              "&:hover": {
+                                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                              },
+                            },
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <PhoneOutlined
+                                  sx={{
+                                    color: errors.phoneNumber ? "error.main" : "#818cf8",
+                                    fontSize: 20,
+                                  }}
+                                />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                      />
+                    </Box>
                   </Box>
 
-                  {/* Row 3: Referral Code */}
-                  <Box sx={{ width: '100%' }}>
+                  {/* Row 3: Referral Sponsor Code with Verification Showcase */}
+                  <Box>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.65 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontWeight: 600,
+                          color: "#cbd5e1",
+                          fontSize: "0.8rem",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        Referral Sponsor Code
+                      </Typography>
+                      {referralValidation.isValid && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "#34d399",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                            fontSize: "0.75rem",
+                          }}
+                        >
+                          <CheckCircle sx={{ fontSize: 14 }} /> Verified Sponsor
+                        </Typography>
+                      )}
+                    </Stack>
                     <TextField
                       id="referralCode"
                       name="referralCode"
-                      label="Referral Code"
+                      placeholder="Enter sponsor username (e.g. admin)"
                       value={form.referralCode}
                       onChange={updateField("referralCode")}
-                      required
                       fullWidth
+                      disabled={loading}
                       error={!!errors.referralCode}
                       helperText={
-                        referralValidation.isValidating 
-                          ? "Validating referral code..." 
-                          : referralValidation.isValid 
-                            ? `✓ Valid! You will be referred by ${referralValidation.referrerName}`
-                            : errors.referralCode || "Enter a valid referral code to continue"
+                        referralValidation.isValidating
+                          ? "Checking sponsor in database..."
+                          : referralValidation.isValid
+                          ? `Registered under ${referralValidation.referrerName}`
+                          : errors.referralCode || "Required sponsor username to join network"
                       }
-                      sx={{ 
-                        '& .MuiOutlinedInput-root': {
-                          height: '56px'
+                      slotProps={{
+                        input: {
+                          sx: {
+                            borderRadius: 0,
+                            backgroundColor: "rgba(15, 23, 42, 0.65)",
+                            borderColor: referralValidation.isValid ? "rgba(16, 185, 129, 0.5)" : undefined,
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              backgroundColor: "rgba(15, 23, 42, 0.9)",
+                            },
+                          },
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <GroupOutlined
+                                sx={{
+                                  color: referralValidation.isValid
+                                    ? "#10b981"
+                                    : errors.referralCode
+                                    ? "error.main"
+                                    : "#818cf8",
+                                  fontSize: 20,
+                                }}
+                              />
+                            </InputAdornment>
+                          ),
+                          endAdornment: referralValidation.isValidating ? (
+                            <InputAdornment position="end">
+                              <CircularProgress size={18} sx={{ color: "#6366f1" }} />
+                            </InputAdornment>
+                          ) : null,
                         },
-                        '& .MuiFormHelperText-root': {
-                          color: referralValidation.isValid ? 'success.main' : errors.referralCode ? 'error.main' : 'text.secondary'
-                        }
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Group />
-                          </InputAdornment>
-                        ),
-                        endAdornment: referralValidation.isValidating && (
-                          <InputAdornment position="end">
-                            <Box sx={{ 
-                              width: 20, 
-                              height: 20, 
-                              border: '2px solid #ccc',
-                              borderTop: '2px solid #1976d2',
-                              borderRadius: '50%',
-                              animation: 'spin 1s linear infinite',
-                              '@keyframes spin': {
-                                '0%': { transform: 'rotate(0deg)' },
-                                '100%': { transform: 'rotate(360deg)' }
-                              }
-                            }} />
-                          </InputAdornment>
-                        )
                       }}
                     />
+
+                    {/* Verified Sponsor Box - Sharp & High-End */}
                     {referralValidation.isValid && (
-                      <Box sx={{ 
-                        mt: 1, 
-                        p: 2, 
-                        bgcolor: 'success.50', 
-                        border: '1px solid', 
-                        borderColor: 'success.200',
-                        borderRadius: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                      }}>
-                        <Box sx={{ 
-                          width: 8, 
-                          height: 8, 
-                          bgcolor: 'success.main', 
-                          borderRadius: '50%' 
-                        }} />
-                        <Typography variant="body2" color="success.dark">
-                          You will be referred by <strong>{referralValidation.referrerName}</strong>
+                      <Box
+                        sx={{
+                          mt: 1.25,
+                          p: 1.5,
+                          backgroundColor: "rgba(16, 185, 129, 0.08)",
+                          border: "1px solid rgba(16, 185, 129, 0.3)",
+                          borderLeft: "3px solid #10b981",
+                          borderRadius: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Stack direction="row" spacing={1.5} alignItems="center">
+                          <VerifiedUser sx={{ color: "#34d399", fontSize: 20 }} />
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: "#94a3b8", display: "block", textTransform: "uppercase", fontSize: "0.7rem", fontWeight: 700 }}
+                            >
+                              Confirmed Sponsor
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: "#f8fafc", fontWeight: 700, fontSize: "0.9rem" }}>
+                              {referralValidation.referrerName}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                        <Typography variant="caption" sx={{ color: "#34d399", fontWeight: 600, fontSize: "0.75rem" }}>
+                          Active Node
                         </Typography>
                       </Box>
                     )}
                   </Box>
 
-                  {/* Row 4: Password and Confirm Password */}
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 2, 
-                    width: '100%',
-                    flexDirection: { xs: 'column', sm: 'row' }
-                  }}>
-                    <TextField
-                      id="password"
-                      name="password"
-                      label="Password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={form.password}
-                      onChange={updateField("password")}
-                      required
-                      fullWidth
-                      error={!!errors.password}
-                      helperText={errors.password}
-                      sx={{ 
-                        flex: 1,
-                        '& .MuiOutlinedInput-root': {
-                          height: '56px'
-                        }
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Lock />
-                          </InputAdornment>
-                        ),
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton
-                              onClick={() => setShowPassword(!showPassword)}
-                              edge="end"
-                              sx={{ color: 'white' }}
-                            >
-                              {showPassword ? <VisibilityOff /> : <Visibility />}
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                    <TextField
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      label="Confirm Password"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={form.confirmPassword}
-                      onChange={updateField("confirmPassword")}
-                      required
-                      fullWidth
-                      error={!!errors.confirmPassword}
-                      helperText={errors.confirmPassword}
-                      sx={{ 
-                        flex: 1,
-                        '& .MuiOutlinedInput-root': {
-                          height: '56px'
-                        }
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Lock />
-                          </InputAdornment>
-                        ),
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              edge="end"
-                              sx={{ color: 'white' }}
-                            >
-                              {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </Box>
-                </Box>
-
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  disabled={loading}
-                  sx={{ 
-                    mt: 3, 
-                    mb: 2,
-                    py: 1.5,
-                    height: '56px',
-                    fontSize: '1.1rem',
-                    fontWeight: 'bold',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%)',
-                    }
-                  }}
-                  endIcon={loading ? null : <ArrowForward />}
-                >
-                  {loading ? "Creating Account..." : "Create Account"}
-                </Button>
-              </Box>
-
-              {/* Sign in link */}
-              <Box sx={{ textAlign: 'center', mt: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Already have an account?{" "}
-                  <Link
-                    href="/login"
-                    style={{ 
-                      color: '#3b82f6', 
-                      textDecoration: 'none',
-                      fontWeight: 'bold'
+                  {/* Row 4: Password & Confirm Password */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      flexDirection: { xs: "column", sm: "row" },
                     }}
                   >
-                    Sign in here
+                    <Box sx={{ flex: 1 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          mb: 0.65,
+                          fontWeight: 600,
+                          color: "#cbd5e1",
+                          fontSize: "0.8rem",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        Password
+                      </Typography>
+                      <TextField
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••••••"
+                        value={form.password}
+                        onChange={updateField("password")}
+                        fullWidth
+                        disabled={loading}
+                        error={!!errors.password}
+                        helperText={errors.password || "Min. 6 characters"}
+                        slotProps={{
+                          input: {
+                            sx: {
+                              borderRadius: 0,
+                              backgroundColor: "rgba(15, 23, 42, 0.65)",
+                              transition: "all 0.2s ease",
+                              "&:hover": {
+                                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                              },
+                            },
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <LockOutlined
+                                  sx={{
+                                    color: errors.password ? "error.main" : "#818cf8",
+                                    fontSize: 20,
+                                  }}
+                                />
+                              </InputAdornment>
+                            ),
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <IconButton
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  edge="end"
+                                  size="small"
+                                  sx={{ color: "#94a3b8" }}
+                                  aria-label={showPassword ? "Hide password" : "Show password"}
+                                >
+                                  {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                                </IconButton>
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                      />
+                    </Box>
+
+                    <Box sx={{ flex: 1 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          mb: 0.65,
+                          fontWeight: 600,
+                          color: "#cbd5e1",
+                          fontSize: "0.8rem",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        Confirm Password
+                      </Typography>
+                      <TextField
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="••••••••••••"
+                        value={form.confirmPassword}
+                        onChange={updateField("confirmPassword")}
+                        fullWidth
+                        disabled={loading}
+                        error={!!errors.confirmPassword}
+                        helperText={errors.confirmPassword}
+                        slotProps={{
+                          input: {
+                            sx: {
+                              borderRadius: 0,
+                              backgroundColor: "rgba(15, 23, 42, 0.65)",
+                              transition: "all 0.2s ease",
+                              "&:hover": {
+                                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                              },
+                            },
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <LockOutlined
+                                  sx={{
+                                    color: errors.confirmPassword ? "error.main" : "#818cf8",
+                                    fontSize: 20,
+                                  }}
+                                />
+                              </InputAdornment>
+                            ),
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <IconButton
+                                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                  edge="end"
+                                  size="small"
+                                  sx={{ color: "#94a3b8" }}
+                                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                >
+                                  {showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                                </IconButton>
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                      />
+                    </Box>
+                  </Box>
+
+                  {/* Submit Button - Sharp, Gradient & Glowing */}
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    disabled={loading}
+                    sx={{
+                      mt: 1.5,
+                      py: 1.6,
+                      fontSize: "1.025rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.03em",
+                      borderRadius: 0,
+                      background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #3b82f6 100%)",
+                      boxShadow: "0 8px 25px -4px rgba(99, 102, 241, 0.5)",
+                      transition: "all 0.25s ease",
+                      "&:hover": {
+                        background: "linear-gradient(135deg, #4f46e5 0%, #4338ca 50%, #2563eb 100%)",
+                        boxShadow: "0 12px 30px -4px rgba(99, 102, 241, 0.7)",
+                        transform: "translateY(-1px)",
+                      },
+                    }}
+                    endIcon={
+                      loading ? null : (
+                        <ArrowForward
+                          sx={{
+                            transition: "transform 0.2s ease",
+                            ".MuiButton-root:hover &": {
+                              transform: "translateX(5px)",
+                            },
+                          }}
+                        />
+                      )
+                    }
+                  >
+                    {loading ? (
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <CircularProgress size={20} color="inherit" />
+                        <span>Creating Your Account...</span>
+                      </Stack>
+                    ) : (
+                      "Complete Registration"
+                    )}
+                  </Button>
+                </Stack>
+              </Box>
+
+              {/* Sign in prompt */}
+              <Box
+                sx={{
+                  textAlign: "center",
+                  mt: 3,
+                  pt: 2.5,
+                  borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                }}
+              >
+                <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                  Already registered with Ledora?{" "}
+                  <Link
+                    href="/login"
+                    style={{
+                      color: "#818cf8",
+                      textDecoration: "none",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Sign in to your account
                   </Link>
+                </Typography>
+              </Box>
+
+              {/* Powered By Footer */}
+              <Box sx={{ mt: 2.5, textAlign: "center" }}>
+                <Typography variant="caption" sx={{ color: "#64748b", fontSize: "0.8rem" }}>
+                  Powerd By :{" "}
+                  <a
+                    href="https://rapidtechpro.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#818cf8",
+                      textDecoration: "none",
+                      fontWeight: 700,
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    RAPIDTECHPRO
+                  </a>
                 </Typography>
               </Box>
             </CardContent>
@@ -738,17 +1133,21 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '18px'
-      }}>
-        Loading signup form...
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <Box
+          sx={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#080c14",
+          }}
+        >
+          <CircularProgress color="primary" />
+        </Box>
+      }
+    >
       <SignupForm />
     </Suspense>
   );

@@ -19,18 +19,23 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Paper
 } from '@mui/material';
 import {
   AccountBalanceWallet,
   SwapHoriz,
   CheckCircle,
-  Warning
+  WarningAmber,
+  Security,
+  FlashOn
 } from '@mui/icons-material';
 import { UserContext } from '../../../../lib/userContext';
+import { useAppTheme } from '../../../../context/AdminThemeContext';
 
 export default function TransferToWalletPage() {
   const context = useContext(UserContext);
+  const { isLight } = useAppTheme();
   const [transferData, setTransferData] = useState({
     amount: '',
     fromAccount: '',
@@ -44,50 +49,44 @@ export default function TransferToWalletPage() {
   const [mounted, setMounted] = useState(false);
   const [accounts, setAccounts] = useState([]);
 
+  const bgCard = isLight ? '#ffffff' : '#0c1220';
+  const borderCard = isLight ? '#e2e8f0' : '#1e293b';
+  const textPrimary = isLight ? '#0f172a' : '#f8fafc';
+  const textSecondary = isLight ? '#64748b' : '#94a3b8';
+  const bgSubtle = isLight ? '#f8fafc' : '#070a12';
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch('/api/user/accounts', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setAccounts(data.accounts || []);
+      }
+    } catch (err) {
+      console.error('Error fetching accounts:', err);
+    }
+  };
 
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user) {
       fetchAccounts();
     }
   }, [mounted, context?.isAuthenticated, context?.user]);
-  
-  // Safety check for context
-  if (!context) {
+
+  if (!mounted || !context) {
     return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading...
-        </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress size={32} sx={{ color: '#2563eb' }} />
       </Box>
     );
   }
-  
-  const { user, isAuthenticated } = context;
-
-  const fetchAccounts = async () => {
-    try {
-      const response = await fetch('/api/user/accounts', {
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAccounts(data.accounts || []);
-      }
-    } catch (error) {
-      console.error('Error fetching accounts:', error);
-    }
-  };
 
   const handleInputChange = (field, value) => {
-    setTransferData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setTransferData(prev => ({ ...prev, [field]: value }));
   };
 
   const validateForm = () => {
@@ -95,33 +94,27 @@ export default function TransferToWalletPage() {
       setError('Please enter a valid transfer amount');
       return false;
     }
-
     if (parseFloat(transferData.amount) < 100) {
       setError('Minimum transfer amount is PKR 100');
       return false;
     }
-
     if (!transferData.fromAccount) {
       setError('Please select source account');
       return false;
     }
-
     if (!transferData.toAccount) {
       setError('Please select destination account');
       return false;
     }
-
     if (transferData.fromAccount === transferData.toAccount) {
       setError('Source and destination accounts cannot be the same');
       return false;
     }
-
     return true;
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -129,9 +122,7 @@ export default function TransferToWalletPage() {
     try {
       const response = await fetch('/api/user/transfer', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           amount: parseFloat(transferData.amount),
@@ -142,22 +133,17 @@ export default function TransferToWalletPage() {
       });
 
       const data = await response.json();
-
       if (response.ok) {
         setMessage('Transfer completed successfully!');
-        setTransferData({
-          amount: '',
-          fromAccount: '',
-          toAccount: '',
-          notes: ''
-        });
+        setTransferData({ amount: '', fromAccount: '', toAccount: '', notes: '' });
         setConfirmDialogOpen(false);
+        fetchAccounts();
         setTimeout(() => setMessage(null), 5000);
       } else {
         setError(data.message || 'Failed to complete transfer');
       }
-    } catch (error) {
-      console.error('Error completing transfer:', error);
+    } catch (err) {
+      console.error('Error completing transfer:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -170,183 +156,166 @@ export default function TransferToWalletPage() {
     }
   };
 
-  const formatCurrency = (amount) => {
-    return `PKR ${parseFloat(amount).toLocaleString()}`;
-  };
-
-  // Prevent hydration mismatch by showing loading until mounted
-  if (!mounted) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const formatCurrency = (amount) => `PKR ${parseFloat(amount || 0).toLocaleString()}`;
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
-        Transfer to Wallet
-      </Typography>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Header */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: { xs: 2.5, md: 3 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <SwapHoriz sx={{ color: '#3b82f6', fontSize: 32 }} />
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
+              Internal Account Transfer
+            </Typography>
+            <Typography variant="body2" sx={{ color: textSecondary }}>
+              Move available balances instantly between your commissions wallet, shopping balance, and primary account.
+            </Typography>
+          </Box>
+        </Box>
+      </Card>
 
-      {message && <Alert severity="success" sx={{ mb: 3 }}>{message}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {message && (
+        <Alert severity="success" sx={{ borderRadius: 0, border: '1px solid #10b981', bgcolor: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.1)' }}>
+          {message}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ borderRadius: 0, border: '1px solid #ef4444', bgcolor: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.1)' }}>
+          {error}
+        </Alert>
+      )}
 
       <Grid container spacing={3}>
-        {/* Transfer Form */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <SwapHoriz />
-                Transfer Funds
+        {/* Form */}
+        <Grid item xs={12} md={7}>
+          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+            <CardContent sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary, mb: 2 }}>
+                Transfer Parameters
               </Typography>
-              <Divider sx={{ mb: 3 }} />
+              <Divider sx={{ mb: 3, borderColor: borderCard }} />
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Transfer Amount */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                 <TextField
-                  label="Transfer Amount (PKR)"
+                  label="Transfer Amount (PKR) *"
                   type="number"
+                  size="small"
+                  fullWidth
                   value={transferData.amount}
                   onChange={(e) => handleInputChange('amount', e.target.value)}
-                  fullWidth
-                  required
-                  inputProps={{ min: 100, step: 10 }}
-                  helperText="Minimum transfer amount is PKR 100"
+                  placeholder="Min. PKR 100"
+                  InputLabelProps={{ sx: { color: textSecondary } }}
+                  InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
                 />
 
-                {/* Source Account */}
-                <FormControl fullWidth required>
-                  <InputLabel>From Account</InputLabel>
+                <FormControl fullWidth size="small">
+                  <InputLabel sx={{ color: textSecondary }}>Source Account *</InputLabel>
                   <Select
                     value={transferData.fromAccount}
                     onChange={(e) => handleInputChange('fromAccount', e.target.value)}
-                    label="From Account"
+                    label="Source Account *"
+                    sx={{ borderRadius: 0, color: textPrimary }}
                   >
-                    {accounts.map((account) => (
-                      <MenuItem key={account.id} value={account.id}>
-                        {account.name} - {formatCurrency(account.balance)}
+                    {accounts.map((acc) => (
+                      <MenuItem key={acc.id} value={acc.id}>
+                        {acc.name} — {formatCurrency(acc.balance)}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
 
-                {/* Destination Account */}
-                <FormControl fullWidth required>
-                  <InputLabel>To Account</InputLabel>
+                <FormControl fullWidth size="small">
+                  <InputLabel sx={{ color: textSecondary }}>Destination Account *</InputLabel>
                   <Select
                     value={transferData.toAccount}
                     onChange={(e) => handleInputChange('toAccount', e.target.value)}
-                    label="To Account"
+                    label="Destination Account *"
+                    sx={{ borderRadius: 0, color: textPrimary }}
                   >
-                    {accounts.map((account) => (
-                      <MenuItem key={account.id} value={account.id}>
-                        {account.name} - {formatCurrency(account.balance)}
+                    {accounts.map((acc) => (
+                      <MenuItem key={acc.id} value={acc.id}>
+                        {acc.name} — {formatCurrency(acc.balance)}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
 
-                {/* Notes */}
                 <TextField
-                  label="Notes (Optional)"
+                  label="Remarks (Optional)"
                   multiline
-                  rows={3}
+                  rows={2}
+                  size="small"
+                  fullWidth
                   value={transferData.notes}
                   onChange={(e) => handleInputChange('notes', e.target.value)}
-                  fullWidth
-                  placeholder="Any additional notes for this transfer"
+                  placeholder="Reason or ledger reference"
+                  InputLabelProps={{ sx: { color: textSecondary } }}
+                  InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
                 />
 
-                {/* Transfer Button */}
                 <Button
                   variant="contained"
-                  size="large"
+                  fullWidth
                   onClick={handleConfirmTransfer}
                   disabled={loading}
+                  startIcon={<FlashOn />}
                   sx={{
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    fontWeight: 'bold',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%)',
-                    }
+                    borderRadius: 0,
+                    bgcolor: '#3b82f6',
+                    color: '#ffffff',
+                    fontWeight: 800,
+                    py: 1.2,
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: '#2563eb' }
                   }}
                 >
-                  {loading ? 'Processing...' : 'Transfer Funds'}
+                  Review & Transfer
                 </Button>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Transfer Information */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AccountBalanceWallet />
-                Transfer Information
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Alert severity="info">
-                  <Typography variant="body2">
-                    <strong>Transfer Limits:</strong>
-                  </Typography>
-                  <Typography variant="body2">
-                    • Minimum: PKR 100
-                  </Typography>
-                  <Typography variant="body2">
-                    • Maximum: No limit
-                  </Typography>
-                </Alert>
-
-                <Alert severity="warning">
-                  <Typography variant="body2">
-                    <strong>Processing Time:</strong>
-                  </Typography>
-                  <Typography variant="body2">
-                    • Instant transfer between your accounts
-                  </Typography>
-                  <Typography variant="body2">
-                    • No fees charged
-                  </Typography>
-                </Alert>
-
-                <Alert severity="success">
-                  <Typography variant="body2">
-                    <strong>Security:</strong>
-                  </Typography>
-                  <Typography variant="body2">
-                    • All transfers are secure
-                  </Typography>
-                  <Typography variant="body2">
-                    • Transaction history is maintained
-                  </Typography>
-                </Alert>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {/* Recent Transfers */}
-          <Card sx={{ mt: 2 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Recent Transfers
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <Box sx={{ textAlign: 'center', py: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  No recent transfers
+        {/* Policy & Guidance */}
+        <Grid item xs={12} md={5}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary, mb: 1 }}>
+                  Transfer Terms
                 </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+                <Divider sx={{ mb: 2, borderColor: borderCard }} />
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Paper sx={{ p: 2, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+                    <Typography variant="caption" sx={{ color: '#3b82f6', fontWeight: 800, textTransform: 'uppercase' }}>
+                      Limit
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary, mt: 0.5 }}>
+                      Min: PKR 100 • Max: Available Balance
+                    </Typography>
+                  </Paper>
+                  <Paper sx={{ p: 2, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+                    <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 800, textTransform: 'uppercase' }}>
+                      Fee Structure
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary, mt: 0.5 }}>
+                      0% Transaction Fee for internal wallets
+                    </Typography>
+                  </Paper>
+                  <Paper sx={{ p: 2, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+                    <Typography variant="caption" sx={{ color: '#8b5cf6', fontWeight: 800, textTransform: 'uppercase' }}>
+                      Settlement Speed
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary, mt: 0.5 }}>
+                      Immediate execution with real-time balance adjustment
+                    </Typography>
+                  </Paper>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
         </Grid>
       </Grid>
 
@@ -354,51 +323,60 @@ export default function TransferToWalletPage() {
       <Dialog
         open={confirmDialogOpen}
         onClose={() => setConfirmDialogOpen(false)}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            bgcolor: bgCard,
+            border: `1px solid ${borderCard}`,
+            backgroundImage: 'none'
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ color: textPrimary, fontWeight: 800 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Warning color="warning" />
-            Confirm Transfer
+            <WarningAmber sx={{ color: '#f59e0b' }} />
+            Confirm Wallet Transfer
           </Box>
         </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            Please review your transfer details:
+        <DialogContent dividers sx={{ borderColor: borderCard }}>
+          <Typography variant="body2" sx={{ color: textSecondary, mb: 2 }}>
+            Confirm transfer details below. Internal transfers are immediate:
           </Typography>
-          
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="body2" gutterBottom>
-              <strong>Transfer Amount:</strong> {formatCurrency(transferData.amount)}
+          <Paper sx={{ p: 2, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0, mb: 2 }}>
+            <Typography variant="body2" sx={{ color: textPrimary, mb: 0.5 }}>
+              <strong>Amount:</strong> {formatCurrency(transferData.amount)}
             </Typography>
-            <Typography variant="body2" gutterBottom>
+            <Typography variant="body2" sx={{ color: textPrimary, mb: 0.5 }}>
               <strong>From:</strong> {accounts.find(a => a.id === transferData.fromAccount)?.name}
             </Typography>
-            <Typography variant="body2" gutterBottom>
+            <Typography variant="body2" sx={{ color: textPrimary }}>
               <strong>To:</strong> {accounts.find(a => a.id === transferData.toAccount)?.name}
             </Typography>
-            {transferData.notes && (
-              <Typography variant="body2">
-                <strong>Notes:</strong> {transferData.notes}
-              </Typography>
-            )}
-          </Box>
-
-          <Alert severity="info" sx={{ mt: 2 }}>
-            This transfer will be processed instantly and cannot be reversed.
-          </Alert>
+          </Paper>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialogOpen(false)}>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setConfirmDialogOpen(false)}
+            sx={{ borderRadius: 0, color: textSecondary, textTransform: 'none', fontWeight: 600 }}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             variant="contained"
             disabled={loading}
+            sx={{
+              borderRadius: 0,
+              bgcolor: '#3b82f6',
+              color: '#ffffff',
+              fontWeight: 800,
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#2563eb' }
+            }}
           >
-            {loading ? 'Processing...' : 'Confirm Transfer'}
+            {loading ? 'Processing...' : 'Confirm & Transfer'}
           </Button>
         </DialogActions>
       </Dialog>

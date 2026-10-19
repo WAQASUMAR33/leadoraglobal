@@ -1,13 +1,59 @@
 'use client';
 
 import { useState, useEffect, useContext, useCallback } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  Divider,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  IconButton,
+  Tooltip,
+  Paper,
+  CircularProgress,
+  InputAdornment,
+  FormControlLabel,
+  Switch
+} from '@mui/material';
+import {
+  Payment,
+  AccountBalance,
+  PhoneIphone,
+  Add,
+  Edit,
+  Delete,
+  Search,
+  Star,
+  StarBorder,
+  WarningAmber
+} from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
+import { useAppTheme } from '../../../context/AdminThemeContext';
 
 export default function PaymentMethodsPage() {
   const context = useContext(UserContext);
-  const [paymentMethods, setPaymentMethods] = useState([]);
-  const [filteredPaymentMethods, setFilteredPaymentMethods] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { isLight } = useAppTheme();
+  const [paymentMethods, setPaymentMethods] = useState([
+    { id: 1, type: "bank", title: "Meezan Bank Limited", accountNumber: "01020304050607", accountName: "Waqas Umar", branchCode: "0102" },
+    { id: 2, type: "easypaisa", title: "EasyPaisa Mobile Account", accountNumber: "03001234567", accountName: "Waqas Umar" }
+  ]);
+  const [filteredPaymentMethods, setFilteredPaymentMethods] = useState([
+    { id: 1, type: "bank", title: "Meezan Bank Limited", accountNumber: "01020304050607", accountName: "Waqas Umar", branchCode: "0102" },
+    { id: 2, type: "easypaisa", title: "EasyPaisa Mobile Account", accountNumber: "03001234567", accountName: "Waqas Umar" }
+  ]);
+  const [loading, setLoading] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -17,8 +63,7 @@ export default function PaymentMethodsPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [filters, setFilters] = useState({
     search: '',
-    type: '',
-    bankName: ''
+    type: ''
   });
   const [formData, setFormData] = useState({
     type: 'bank_transfer',
@@ -32,8 +77,28 @@ export default function PaymentMethodsPage() {
     isDefault: false
   });
 
+  const bgCard = isLight ? '#ffffff' : '#0c1220';
+  const borderCard = isLight ? '#e2e8f0' : '#1e293b';
+  const textPrimary = isLight ? '#0f172a' : '#f8fafc';
+  const textSecondary = isLight ? '#64748b' : '#94a3b8';
+  const bgSubtle = isLight ? '#f8fafc' : '#070a12';
+
+  const fetchPaymentMethods = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/user/payment-methods', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentMethods(data.paymentMethods || []);
+      }
+    } catch (err) {
+      console.error('Error fetching payment methods:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setLoading(true);
     if (context?.isAuthenticated && context?.user) {
       fetchPaymentMethods();
     }
@@ -41,31 +106,18 @@ export default function PaymentMethodsPage() {
 
   const applyFilters = useCallback(() => {
     let filtered = [...paymentMethods];
-
-    // Search filter
     if (filters.search) {
-      filtered = filtered.filter(method => 
-        method.bankName?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        method.accountName?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        method.accountNumber?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        method.ibanNumber?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        method.mobileNumber?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        method.email?.toLowerCase().includes(filters.search.toLowerCase())
+      const q = filters.search.toLowerCase();
+      filtered = filtered.filter(m =>
+        m.bankName?.toLowerCase().includes(q) ||
+        m.accountName?.toLowerCase().includes(q) ||
+        m.accountNumber?.toLowerCase().includes(q) ||
+        m.mobileNumber?.toLowerCase().includes(q)
       );
     }
-
-    // Type filter
     if (filters.type) {
-      filtered = filtered.filter(method => method.type === filters.type);
+      filtered = filtered.filter(m => m.type === filters.type);
     }
-
-    // Bank name filter
-    if (filters.bankName) {
-      filtered = filtered.filter(method => 
-        method.bankName?.toLowerCase().includes(filters.bankName.toLowerCase())
-      );
-    }
-
     setFilteredPaymentMethods(filtered);
   }, [paymentMethods, filters]);
 
@@ -73,61 +125,33 @@ export default function PaymentMethodsPage() {
     applyFilters();
   }, [paymentMethods, filters, applyFilters]);
 
-  const clearFilters = () => {
-    setFilters({
-      search: '',
-      type: '',
-      bankName: ''
-    });
-  };
-
-  const fetchPaymentMethods = async () => {
-    try {
-      const response = await fetch('/api/user/payment-methods', {
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPaymentMethods(data.paymentMethods || []);
-      }
-    } catch (error) {
-      console.error('Error fetching payment methods:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAddPaymentMethod = async (e) => {
     e.preventDefault();
     setAddLoading(true);
     try {
       const response = await fetch('/api/user/payment-methods', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(formData)
       });
-
       if (response.ok) {
         setShowAddModal(false);
-    setFormData({
-          type: 'bank_transfer', 
-          bankName: '', 
-      accountName: '',
-      accountNumber: '',
-          ibanNumber: '', 
-      branchCode: '',
-      mobileNumber: '',
-      email: '',
-      isDefault: false
-    });
+        setFormData({
+          type: 'bank_transfer',
+          bankName: '',
+          accountName: '',
+          accountNumber: '',
+          ibanNumber: '',
+          branchCode: '',
+          mobileNumber: '',
+          email: '',
+          isDefault: false
+        });
         fetchPaymentMethods();
       }
-    } catch (error) {
-      console.error('Error adding payment method:', error);
+    } catch (err) {
+      console.error('Error adding method:', err);
     } finally {
       setAddLoading(false);
     }
@@ -139,31 +163,17 @@ export default function PaymentMethodsPage() {
     try {
       const response = await fetch(`/api/user/payment-methods/${selectedPaymentMethod.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(formData)
       });
-
       if (response.ok) {
         setShowEditModal(false);
         setSelectedPaymentMethod(null);
-        setFormData({ 
-          type: 'bank_transfer', 
-          bankName: '', 
-          accountName: '', 
-          accountNumber: '', 
-          ibanNumber: '', 
-          branchCode: '', 
-          mobileNumber: '', 
-          email: '', 
-          isDefault: false 
-        });
         fetchPaymentMethods();
       }
-    } catch (error) {
-      console.error('Error updating payment method:', error);
+    } catch (err) {
+      console.error('Error updating method:', err);
     } finally {
       setEditLoading(false);
     }
@@ -176,413 +186,432 @@ export default function PaymentMethodsPage() {
         method: 'DELETE',
         credentials: 'include'
       });
-
       if (response.ok) {
         setShowDeleteModal(false);
         setSelectedPaymentMethod(null);
         fetchPaymentMethods();
       }
-    } catch (error) {
-      console.error('Error deleting payment method:', error);
+    } catch (err) {
+      console.error('Error deleting method:', err);
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  const openEditModal = (paymentMethod) => {
-    setSelectedPaymentMethod(paymentMethod);
+  const openEditModal = (method) => {
+    setSelectedPaymentMethod(method);
     setFormData({
-      type: paymentMethod.type,
-      bankName: paymentMethod.bankName || '',
-      accountName: paymentMethod.accountName || '',
-      accountNumber: paymentMethod.accountNumber || '',
-      ibanNumber: paymentMethod.ibanNumber || '',
-      branchCode: paymentMethod.branchCode || '',
-      mobileNumber: paymentMethod.mobileNumber || '',
-      email: paymentMethod.email || '',
-      isDefault: paymentMethod.isDefault || false
+      type: method.type,
+      bankName: method.bankName || '',
+      accountName: method.accountName || '',
+      accountNumber: method.accountNumber || '',
+      ibanNumber: method.ibanNumber || '',
+      branchCode: method.branchCode || '',
+      mobileNumber: method.mobileNumber || '',
+      email: method.email || '',
+      isDefault: method.isDefault || false
     });
     setShowEditModal(true);
   };
 
-  const openDeleteModal = (paymentMethod) => {
-    setSelectedPaymentMethod(paymentMethod);
+  const openDeleteModal = (method) => {
+    setSelectedPaymentMethod(method);
     setShowDeleteModal(true);
   };
 
-  const getPaymentMethodTypeLabel = (type) => {
-    switch (type) {
-      case 'bank_transfer': return 'Bank Transfer';
-      case 'easypaisa': return 'EasyPaisa';
-      case 'jazzcash': return 'JazzCash';
-      case 'paypal': return 'PayPal';
-      default: return type;
-    }
-  };
-
-  const getPaymentMethodDetails = (method) => {
-    switch (method.type) {
-      case 'bank_transfer':
-        return `${method.bankName} - ${method.accountNumber}`;
-      case 'easypaisa':
-      case 'jazzcash':
-        return method.mobileNumber;
-      case 'paypal':
-        return method.email;
-      default:
-        return method.accountNumber || method.mobileNumber || method.email;
-    }
-  };
-
-  // Safety check for context
   if (!context) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress size={32} sx={{ color: '#2563eb' }} />
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Payment Methods</h1>
-          <p className="text-gray-300">Manage your payment methods for withdrawals</p>
-        </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          <span>Add Payment Method</span>
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700 p-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-end">
-          {/* Search */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-300 mb-2">Search Payment Methods</label>
-            <input
-              type="text"
-              placeholder="Search by bank name, account title, account number, IBAN, mobile, or email..."
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
-            />
-          </div>
-
-          {/* Type Filter */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-300 mb-2">Payment Type</label>
-            <select
-              value={filters.type}
-              onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
-            >
-              <option value="">All Types</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="easypaisa">EasyPaisa</option>
-              <option value="jazzcash">JazzCash</option>
-              <option value="paypal">PayPal</option>
-            </select>
-          </div>
-
-          {/* Bank Name Filter */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-300 mb-2">Bank Name</label>
-            <input
-              type="text"
-              placeholder="Filter by bank name..."
-              value={filters.bankName}
-              onChange={(e) => setFilters({ ...filters, bankName: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 placeholder-gray-400"
-            />
-          </div>
-
-          {/* Clear Filters */}
-          <div>
-            <button
-              onClick={clearFilters}
-              className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-xl transition-all duration-300 font-semibold"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-
-        {/* Results Count */}
-        <div className="mt-4 text-sm text-gray-400">
-          Showing {filteredPaymentMethods.length} of {paymentMethods.length} payment methods
-        </div>
-      </div>
-
-      {/* Payment Methods Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredPaymentMethods.map((paymentMethod) => (
-          <div key={paymentMethod.id} className="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold text-white">{getPaymentMethodTypeLabel(paymentMethod.type)}</h3>
-                <div className="flex items-center space-x-2">
-                  {paymentMethod.isDefault && (
-                    <span className="bg-green-900 text-green-300 text-xs font-medium px-2 py-1 rounded-full">
-                      Default
-                    </span>
-                  )}
-                  <span className="bg-blue-900 text-blue-300 text-xs font-medium px-2 py-1 rounded-full">
-                    Active
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-2 mb-4">
-                <div>
-                  <p className="text-sm text-gray-400">Account Title</p>
-                  <p className="text-white font-medium">{paymentMethod.accountName}</p>
-                </div>
-                {paymentMethod.type === 'bank_transfer' && (
-                  <>
-                    <div>
-                      <p className="text-sm text-gray-400">Bank Name</p>
-                      <p className="text-white font-medium">{paymentMethod.bankName}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Account Number</p>
-                      <p className="text-white font-mono text-sm">{paymentMethod.accountNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">IBAN</p>
-                      <p className="text-white font-mono text-sm">{paymentMethod.ibanNumber}</p>
-                    </div>
-                  </>
-                )}
-                {(paymentMethod.type === 'easypaisa' || paymentMethod.type === 'jazzcash') && (
-                  <div>
-                    <p className="text-sm text-gray-400">Mobile Number</p>
-                    <p className="text-white font-mono text-sm">{paymentMethod.mobileNumber}</p>
-                  </div>
-                )}
-                {paymentMethod.type === 'paypal' && (
-                  <div>
-                    <p className="text-sm text-gray-400">Email</p>
-                    <p className="text-white font-mono text-sm">{paymentMethod.email}</p>
-                  </div>
-                )}
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => openEditModal(paymentMethod)}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => openDeleteModal(paymentMethod)}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredPaymentMethods.length === 0 && (
-        <div className="text-center py-12">
-          <svg className="w-16 h-16 text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-          </svg>
-          <h3 className="text-lg font-medium text-white mb-2">No payment methods found</h3>
-          <p className="text-gray-400 mb-4">Get started by adding your first payment method</p>
-          <button
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: { xs: 2.5, md: 3 } }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Payment sx={{ color: '#3b82f6', fontSize: 32 }} />
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
+                Payout Payment Methods
+              </Typography>
+              <Typography variant="body2" sx={{ color: textSecondary }}>
+                Configure your verified bank accounts, JazzCash, and EasyPaisa for seamless withdrawals.
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
             onClick={() => setShowAddModal(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg"
+            sx={{
+              borderRadius: 0,
+              bgcolor: '#3b82f6',
+              color: '#ffffff',
+              fontWeight: 800,
+              textTransform: 'none',
+              px: 2.5,
+              '&:hover': { bgcolor: '#2563eb' }
+            }}
           >
-            Add Payment Method
-          </button>
-        </div>
+            Add New Account
+          </Button>
+        </Box>
+      </Card>
+
+      {/* Filter Bar */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={8}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search by bank name, account title, or account number..."
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: textSecondary }} />
+                  </InputAdornment>
+                ),
+                sx: { borderRadius: 0, color: textPrimary, bgcolor: bgSubtle }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Account Type"
+              value={filters.type}
+              onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+              InputLabelProps={{ sx: { color: textSecondary } }}
+              InputProps={{ sx: { borderRadius: 0, color: textPrimary, bgcolor: bgSubtle } }}
+            >
+              <MenuItem value="">All Account Types</MenuItem>
+              <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
+              <MenuItem value="jazzcash">JazzCash</MenuItem>
+              <MenuItem value="easypaisa">EasyPaisa</MenuItem>
+            </TextField>
+          </Grid>
+        </Grid>
+      </Card>
+
+      {/* Methods Cards Grid */}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress size={32} sx={{ color: '#2563eb' }} />
+        </Box>
+      ) : filteredPaymentMethods.length > 0 ? (
+        <Grid container spacing={3}>
+          {filteredPaymentMethods.map((method) => {
+            const isBank = method.type === 'bank_transfer';
+            const icon = isBank ? <AccountBalance sx={{ color: '#3b82f6', fontSize: 28 }} /> : <PhoneIphone sx={{ color: '#10b981', fontSize: 28 }} />;
+
+            return (
+              <Grid item xs={12} md={6} key={method.id}>
+                <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, height: '100%', position: 'relative' }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        {icon}
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary }}>
+                            {isBank ? method.bankName : method.type?.toUpperCase()}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: textSecondary, textTransform: 'uppercase', fontWeight: 700 }}>
+                            {method.type?.replace('_', ' ')}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title="Edit Details">
+                          <IconButton size="small" onClick={() => openEditModal(method)} sx={{ color: textSecondary }}>
+                            <Edit sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Account">
+                          <IconButton size="small" onClick={() => openDeleteModal(method)} sx={{ color: '#ef4444' }}>
+                            <Delete sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+
+                    <Paper sx={{ p: 2, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0, mb: 2 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" sx={{ color: textSecondary }}>Account Title:</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: textPrimary }}>{method.accountName}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" sx={{ color: textSecondary }}>Account / Phone No:</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>
+                            {method.accountNumber || method.mobileNumber}
+                          </Typography>
+                        </Box>
+                        {method.ibanNumber && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="caption" sx={{ color: textSecondary }}>IBAN:</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: textPrimary, fontFamily: 'monospace' }}>{method.ibanNumber}</Typography>
+                          </Box>
+                        )}
+                        {method.branchCode && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="caption" sx={{ color: textSecondary }}>Branch Code:</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: textPrimary }}>{method.branchCode}</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Paper>
+
+                    {method.isDefault && (
+                      <Chip
+                        icon={<Star sx={{ fontSize: '14px !important', color: '#f59e0b !important' }} />}
+                        label="PRIMARY PAYOUT ACCOUNT"
+                        size="small"
+                        sx={{ borderRadius: 0, bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', fontWeight: 800, fontSize: '0.68rem' }}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      ) : (
+        <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 6, textAlign: 'center' }}>
+          <Payment sx={{ fontSize: 44, color: textSecondary, mb: 1.5 }} />
+          <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary, mb: 0.5 }}>
+            No Payment Accounts Configured
+          </Typography>
+          <Typography variant="body2" sx={{ color: textSecondary, mb: 3 }}>
+            Add your bank account or mobile wallet to begin withdrawing commissions.
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setShowAddModal(true)}
+            sx={{ borderRadius: 0, bgcolor: '#3b82f6', textTransform: 'none', fontWeight: 800 }}
+          >
+            Add Payout Account
+          </Button>
+        </Card>
       )}
 
-      {/* Add Payment Method Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-purple-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl border border-gray-700">
-            <h2 className="text-2xl font-bold text-white mb-4">Add New Payment Method</h2>
-            <form onSubmit={handleAddPaymentMethod} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Bank Title</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.bankName}
-                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                  placeholder="e.g., HBL Bank, UBL Bank"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Account Title</label>
-                <input
-                  type="text"
-                  required
-                value={formData.accountName}
-                  onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                  placeholder="Account holder name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Account Number</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.accountNumber}
-                  onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                  placeholder="Account number"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">IBAN Number</label>
-                <input
-                  type="text"
-                required
-                  value={formData.ibanNumber}
-                  onChange={(e) => setFormData({ ...formData, ibanNumber: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                  placeholder="IBAN number"
-                />
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  type="submit"
-                  disabled={addLoading}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
+      {/* Add / Edit Dialog */}
+      <Dialog
+        open={showAddModal || showEditModal}
+        onClose={() => { setShowAddModal(false); setShowEditModal(false); }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            bgcolor: bgCard,
+            border: `1px solid ${borderCard}`,
+            backgroundImage: 'none'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: textPrimary, fontWeight: 800 }}>
+          {showAddModal ? 'Add Payment Method' : 'Edit Payment Method'}
+        </DialogTitle>
+        <DialogContent dividers sx={{ borderColor: borderCard }}>
+          <form id="paymentMethodForm" onSubmit={showAddModal ? handleAddPaymentMethod : handleEditPaymentMethod}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 1 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel sx={{ color: textSecondary }}>Method Type *</InputLabel>
+                <Select
+                  value={formData.type}
+                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                  label="Method Type *"
+                  sx={{ borderRadius: 0, color: textPrimary }}
                 >
-                  {addLoading ? 'Adding...' : 'Add Payment Method'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                  <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
+                  <MenuItem value="jazzcash">JazzCash</MenuItem>
+                  <MenuItem value="easypaisa">EasyPaisa</MenuItem>
+                </Select>
+              </FormControl>
 
-      {/* Edit Payment Method Modal */}
-      {showEditModal && selectedPaymentMethod && (
-        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-purple-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl border border-gray-700">
-            <h2 className="text-2xl font-bold text-white mb-4">Edit Payment Method</h2>
-            <form onSubmit={handleEditPaymentMethod} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Bank Title</label>
-                <input
-                  type="text"
+              {formData.type === 'bank_transfer' ? (
+                <>
+                  <TextField
+                    label="Bank Name *"
                     required
-                  value={formData.bankName}
-                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Account Title</label>
-                <input
-                  type="text"
+                    size="small"
+                    fullWidth
+                    value={formData.bankName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
+                    placeholder="e.g. Meezan Bank, HBL, UBL"
+                    InputLabelProps={{ sx: { color: textSecondary } }}
+                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                  />
+                  <TextField
+                    label="Account Title / Beneficiary Name *"
                     required
-                  value={formData.accountName}
-                  onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Account Number</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.accountNumber}
-                  onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">IBAN Number</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.ibanNumber}
-                  onChange={(e) => setFormData({ ...formData, ibanNumber: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                />
-              </div>
+                    size="small"
+                    fullWidth
+                    value={formData.accountName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, accountName: e.target.value }))}
+                    placeholder="Exact title on bank account"
+                    InputLabelProps={{ sx: { color: textSecondary } }}
+                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                  />
+                  <TextField
+                    label="Account Number *"
+                    required
+                    size="small"
+                    fullWidth
+                    value={formData.accountNumber}
+                    onChange={(e) => setFormData(prev => ({ ...prev, accountNumber: e.target.value }))}
+                    placeholder="Enter account number"
+                    InputLabelProps={{ sx: { color: textSecondary } }}
+                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                  />
+                  <TextField
+                    label="IBAN Number (Optional)"
+                    size="small"
+                    fullWidth
+                    value={formData.ibanNumber}
+                    onChange={(e) => setFormData(prev => ({ ...prev, ibanNumber: e.target.value }))}
+                    placeholder="PK..."
+                    InputLabelProps={{ sx: { color: textSecondary } }}
+                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                  />
+                  <TextField
+                    label="Branch Code (Optional)"
+                    size="small"
+                    fullWidth
+                    value={formData.branchCode}
+                    onChange={(e) => setFormData(prev => ({ ...prev, branchCode: e.target.value }))}
+                    placeholder="Branch code"
+                    InputLabelProps={{ sx: { color: textSecondary } }}
+                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                  />
+                </>
+              ) : (
+                <>
+                  <TextField
+                    label="Account Title / Owner Name *"
+                    required
+                    size="small"
+                    fullWidth
+                    value={formData.accountName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, accountName: e.target.value }))}
+                    placeholder="Name registered on wallet"
+                    InputLabelProps={{ sx: { color: textSecondary } }}
+                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                  />
+                  <TextField
+                    label="Mobile Number *"
+                    required
+                    size="small"
+                    fullWidth
+                    value={formData.mobileNumber}
+                    onChange={(e) => setFormData(prev => ({ ...prev, mobileNumber: e.target.value }))}
+                    placeholder="03XXXXXXXXX"
+                    InputLabelProps={{ sx: { color: textSecondary } }}
+                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                  />
+                </>
+              )}
 
-              <div className="flex space-x-3">
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
-                >
-                  {editLoading ? 'Updating...' : 'Update Payment Method'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.isDefault}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
+                    color="primary"
+                  />
+                }
+                label={<Typography variant="body2" sx={{ color: textPrimary, fontWeight: 600 }}>Set as primary payout method</Typography>}
+              />
+            </Box>
+          </form>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => { setShowAddModal(false); setShowEditModal(false); }}
+            sx={{ borderRadius: 0, color: textSecondary, textTransform: 'none', fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="paymentMethodForm"
+            variant="contained"
+            disabled={addLoading || editLoading}
+            sx={{
+              borderRadius: 0,
+              bgcolor: '#3b82f6',
+              color: '#ffffff',
+              fontWeight: 800,
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#2563eb' }
+            }}
+          >
+            {addLoading || editLoading ? 'Saving...' : 'Save Account'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedPaymentMethod && (
-        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-red-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl border border-gray-700">
-            <h2 className="text-2xl font-bold text-white mb-4">Delete Payment Method</h2>
-            <p className="text-gray-300 mb-6">
-              Are you sure you want to delete the payment method for &quot;{getPaymentMethodTypeLabel(selectedPaymentMethod.type)}&quot;? This action cannot be undone.
-            </p>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleDeletePaymentMethod}
-                disabled={deleteLoading}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
-              >
-                {deleteLoading ? 'Deleting...' : 'Delete'}
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 bg-gray-600 hover:bg-gray-500 text-gray-200 py-2 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            bgcolor: bgCard,
+            border: `1px solid ${borderCard}`,
+            backgroundImage: 'none'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: textPrimary, fontWeight: 800 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningAmber sx={{ color: '#ef4444' }} />
+            Delete Payment Method
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers sx={{ borderColor: borderCard }}>
+          <Typography variant="body2" sx={{ color: textSecondary }}>
+            Are you sure you want to remove <strong>{selectedPaymentMethod?.bankName || selectedPaymentMethod?.type?.toUpperCase()}</strong> ({selectedPaymentMethod?.accountNumber || selectedPaymentMethod?.mobileNumber})?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setShowDeleteModal(false)}
+            sx={{ borderRadius: 0, color: textSecondary, textTransform: 'none', fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeletePaymentMethod}
+            variant="contained"
+            disabled={deleteLoading}
+            sx={{
+              borderRadius: 0,
+              bgcolor: '#ef4444',
+              color: '#ffffff',
+              fontWeight: 800,
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#dc2626' }
+            }}
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }

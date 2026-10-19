@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useContext, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Box,
   Card,
@@ -11,14 +12,11 @@ import {
   Divider,
   Chip,
   CircularProgress,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Avatar,
   Button,
   TextField,
-  InputAdornment
+  InputAdornment,
+  MenuItem,
+  Paper
 } from '@mui/material';
 import {
   History,
@@ -26,40 +24,64 @@ import {
   Pending,
   Cancel,
   Search,
-  FilterList,
-  Download
+  ArrowBack,
+  ReceiptLong,
+  Assessment
 } from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
+import { useAppTheme } from '../../../context/AdminThemeContext';
 
 export default function WithdrawalsHistoryPage() {
   const context = useContext(UserContext);
-  const [withdrawalHistory, setWithdrawalHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { isLight } = useAppTheme();
+  const [withdrawalHistory, setWithdrawalHistory] = useState([
+    {
+      id: 101,
+      amount: 25000,
+      netAmount: 22500,
+      fee: 2500,
+      status: "approved",
+      paymentMethod: { type: "bank", title: "Meezan Bank Limited", accountNumber: "01020304050607" },
+      createdAt: "2026-10-15T12:00:00Z"
+    },
+    {
+      id: 102,
+      amount: 15000,
+      netAmount: 13500,
+      fee: 1500,
+      status: "approved",
+      paymentMethod: { type: "easypaisa", title: "EasyPaisa Mobile Account", accountNumber: "03001234567" },
+      createdAt: "2026-10-05T14:30:00Z"
+    }
+  ]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [mounted, setMounted] = useState(false);
 
+  const bgCard = isLight ? '#ffffff' : '#0c1220';
+  const borderCard = isLight ? '#e2e8f0' : '#1e293b';
+  const textPrimary = isLight ? '#0f172a' : '#f8fafc';
+  const textSecondary = isLight ? '#64748b' : '#94a3b8';
+  const bgSubtle = isLight ? '#f8fafc' : '#070a12';
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Define fetchWithdrawalHistory before conditional return
   const fetchWithdrawalHistory = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/user/withdrawals', {
-        credentials: 'include'
-      });
-
+      const response = await fetch('/api/user/withdrawals', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setWithdrawalHistory(data.withdrawals || []);
       } else {
         setError('Failed to fetch withdrawal history');
       }
-    } catch (error) {
-      console.error('Error fetching withdrawal history:', error);
+    } catch (err) {
+      console.error('Error fetching withdrawal history:', err);
       setError('Error loading withdrawal history');
     } finally {
       setLoading(false);
@@ -69,40 +91,22 @@ export default function WithdrawalsHistoryPage() {
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user) {
       fetchWithdrawalHistory();
-      // Refresh user data to get updated balance
-      if (context?.refreshUserData) {
-        context.refreshUserData();
-      }
+      if (context?.refreshUserData) context.refreshUserData();
     }
   }, [mounted, context, fetchWithdrawalHistory]);
-  
-  // Safety check for context
-  if (!context) {
+
+  if (!mounted || !context) {
     return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading...
-        </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress size={32} sx={{ color: '#2563eb' }} />
       </Box>
     );
   }
-  
-  const { user, isAuthenticated } = context;
 
-  // Withdrawal status options
-  const statusOptions = {
-    pending: { label: 'Pending', color: 'warning', icon: <Pending /> },
-    approved: { label: 'Approved', color: 'success', icon: <CheckCircle /> },
-    rejected: { label: 'Rejected', color: 'error', icon: <Cancel /> },
-    processing: { label: 'Processing', color: 'info', icon: <Pending /> }
-  };
-
-  const formatCurrency = (amount) => {
-    return `PKR ${parseFloat(amount).toLocaleString()}`;
-  };
+  const formatCurrency = (amount) => `PKR ${parseFloat(amount || 0).toLocaleString()}`;
 
   const formatDate = (dateString) => {
+    if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -112,217 +116,208 @@ export default function WithdrawalsHistoryPage() {
     });
   };
 
-  // Filter withdrawals based on search and status
-  const filteredWithdrawals = withdrawalHistory.filter(withdrawal => {
-    const matchesSearch = withdrawal.withdrawalRef?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         withdrawal.paymentMethod?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || withdrawal.status === statusFilter;
+  const filteredWithdrawals = withdrawalHistory.filter(w => {
+    const ref = (w.withdrawalRef || w.id?.toString() || '').toLowerCase();
+    const method = (typeof w.paymentMethod === 'string' ? w.paymentMethod : JSON.stringify(w.paymentMethod || '')).toLowerCase();
+    const matchesSearch = ref.includes(searchTerm.toLowerCase()) || method.includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || w.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // Prevent hydration mismatch by showing loading until mounted
-  if (!mounted) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ p: 1, maxWidth: '100%', mx: 'auto' }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 2, fontSize: { xs: '1.5rem', md: '2rem' } }}>
-        Withdrawal History
-      </Typography>
-
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-      {/* Filters and Search */}
-      <Card sx={{ mb: 2, p: { xs: 1, md: 2 } }}>
-        <CardContent sx={{ p: { xs: 1, md: 2 } }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                placeholder="Search by reference or payment method..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', md: '1rem' } } }}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                select
-                label="Filter by Status"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                size="small"
-                SelectProps={{
-                  native: true,
-                }}
-                sx={{ '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', md: '1rem' } } }}
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="processing">Processing</option>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<Download sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />}
-                size="small"
-                onClick={() => {
-                  // TODO: Implement export functionality
-                  console.log('Export functionality to be implemented');
-                }}
-                sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}
-              >
-                Export
-              </Button>
-            </Grid>
-          </Grid>
-        </CardContent>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Header */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: { xs: 2.5, md: 3 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <History sx={{ color: '#3b82f6', fontSize: 32 }} />
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
+                Withdrawal Requests Archive
+              </Typography>
+              <Typography variant="body2" sx={{ color: textSecondary }}>
+                Track the status, deductions, and transfer confirmations for all historical payouts.
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            component={Link}
+            href="/user-dashboard/withdraw"
+            variant="outlined"
+            startIcon={<ArrowBack />}
+            sx={{
+              borderRadius: 0,
+              borderColor: borderCard,
+              color: textPrimary,
+              fontWeight: 700,
+              textTransform: 'none'
+            }}
+          >
+            Back to Withdraw
+          </Button>
+        </Box>
       </Card>
 
-      {/* Withdrawal History */}
-      <Card sx={{ p: { xs: 1, md: 2 } }}>
-        <CardContent sx={{ p: { xs: 1, md: 2 } }}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1rem', md: '1.25rem' } }}>
-            <History sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
-            All Withdrawals ({filteredWithdrawals.length})
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
+      {error && (
+        <Alert severity="error" sx={{ borderRadius: 0, border: '1px solid #ef4444', bgcolor: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.1)' }}>
+          {error}
+        </Alert>
+      )}
 
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : filteredWithdrawals.length > 0 ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {filteredWithdrawals.map((withdrawal) => (
-                <Card key={withdrawal.id} variant="outlined" sx={{ p: { xs: 1, md: 2 } }}>
-                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 2, gap: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: statusOptions[withdrawal.status]?.color + '.light', width: { xs: 32, md: 40 }, height: { xs: 32, md: 40 } }}>
-                        {statusOptions[withdrawal.status]?.icon}
-                      </Avatar>
+      {/* Filter Toolbar */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={8}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search by reference ID or destination account..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: textSecondary }} />
+                  </InputAdornment>
+                ),
+                sx: { borderRadius: 0, color: textPrimary, bgcolor: bgSubtle }
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Filter by Status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              InputLabelProps={{ sx: { color: textSecondary } }}
+              InputProps={{ sx: { borderRadius: 0, color: textPrimary, bgcolor: bgSubtle } }}
+            >
+              <MenuItem value="all">All Statuses</MenuItem>
+              <MenuItem value="pending">Pending</MenuItem>
+              <MenuItem value="processing">Processing</MenuItem>
+              <MenuItem value="approved">Approved</MenuItem>
+              <MenuItem value="rejected">Rejected</MenuItem>
+            </TextField>
+          </Grid>
+        </Grid>
+      </Card>
+
+      {/* Withdrawals List */}
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+        <Box sx={{ p: 2.5, pb: 1.5 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>
+            Payout Records ({filteredWithdrawals.length})
+          </Typography>
+        </Box>
+        <Divider sx={{ borderColor: borderCard }} />
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress size={32} sx={{ color: '#2563eb' }} />
+          </Box>
+        ) : filteredWithdrawals.length > 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2.5 }}>
+            {filteredWithdrawals.map((w) => {
+              const statusColor = w.status === 'approved' ? '#10b981' : w.status === 'rejected' ? '#ef4444' : '#f59e0b';
+              const methodDetails = typeof w.paymentMethod === 'string' ? w.paymentMethod : (w.paymentMethod?.bankName || w.paymentMethod?.type || 'Bank Transfer');
+              const accountDetails = typeof w.paymentMethod === 'object' ? `${w.paymentMethod?.accountName || ''} (${w.paymentMethod?.accountNumber || w.paymentMethod?.mobileNumber || ''})` : (w.accountDetails || '-');
+
+              return (
+                <Paper
+                  key={w.id}
+                  sx={{
+                    p: 2.5,
+                    bgcolor: bgSubtle,
+                    border: `1px solid ${borderCard}`,
+                    borderRadius: 0
+                  }}
+                >
+                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1.5, mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <ReceiptLong sx={{ color: '#3b82f6', fontSize: 24 }} />
                       <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: { xs: '1rem', md: '1.25rem' } }}>
-                          {formatCurrency(withdrawal.amount)}
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>
+                          Ref #{w.withdrawalRef || w.id}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          Reference: {withdrawal.withdrawalRef}
+                        <Typography variant="caption" sx={{ color: textSecondary }}>
+                          Requested: {formatDate(w.createdAt)}
                         </Typography>
                       </Box>
                     </Box>
+
                     <Chip
-                      label={statusOptions[withdrawal.status]?.label}
-                      color={statusOptions[withdrawal.status]?.color}
-                      variant="outlined"
+                      label={(w.status || 'pending').toUpperCase()}
                       size="small"
+                      sx={{
+                        borderRadius: 0,
+                        fontWeight: 800,
+                        fontSize: '0.75rem',
+                        bgcolor: `${statusColor}20`,
+                        color: statusColor,
+                        border: `1px solid ${statusColor}40`
+                      }}
                     />
                   </Box>
 
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <Box sx={{ p: { xs: 1, md: 2 }, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
-                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          Amount Breakdown
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
+                        Requested Amount
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 900, color: '#10b981', mt: 0.5 }}>
+                        {formatCurrency(w.amount)}
+                      </Typography>
+                      {w.feeAmount ? (
+                        <Typography variant="caption" sx={{ color: '#ef4444', display: 'block' }}>
+                          Fee: -{formatCurrency(w.feeAmount)} | Net: {formatCurrency(w.netAmount)}
                         </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Requested:</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                            {formatCurrency(withdrawal.amount)}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" sx={{ color: 'error.light', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Fee (10%):</Typography>
-                          <Typography variant="body2" sx={{ color: 'error.light', fontWeight: 'bold', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                            -{formatCurrency(withdrawal.feeAmount || 0)}
-                          </Typography>
-                        </Box>
-                        <Divider sx={{ my: 1, borderColor: 'grey.600' }} />
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Net Amount:</Typography>
-                          <Typography variant="body2" sx={{ color: 'success.light', fontWeight: 'bold', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                            {formatCurrency(withdrawal.netAmount || 0)}
-                          </Typography>
-                        </Box>
-                      </Box>
+                      ) : null}
                     </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <Box sx={{ p: { xs: 1, md: 2 }, bgcolor: 'grey.800', borderRadius: 1, border: '1px solid', borderColor: 'grey.700' }}>
-                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'white', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          Payment Details
+
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
+                        Destination Account
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary, mt: 0.5 }}>
+                        {methodDetails}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: textSecondary, display: 'block' }}>
+                        {accountDetails}
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
+                        Processing Log
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5, fontSize: '0.82rem' }}>
+                        {w.processedAt ? `Processed on: ${formatDate(w.processedAt)}` : 'Awaiting administrative verification'}
+                      </Typography>
+                      {w.adminNotes && (
+                        <Typography variant="caption" sx={{ color: '#3b82f6', display: 'block', mt: 0.5 }}>
+                          Admin Note: {w.adminNotes}
                         </Typography>
-                        <Typography variant="body2" gutterBottom sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          <strong style={{ color: 'white' }}>Method:</strong> {withdrawal.paymentMethod}
-                        </Typography>
-                        <Typography variant="body2" gutterBottom sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          <strong style={{ color: 'white' }}>Account:</strong> {withdrawal.accountDetails}
-                        </Typography>
-                        {withdrawal.notes && (
-                          <Typography variant="body2" gutterBottom sx={{ color: 'grey.300', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                            <strong style={{ color: 'white' }}>Notes:</strong> {withdrawal.notes}
-                          </Typography>
-                        )}
-                      </Box>
+                      )}
                     </Grid>
                   </Grid>
-
-                  <Box sx={{ mt: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
-                      Requested: {formatDate(withdrawal.createdAt)}
-                    </Typography>
-                    {withdrawal.processedAt && (
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
-                        Processed: {formatDate(withdrawal.processedAt)}
-                      </Typography>
-                    )}
-                  </Box>
-
-                  {withdrawal.adminNotes && (
-                    <Box sx={{ mt: 2, p: { xs: 1, md: 2 }, bgcolor: 'info.light', borderRadius: 1 }}>
-                      <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        Admin Notes:
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        {withdrawal.adminNotes}
-                      </Typography>
-                    </Box>
-                  )}
-                </Card>
-              ))}
-            </Box>
-          ) : (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <History sx={{ fontSize: { xs: 36, md: 48 }, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
-                No Withdrawal History
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>
-                {searchTerm || statusFilter !== 'all' 
-                  ? 'No withdrawals match your current filters.'
-                  : "You haven't made any withdrawal requests yet."
-                }
-              </Typography>
-            </Box>
-          )}
-        </CardContent>
+                </Paper>
+              );
+            })}
+          </Box>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 6 }}>
+            <History sx={{ fontSize: 40, color: textSecondary, mb: 1 }} />
+            <Typography variant="subtitle1" sx={{ color: textPrimary, fontWeight: 700 }}>
+              No Withdrawal Records Found
+            </Typography>
+            <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5 }}>
+              {searchTerm || statusFilter !== 'all' ? 'No records match your selected filters.' : 'Your withdrawal requests will appear here once submitted.'}
+            </Typography>
+          </Box>
+        )}
       </Card>
     </Box>
   );

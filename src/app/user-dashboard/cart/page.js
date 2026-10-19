@@ -2,23 +2,46 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { useAppTheme } from "@/context/AdminThemeContext";
+import {
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  IconButton,
+  Divider,
+  Paper,
+  Stack,
+  CircularProgress
+} from "@mui/material";
+import {
+  ShoppingCart as ShoppingCartIcon,
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  DeleteOutline as DeleteOutlineIcon,
+  ArrowForward as ArrowForwardIcon,
+  Storefront as StorefrontIcon,
+  ReceiptLong as ReceiptLongIcon
+} from "@mui/icons-material";
 
-export default function Cart() {
+export default function CartPage() {
+  const { isLight } = useAppTheme();
   const [cart, setCart] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [shoppingEligibility, setShoppingEligibility] = useState(null);
 
   useEffect(() => {
-    // Load cart from localStorage
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
+    try {
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        setCart(JSON.parse(savedCart));
+      }
+    } catch (e) {
+      console.error('Error reading cart:', e);
     }
-    
-    // Fetch shopping eligibility
     fetchShoppingEligibility();
-    
     setLoading(false);
   }, []);
 
@@ -27,7 +50,6 @@ export default function Cart() {
       const response = await fetch('/api/user/shopping-eligibility', {
         credentials: 'include'
       });
-      
       if (response.ok) {
         const data = await response.json();
         setShoppingEligibility(data);
@@ -43,17 +65,13 @@ export default function Cart() {
       return;
     }
 
-    // Check if user has shopping amount limit
     if (shoppingEligibility && 
         shoppingEligibility.shopping && 
         shoppingEligibility.shopping.shoppingType === 'package_benefits' &&
         shoppingEligibility.shopping.remainingAmount !== null) {
       
-      // Calculate what the new cart total would be
       const newCart = cart.map(item =>
-        item.id === productId
-          ? { ...item, quantity: newQuantity }
-          : item
+        item.id === productId ? { ...item, quantity: newQuantity } : item
       );
       
       const newCartTotal = newCart.reduce((total, item) => {
@@ -62,24 +80,18 @@ export default function Cart() {
       }, 0);
       
       const remainingAmount = shoppingEligibility.shopping.remainingAmount;
-      
-      // Check if new total exceeds available shopping amount
       if (newCartTotal > remainingAmount) {
         alert(
           `Shopping amount limit reached!\n\n` +
-          `Available shopping amount: PKR ${remainingAmount.toFixed(2)}\n` +
-          `New cart total would be: PKR ${newCartTotal.toFixed(2)}\n\n` +
-          `Please reduce the quantity or remove items from cart.`
+          `Available shopping balance: $${remainingAmount.toFixed(2)}\n` +
+          `New cart total: $${newCartTotal.toFixed(2)}`
         );
         return;
       }
     }
 
-    // Proceed with update
     const updatedCart = cart.map(item =>
-      item.id === productId
-        ? { ...item, quantity: newQuantity }
-        : item
+      item.id === productId ? { ...item, quantity: newQuantity } : item
     );
     setCart(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
@@ -93,201 +105,229 @@ export default function Cart() {
 
   const getSubtotal = () => {
     return cart.reduce((total, item) => {
-      const price = item.sale_price || item.price;
-      return total + (parseFloat(price) * item.quantity);
+      const price = parseFloat(item.sale_price || item.price);
+      return total + (price * item.quantity);
     }, 0);
   };
 
-  const getTotal = () => {
-    return getSubtotal(); // Add shipping/tax if needed
-  };
-
-  const handleCheckout = () => {
-    // Redirect to checkout page
-    window.location.href = '/user-dashboard/checkout';
-  };
+  const cardBg = isLight ? "#ffffff" : "#0c1220";
+  const cardBorder = isLight ? "1px solid #e2e8f0" : "1px solid #1e293b";
+  const textPrimary = isLight ? "#0f172a" : "#f8fafc";
+  const textSecondary = isLight ? "#475569" : "#94a3b8";
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress size={40} sx={{ color: '#6366f1' }} />
+      </Box>
     );
   }
 
+  const subtotal = getSubtotal();
+
   return (
-    <div className="space-y-2 p-1">
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       {/* Header */}
-      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white">Shopping Cart</h1>
-            <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base">
-              {cart.length} {cart.length === 1 ? 'item' : 'items'} in your cart
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-            <Link
-              href="/user-dashboard/orders"
-              className="px-3 md:px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 text-sm md:text-base text-center"
-            >
-              My Orders
-            </Link>
-            <Link
-              href="/user-dashboard/shop"
-              className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base text-center"
-            >
-              Continue Shopping
-            </Link>
-          </div>
-        </div>
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+        <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+            <ShoppingCartIcon sx={{ color: "#6366f1", fontSize: 26 }} />
+            <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: "-0.02em" }}>
+              Shopping Cart
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ color: textSecondary }}>
+            Review selected items and proceed to order placement.
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: "flex", gap: 1.5 }}>
+          <Button
+            component={Link}
+            href="/user-dashboard/orders"
+            variant="outlined"
+            size="small"
+            startIcon={<ReceiptLongIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              borderRadius: 0,
+              borderColor: isLight ? "#cbd5e1" : "#1e293b",
+              color: textPrimary,
+              fontWeight: 700,
+              fontSize: "0.78rem"
+            }}
+          >
+            My Orders
+          </Button>
+          <Button
+            component={Link}
+            href="/user-dashboard/shop"
+            variant="contained"
+            size="small"
+            startIcon={<StorefrontIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              borderRadius: 0,
+              backgroundColor: "#6366f1",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: "0.78rem",
+              "&:hover": { backgroundColor: "#4f46e5" }
+            }}
+          >
+            Continue Shopping
+          </Button>
+        </Box>
+      </Box>
 
       {cart.length === 0 ? (
-        /* Empty Cart */
-        <div className="bg-gray-800 rounded-xl p-6 md:p-12 border border-gray-700 text-center">
-          <svg className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-          </svg>
-          <h3 className="text-lg md:text-xl font-semibold text-white mb-2">Your cart is empty</h3>
-          <p className="text-gray-400 mb-4 md:mb-6 text-sm md:text-base">Start shopping to add items to your cart</p>
-          <Link
+        <Card sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder, p: 6, textAlign: "center" }}>
+          <ShoppingCartIcon sx={{ fontSize: 48, color: textSecondary, mb: 1.5 }} />
+          <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary, mb: 0.5 }}>
+            Your Cart is Empty
+          </Typography>
+          <Typography variant="body2" sx={{ color: textSecondary, mb: 3 }}>
+            You haven&apos;t added any merchandise items to your cart yet.
+          </Typography>
+          <Button
+            component={Link}
             href="/user-dashboard/shop"
-            className="px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
+            variant="contained"
+            sx={{
+              borderRadius: 0,
+              backgroundColor: "#6366f1",
+              color: "#fff",
+              fontWeight: 700,
+              px: 3,
+              "&:hover": { backgroundColor: "#4f46e5" }
+            }}
           >
-            Browse Products
-          </Link>
-        </div>
+            Browse Products Catalog
+          </Button>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-3 md:space-y-4">
-            {cart.map((item) => (
-              <div key={item.id} className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
-                  {/* Product Image */}
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.src = '/placeholder-product.jpg';
-                      }}
-                    />
-                  </div>
+        <Grid container spacing={3}>
+          {/* Cart Items List */}
+          <Grid item xs={12} lg={8}>
+            <Stack spacing={2}>
+              {cart.map((item) => {
+                const itemPrice = parseFloat(item.sale_price || item.price);
+                const itemTotal = itemPrice * item.quantity;
 
-                  {/* Product Info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-semibold mb-1 text-sm md:text-base truncate">{item.title}</h3>
-                    <p className="text-gray-400 text-xs md:text-sm mb-2 line-clamp-2">{item.description}</p>
-                    
-                    {/* Price */}
-                    <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-                      {item.sale_price ? (
-                        <>
-                          <span className="text-sm md:text-lg font-bold text-white">
-                            PKR {parseFloat(item.sale_price).toFixed(2)}
-                          </span>
-                          <span className="text-xs md:text-sm text-gray-400 line-through">
-                            PKR {parseFloat(item.price).toFixed(2)}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-sm md:text-lg font-bold text-white">
-                          PKR {parseFloat(item.price).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                return (
+                  <Card key={item.id} sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder }}>
+                    <CardContent sx={{ p: 2 }}>
+                      <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+                        <Box sx={{ width: 80, height: 80, backgroundColor: isLight ? "#f1f5f9" : "#080d19", border: cardBorder, flexShrink: 0 }}>
+                          <img
+                            src={item.image || '/placeholder-product.jpg'}
+                            alt={item.title}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            onError={(e) => { e.target.src = '/placeholder-product.jpg'; }}
+                          />
+                        </Box>
 
-                  {/* Quantity Controls and Actions */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3">
-                    {/* Quantity Controls */}
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="w-7 h-7 md:w-8 md:h-8 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 text-sm md:text-base"
-                      >
-                        -
-                      </button>
-                      <span className="w-8 md:w-12 text-center text-white font-medium text-sm md:text-base">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-7 h-7 md:w-8 md:h-8 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 text-sm md:text-base"
-                      >
-                        +
-                      </button>
-                    </div>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: textPrimary, noWrap: true }}>
+                            {item.title}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: textSecondary, display: "block", mb: 0.8 }}>
+                            Unit Price: ${itemPrice.toFixed(2)}
+                          </Typography>
 
-                    {/* Total Price */}
-                    <div className="text-right">
-                      <div className="text-sm md:text-lg font-bold text-white">
-                        PKR {((item.sale_price || item.price) * item.quantity).toFixed(2)}
-                      </div>
-                    </div>
+                          {/* Stepper Controls */}
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", border: cardBorder }}>
+                              <IconButton
+                                size="small"
+                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                sx={{ borderRadius: 0, p: 0.5, color: textPrimary }}
+                              >
+                                <RemoveIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                              <Typography sx={{ px: 1.5, fontSize: "0.82rem", fontWeight: 700, color: textPrimary }}>
+                                {item.quantity}
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                sx={{ borderRadius: 0, p: 0.5, color: textPrimary }}
+                              >
+                                <AddIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Box>
 
-                    {/* Remove Button */}
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-red-400 hover:text-red-300 transition-colors duration-200 p-1"
-                    >
-                      <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                            <IconButton
+                              size="small"
+                              onClick={() => removeFromCart(item.id)}
+                              sx={{ borderRadius: 0, color: "#f87171", border: "1px solid rgba(248,113,113,0.3)", p: 0.5 }}
+                            >
+                              <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Box>
+                        </Box>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700 sticky top-6">
-              <h2 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">Order Summary</h2>
-              
-              <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-400 text-sm md:text-base">Subtotal</span>
-                  <span className="text-white text-sm md:text-base">PKR {getSubtotal().toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400 text-sm md:text-base">Shipping</span>
-                  <span className="text-white text-sm md:text-base">Free</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400 text-sm md:text-base">Tax</span>
-                  <span className="text-white text-sm md:text-base">PKR 0.00</span>
-                </div>
-                <div className="border-t border-gray-700 pt-3 md:pt-4">
-                  <div className="flex justify-between">
-                    <span className="text-base md:text-lg font-bold text-white">Total</span>
-                    <span className="text-base md:text-lg font-bold text-white">PKR {getTotal().toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
+                        <Box sx={{ textAlign: "right" }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#10b981" }}>
+                            ${itemTotal.toFixed(2)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </Stack>
+          </Grid>
 
-              <button
-                onClick={handleCheckout}
-                className="w-full py-2 md:py-3 px-3 md:px-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 text-sm md:text-base"
-              >
-                Proceed to Checkout
-              </button>
+          {/* Cart Summary Card */}
+          <Grid item xs={12} lg={4}>
+            <Card sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder }}>
+              <Box sx={{ p: 2, px: 2.5, backgroundColor: isLight ? "#f8fafc" : "#0f172a", borderBottom: cardBorder }}>
+                <Typography sx={{ fontWeight: 800, color: textPrimary, fontSize: "0.9rem", letterSpacing: "0.04em" }}>
+                  ORDER SUMMARY
+                </Typography>
+              </Box>
+              <CardContent sx={{ p: 2.5 }}>
+                <Stack spacing={1.5}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <Typography variant="body2" sx={{ color: textSecondary }}>Subtotal ({cart.length} items)</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary }}>${subtotal.toFixed(2)}</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <Typography variant="body2" sx={{ color: textSecondary }}>Shipping & Handling</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: "#10b981" }}>Complimentary</Typography>
+                  </Box>
 
-              <div className="mt-3 md:mt-4 text-center">
-                <p className="text-xs md:text-sm text-gray-400">
-                  Order will be processed after confirmation
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+                  <Divider sx={{ my: 1, borderColor: isLight ? "#e2e8f0" : "#1e293b" }} />
+
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>Total Payable</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: "#10b981" }}>${subtotal.toFixed(2)}</Typography>
+                  </Box>
+
+                  <Button
+                    component={Link}
+                    href="/user-dashboard/checkout"
+                    fullWidth
+                    variant="contained"
+                    endIcon={<ArrowForwardIcon sx={{ fontSize: 16 }} />}
+                    sx={{
+                      borderRadius: 0,
+                      backgroundColor: "#6366f1",
+                      color: "#fff",
+                      fontWeight: 700,
+                      py: 1.2,
+                      mt: 1.5,
+                      "&:hover": { backgroundColor: "#4f46e5" }
+                    }}
+                  >
+                    Proceed to Checkout
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
       )}
-    </div>
+    </Box>
   );
 }
-
-

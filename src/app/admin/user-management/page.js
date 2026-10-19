@@ -1,90 +1,132 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  Button,
+  Chip,
+  Avatar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  IconButton,
+  Tooltip,
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert
+} from '@mui/material';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import SearchIcon from '@mui/icons-material/Search';
+import SyncIcon from '@mui/icons-material/Sync';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import LockResetIcon from '@mui/icons-material/LockReset';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import StarsIcon from '@mui/icons-material/Stars';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import ShareIcon from '@mui/icons-material/Share';
+import BlockIcon from '@mui/icons-material/Block';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
+import FlashOnIcon from '@mui/icons-material/FlashOn';
+import { useAdminTheme } from '@/context/AdminThemeContext';
 
-export default function AdminUserManagement() {
+export default function UserManagementPage() {
+  const { isLight } = useAdminTheme();
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
+
+  // Pagination & Server Filter States
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Modals state
   const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
+  const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
   const [showUpdateWalletModal, setShowUpdateWalletModal] = useState(false);
   const [showUpdatePointsModal, setShowUpdatePointsModal] = useState(false);
   const [showUpdateRankModal, setShowUpdateRankModal] = useState(false);
   const [showUpdateReferralModal, setShowUpdateReferralModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+
+  // Form states
   const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmPassword, setNewConfirmPassword] = useState('');
   const [newWalletBalance, setNewWalletBalance] = useState('');
   const [newPoints, setNewPoints] = useState('');
   const [newRankId, setNewRankId] = useState('');
   const [newReferral, setNewReferral] = useState('');
-  const [referralDropdownOpen, setReferralDropdownOpen] = useState(false);
-  const [referralSearchTerm, setReferralSearchTerm] = useState('');
-  const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
-  const [walletUpdateLoading, setWalletUpdateLoading] = useState(false);
-  const [pointsUpdateLoading, setPointsUpdateLoading] = useState(false);
-  const [rankUpdateLoading, setRankUpdateLoading] = useState(false);
-  const [referralUpdateLoading, setReferralUpdateLoading] = useState(false);
-  const [passwordUpdateError, setPasswordUpdateError] = useState('');
-  const [passwordUpdateSuccess, setPasswordUpdateSuccess] = useState('');
-  const [walletUpdateError, setWalletUpdateError] = useState('');
-  const [walletUpdateSuccess, setWalletUpdateSuccess] = useState('');
-  const [pointsUpdateError, setPointsUpdateError] = useState('');
-  const [pointsUpdateSuccess, setPointsUpdateSuccess] = useState('');
-  const [rankUpdateError, setRankUpdateError] = useState('');
-  const [rankUpdateSuccess, setRankUpdateSuccess] = useState('');
-  const [referralUpdateError, setReferralUpdateError] = useState('');
-  const [referralUpdateSuccess, setReferralUpdateSuccess] = useState('');
+
+  // Action states
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState('');
   const [ranks, setRanks] = useState([]);
 
-  const [filters, setFilters] = useState({
-    search: '',
-    status: 'all',
-  });
+  // Debounce search input for high performance
+  const debounceTimer = useRef(null);
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchInput(val);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(val);
+      setPage(0);
+    }, 320);
+  };
 
-  // Remove pagination state - we'll show all records
-
-  // Helper function to get authenticated headers
   const getAuthHeaders = useCallback(() => {
-    if (typeof window === 'undefined') {
-      return { 'Content-Type': 'application/json' };
-    }
+    if (typeof window === 'undefined') return { 'Content-Type': 'application/json' };
     const adminToken = localStorage.getItem('adminToken');
-    console.log('Admin token from localStorage:', adminToken ? 'Present' : 'Missing');
     return {
       'Content-Type': 'application/json',
-      ...(adminToken && { 'Authorization': `Bearer ${adminToken}` }),
+      ...(adminToken && { Authorization: `Bearer ${adminToken}` }),
     };
   }, []);
 
+  // Fetch Users with Server Pagination & Filtering
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch all users without pagination
-      const response = await fetch(`/api/admin/users?limit=all`, {
+      const queryParams = new URLSearchParams({
+        page: (page + 1).toString(),
+        limit: pageSize.toString(),
+        status: statusFilter,
+        ...(debouncedSearch ? { search: debouncedSearch } : {})
+      });
+
+      const response = await fetch(`/api/admin/users?${queryParams.toString()}`, {
         credentials: 'include',
         headers: getAuthHeaders(),
       });
-      
-      console.log('Fetch users response status:', response.status);
-      
+
       if (response.ok) {
         const data = await response.json();
-        console.log('Users fetched successfully:', data);
         setUsers(Array.isArray(data.users) ? data.users : []);
+        if (data.pagination) {
+          setTotalCount(data.pagination.totalCount || 0);
+        }
       } else if (response.status === 401) {
-        console.error('Authentication failed, redirecting to login');
-        // Clear invalid tokens
         localStorage.removeItem('admin');
         localStorage.removeItem('adminToken');
         window.location.href = '/admin/login';
-        return;
-      } else {
-        console.error('Failed to fetch users:', response.status, response.statusText);
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Error response data:', errorData);
-        setUsers([]);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -92,7 +134,7 @@ export default function AdminUserManagement() {
     } finally {
       setLoading(false);
     }
-  }, [getAuthHeaders]);
+  }, [page, pageSize, statusFilter, debouncedSearch, getAuthHeaders]);
 
   const fetchRanks = useCallback(async () => {
     try {
@@ -102,163 +144,36 @@ export default function AdminUserManagement() {
       });
       if (response.ok) {
         const data = await response.json();
-        setRanks(data.ranks || []);
-      } else {
-        console.error('Failed to fetch ranks:', response.status);
+        setRanks(Array.isArray(data.ranks) ? data.ranks : []);
       }
     } catch (error) {
       console.error('Error fetching ranks:', error);
     }
   }, [getAuthHeaders]);
 
-  // Initial data loading effect
   useEffect(() => {
-    // Check if we're in the browser environment
-    if (typeof window === 'undefined') {
-      return;
-    }
-    
-    // Check if admin is logged in
-    const adminData = localStorage.getItem('admin');
-    const adminToken = localStorage.getItem('adminToken');
-    
-    console.log('Admin data in localStorage:', adminData ? 'Present' : 'Missing');
-    console.log('Admin token in localStorage:', adminToken ? 'Present' : 'Missing');
-    
-    if (!adminData || !adminToken) {
-      console.error('Admin not logged in, redirecting to login');
-      window.location.href = '/admin/login';
-      return;
-    }
-    
     fetchUsers();
+  }, [fetchUsers]);
+
+  useEffect(() => {
     fetchRanks();
-  }, [fetchUsers, fetchRanks]);
+  }, [fetchRanks]);
 
-  const applyFilters = useCallback(() => {
-    if (!users || !Array.isArray(users)) {
-      setFilteredUsers([]);
-      return;
-    }
-
-    let filtered = [...users];
-
-    if (filters.search) {
-      filtered = filtered.filter(user =>
-        user?.fullname?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user?.username?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user?.email?.toLowerCase().includes(filters.search.toLowerCase())
-      );
-    }
-
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(user => user?.status === filters.status);
-    }
-
-    setFilteredUsers(filtered);
-  }, [users, filters]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [users, filters, applyFilters]);
-
-  const clearFilters = () => {
-    setFilters({
-      search: '',
-      status: 'all',
-    });
-  };
-
-  const openUpdatePasswordModal = (user) => {
-    setSelectedUser(user);
-    setNewPassword('');
-    setConfirmPassword('');
-    setPasswordUpdateError('');
-    setPasswordUpdateSuccess('');
-    setShowUpdatePasswordModal(true);
-  };
-
-  const openUpdateWalletModal = (user) => {
-    setSelectedUser(user);
-    setNewWalletBalance(user.balance || 0);
-    setWalletUpdateError('');
-    setWalletUpdateSuccess('');
-    setShowUpdateWalletModal(true);
-  };
-
-  const openUpdatePointsModal = (user) => {
-    setSelectedUser(user);
-    setNewPoints(user.points || 0);
-    setPointsUpdateError('');
-    setPointsUpdateSuccess('');
-    setShowUpdatePointsModal(true);
-  };
-
-  const openUpdateRankModal = (user) => {
-    setSelectedUser(user);
-    setNewRankId(user.rankId || '');
-    setRankUpdateError('');
-    setRankUpdateSuccess('');
-    setShowUpdateRankModal(true);
-  };
-
-  const openUpdateReferralModal = (user) => {
-    setSelectedUser(user);
-    setNewReferral(user.referredBy || '');
-    setReferralSearchTerm('');
-    setReferralDropdownOpen(false);
-    setReferralUpdateError('');
-    setReferralUpdateSuccess('');
-    setShowUpdateReferralModal(true);
-  };
-
-  // Get filtered usernames for referral dropdown (excluding current user)
-  const getFilteredUsernames = useCallback(() => {
-    if (!Array.isArray(users) || !selectedUser) {
-      return [];
-    }
-    return users
-      .filter(user => 
-        user.id !== selectedUser?.id && // Exclude current user
-        user.username && user.username.toLowerCase().includes(referralSearchTerm.toLowerCase())
-      )
-      .slice(0, 10); // Limit to 10 results for performance
-  }, [users, selectedUser, referralSearchTerm]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (referralDropdownOpen && !event.target.closest('.referral-dropdown')) {
-        setReferralDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [referralDropdownOpen]);
-
-  const openUserDetailsModal = (user) => {
-    setSelectedUser(user);
-    setShowUserDetailsModal(true);
-  };
-
+  // Update Password
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
-    setPasswordUpdateLoading(true);
-    setPasswordUpdateError('');
-    setPasswordUpdateSuccess('');
+    setActionLoading(true);
+    setActionError('');
 
     if (newPassword.length < 6) {
-      setPasswordUpdateError('Password must be at least 6 characters long.');
-      setPasswordUpdateLoading(false);
+      setActionError('Password must be at least 6 characters long.');
+      setActionLoading(false);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordUpdateError('Passwords do not match.');
-      setPasswordUpdateLoading(false);
+      setActionError('Passwords do not match.');
+      setActionLoading(false);
       return;
     }
 
@@ -272,30 +187,31 @@ export default function AdminUserManagement() {
 
       const data = await response.json();
       if (response.ok) {
-        setPasswordUpdateSuccess('Password updated successfully!');
         setShowUpdatePasswordModal(false);
-        fetchUsers(); // Refresh user list
+        setNewPassword('');
+        setNewConfirmPassword('');
+        fetchUsers();
       } else {
-        setPasswordUpdateError(data.error || data.message || 'Failed to update password.');
+        setActionError(data.error || data.message || 'Failed to update password.');
       }
     } catch (error) {
       console.error('Error updating password:', error);
-      setPasswordUpdateError('An unexpected error occurred.');
+      setActionError('An unexpected error occurred.');
     } finally {
-      setPasswordUpdateLoading(false);
+      setActionLoading(false);
     }
   };
 
+  // Update Wallet
   const handleUpdateWallet = async (e) => {
     e.preventDefault();
-    setWalletUpdateLoading(true);
-    setWalletUpdateError('');
-    setWalletUpdateSuccess('');
-
+    setActionLoading(true);
+    setActionError('');
     const balance = parseFloat(newWalletBalance);
+
     if (isNaN(balance) || balance < 0) {
-      setWalletUpdateError('Please enter a valid balance amount.');
-      setWalletUpdateLoading(false);
+      setActionError('Please enter a valid balance amount.');
+      setActionLoading(false);
       return;
     }
 
@@ -307,32 +223,30 @@ export default function AdminUserManagement() {
         body: JSON.stringify({ balance: balance }),
       });
 
-      const data = await response.json();
       if (response.ok) {
-        setWalletUpdateSuccess('Wallet balance updated successfully!');
         setShowUpdateWalletModal(false);
-        fetchUsers(); // Refresh user list
+        fetchUsers();
       } else {
-        setWalletUpdateError(data.error || data.message || 'Failed to update wallet balance.');
+        const data = await response.json();
+        setActionError(data.error || 'Failed to update wallet.');
       }
-    } catch (error) {
-      console.error('Error updating wallet balance:', error);
-      setWalletUpdateError('An unexpected error occurred.');
+    } catch {
+      setActionError('An error occurred.');
     } finally {
-      setWalletUpdateLoading(false);
+      setActionLoading(false);
     }
   };
 
+  // Update Points
   const handleUpdatePoints = async (e) => {
     e.preventDefault();
-    setPointsUpdateLoading(true);
-    setPointsUpdateError('');
-    setPointsUpdateSuccess('');
+    setActionLoading(true);
+    setActionError('');
+    const pts = parseInt(newPoints, 10);
 
-    const points = parseInt(newPoints);
-    if (isNaN(points) || points < 0) {
-      setPointsUpdateError('Please enter a valid points amount.');
-      setPointsUpdateLoading(false);
+    if (isNaN(pts) || pts < 0) {
+      setActionError('Please enter a valid points number.');
+      setActionLoading(false);
       return;
     }
 
@@ -341,60 +255,56 @@ export default function AdminUserManagement() {
         method: 'PUT',
         headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify({ points: points }),
+        body: JSON.stringify({ points: pts }),
       });
 
-      const data = await response.json();
       if (response.ok) {
-        setPointsUpdateSuccess('Points updated successfully!');
         setShowUpdatePointsModal(false);
-        fetchUsers(); // Refresh user list
+        fetchUsers();
       } else {
-        setPointsUpdateError(data.error || data.message || 'Failed to update points.');
+        const data = await response.json();
+        setActionError(data.error || 'Failed to update points.');
       }
-    } catch (error) {
-      console.error('Error updating points:', error);
-      setPointsUpdateError('An unexpected error occurred.');
+    } catch {
+      setActionError('An error occurred.');
     } finally {
-      setPointsUpdateLoading(false);
+      setActionLoading(false);
     }
   };
 
+  // Update Rank
   const handleUpdateRank = async (e) => {
     e.preventDefault();
-    setRankUpdateLoading(true);
-    setRankUpdateError('');
-    setRankUpdateSuccess('');
+    setActionLoading(true);
+    setActionError('');
 
     try {
       const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify({ rankId: newRankId ? parseInt(newRankId) : null }),
+        body: JSON.stringify({ rankId: newRankId ? parseInt(newRankId, 10) : null }),
       });
 
-      const data = await response.json();
       if (response.ok) {
-        setRankUpdateSuccess('Rank updated successfully!');
         setShowUpdateRankModal(false);
-        fetchUsers(); // Refresh user list
+        fetchUsers();
       } else {
-        setRankUpdateError(data.error || data.message || 'Failed to update rank.');
+        const data = await response.json();
+        setActionError(data.error || 'Failed to update rank.');
       }
-    } catch (error) {
-      console.error('Error updating rank:', error);
-      setRankUpdateError('An unexpected error occurred.');
+    } catch {
+      setActionError('An error occurred.');
     } finally {
-      setRankUpdateLoading(false);
+      setActionLoading(false);
     }
   };
 
+  // Update Referral
   const handleUpdateReferral = async (e) => {
     e.preventDefault();
-    setReferralUpdateLoading(true);
-    setReferralUpdateError('');
-    setReferralUpdateSuccess('');
+    setActionLoading(true);
+    setActionError('');
 
     try {
       const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
@@ -404,791 +314,714 @@ export default function AdminUserManagement() {
         body: JSON.stringify({ referredBy: newReferral.trim() || null }),
       });
 
-      const data = await response.json();
       if (response.ok) {
-        setReferralUpdateSuccess('Referral updated successfully!');
         setShowUpdateReferralModal(false);
-        fetchUsers(); // Refresh user list
+        fetchUsers();
       } else {
-        setReferralUpdateError(data.error || data.message || 'Failed to update referral.');
+        const data = await response.json();
+        setActionError(data.error || 'Failed to update referral.');
       }
-    } catch (error) {
-      console.error('Error updating referral:', error);
-      setReferralUpdateError('An unexpected error occurred.');
+    } catch {
+      setActionError('An error occurred.');
     } finally {
-      setReferralUpdateLoading(false);
+      setActionLoading(false);
     }
   };
 
-  const getStatusColor = (status) => {
+  // Toggle user status
+  const handleToggleStatus = async (user, newStatus) => {
+    if (!confirm(`Are you sure you want to change @${user.username} status to ${newStatus}?`)) return;
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        fetchUsers();
+      }
+    } catch (err) {
+      console.error('Status toggle error:', err);
+    }
+  };
+
+  const getStatusBadge = (status) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'suspended': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active':
+        return (
+          <Chip
+            label="ACTIVE"
+            size="small"
+            sx={{
+              borderRadius: 0,
+              fontWeight: 800,
+              fontSize: '0.65rem',
+              letterSpacing: '0.04em',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              color: '#10b981',
+              border: '1px solid rgba(16, 185, 129, 0.3)'
+            }}
+          />
+        );
+      case 'suspended':
+        return (
+          <Chip
+            label="SUSPENDED"
+            size="small"
+            sx={{
+              borderRadius: 0,
+              fontWeight: 800,
+              fontSize: '0.65rem',
+              letterSpacing: '0.04em',
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              color: '#ef4444',
+              border: '1px solid rgba(239, 68, 68, 0.3)'
+            }}
+          />
+        );
+      default:
+        return (
+          <Chip
+            label={status ? status.toUpperCase() : 'INACTIVE'}
+            size="small"
+            sx={{
+              borderRadius: 0,
+              fontWeight: 800,
+              fontSize: '0.65rem',
+              letterSpacing: '0.04em',
+              backgroundColor: isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)',
+              color: isLight ? '#475569' : 'rgba(255,255,255,0.7)',
+              border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(255,255,255,0.1)'}`
+            }}
+          />
+        );
     }
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount || 0);
+    return `$${parseFloat(amount || 0).toFixed(2)}`;
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Pagination removed - showing all records
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
-
-  // Safety check to prevent rendering errors
-  if (!Array.isArray(users)) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Error loading user data</p>
-          <button 
-            onClick={fetchUsers}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Color tokens
+  const cardBg = isLight ? '#ffffff' : '#0c1220';
+  const cardBorder = isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.08)';
+  const textPrimary = isLight ? '#0f172a' : '#ffffff';
+  const textSecondary = isLight ? '#475569' : 'rgba(255,255,255,0.6)';
+  const inputBg = isLight ? '#f8fafc' : 'rgba(255,255,255,0.02)';
+  const tableHeaderBg = isLight ? '#f8fafc' : '#0f172a';
+  const rowHover = isLight ? 'rgba(99, 102, 241, 0.04)' : 'rgba(255, 255, 255, 0.02)';
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
-          <p className="text-gray-600 mt-2">View all users and manage their accounts</p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-end">
-          {/* Search */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Search Users</label>
-            <input
-              type="text"
-              placeholder="Search by name, username, or email..."
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-gray-800"
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+            <PeopleAltIcon sx={{ color: '#6366f1', fontSize: 28 }} />
+            <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
+              User Account Governance
+            </Typography>
+            <Chip
+              icon={<FlashOnIcon sx={{ fontSize: '14px !important', color: '#10b981' }} />}
+              label="FAST QUERY ACTIVE"
+              size="small"
+              sx={{
+                borderRadius: 0,
+                height: 22,
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                color: '#10b981',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                display: { xs: 'none', md: 'inline-flex' }
+              }}
             />
-          </div>
+          </Box>
+          <Typography variant="body2" sx={{ color: textSecondary }}>
+            High-speed directory query: supervise user identities, calibrate wallet balances, adjust network rank placements, and update credentials.
+          </Typography>
+        </Box>
 
-          {/* Status Filter */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="suspended">Suspended</option>
-            </select>
-          </div>
+        <Button
+          onClick={fetchUsers}
+          variant="outlined"
+          size="small"
+          startIcon={loading ? <CircularProgress size={14} sx={{ color: '#6366f1' }} /> : <SyncIcon sx={{ fontSize: 16 }} />}
+          sx={{
+            borderRadius: 0,
+            borderColor: isLight ? '#cbd5e1' : 'rgba(255,255,255,0.15)',
+            color: textPrimary,
+            backgroundColor: isLight ? '#ffffff' : 'rgba(255,255,255,0.02)',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            '&:hover': { borderColor: '#6366f1', backgroundColor: isLight ? '#f1f5f9' : 'rgba(99, 102, 241, 0.1)' }
+          }}
+        >
+          {loading ? 'Querying...' : `Refresh (${totalCount} Total)`}
+        </Button>
+      </Box>
 
+      {/* Filter Card */}
+      <Card sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder }}>
+        <CardContent sx={{ p: 2 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={8}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Instant search by full name, username, email, or phone number..."
+                value={searchInput}
+                onChange={handleSearchChange}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ color: textSecondary, mr: 1, fontSize: 18 }} />
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 0,
+                    backgroundColor: inputBg,
+                    borderColor: isLight ? '#cbd5e1' : 'rgba(255,255,255,0.1)',
+                    color: textPrimary,
+                    fontSize: '0.85rem'
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(0);
+                  }}
+                  sx={{
+                    borderRadius: 0,
+                    backgroundColor: inputBg,
+                    color: textPrimary,
+                    fontSize: '0.85rem',
+                    border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(255,255,255,0.1)'}`,
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                    '& .MuiSvgIcon-root': { color: textSecondary }
+                  }}
+                >
+                  <MenuItem value="all" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>All Member Statuses</MenuItem>
+                  <MenuItem value="active" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Active Members Only</MenuItem>
+                  <MenuItem value="inactive" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Inactive Only</MenuItem>
+                  <MenuItem value="suspended" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Suspended Accounts</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
-          {/* Clear Filters */}
-          <div>
-            <button
-              onClick={clearFilters}
-              className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-300 font-semibold"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
+      {/* User Directory Table */}
+      <Card sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder, overflow: 'hidden' }}>
+        <TableContainer>
+          <Table size="medium">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: tableHeaderBg }}>
+                <TableCell sx={{ fontWeight: 800, fontSize: '0.74rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Member Identity
+                </TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: '0.74rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Contact Information
+                </TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: '0.74rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Balance & Points
+                </TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: '0.74rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Rank & Placement
+                </TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: '0.74rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Account Status
+                </TableCell>
+                <TableCell align="right" sx={{ fontWeight: 800, fontSize: '0.74rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Governance Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
 
-        {/* Results Count */}
-        <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredUsers.length} users (All records)
-        </div>
-      </div>
-
-      {/* Users Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800">All Users</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Username
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Points
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Wallet
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rank
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {Array.isArray(filteredUsers) && filteredUsers.map((user) => user && (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  {/* Name Column */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center">
-                          <span className="text-white font-semibold text-sm">
-                            {user.fullname?.charAt(0)?.toUpperCase() || 'U'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-800">
-                          {user.fullname || 'Unknown'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          ID: {user.id}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  
-                  {/* Username Column */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-800 font-medium">{user.username || 'Unknown'}</div>
-                  </td>
-                  
-                  {/* Points Column */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-800 font-medium">
-                      {user.points || 0}
-                    </div>
-                  </td>
-                  
-                  {/* Wallet Column */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-800 font-medium">
-                      {formatCurrency(user.balance)}
-                    </div>
-                  </td>
-                  
-                  {/* Rank Column */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-800">
-                      {user.rank?.title || 'No Rank'}
-                    </div>
-                  </td>
-                  
-                  {/* Actions Column */}
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-1">
-                      <button
-                        onClick={() => openUserDetailsModal(user)}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                        title="View Details"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => openUpdateWalletModal(user)}
-                        className="text-yellow-600 hover:text-yellow-900 p-1 rounded hover:bg-yellow-50"
-                        title="Update Wallet"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => openUpdatePointsModal(user)}
-                        className="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50"
-                        title="Update Points"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => openUpdateRankModal(user)}
-                        className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
-                        title="Update Rank"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => openUpdateReferralModal(user)}
-                        className="text-orange-600 hover:text-orange-900 p-1 rounded hover:bg-orange-50"
-                        title="Update Referral"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => openUpdatePasswordModal(user)}
-                        className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
-                        title="Update Password"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2v5a2 2 0 01-2 2h-2a2 2 0 01-2-2v-5a2 2 0 012-2h2zm-2 0V4a2 2 0 012-2h2a2 2 0 012 2v3m-2 0h-2m-4 0H7a2 2 0 00-2 2v5a2 2 0 002 2h2a2 2 0 002-2v-5a2 2 0 00-2-2z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* User Details Modal */}
-      {showUserDetailsModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-800">User Details</h3>
-              <button
-                onClick={() => setShowUserDetailsModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              {/* User Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                  <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">{selectedUser.fullname || 'N/A'}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                  <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">{selectedUser.username || 'N/A'}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">{selectedUser.email || 'N/A'}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                  <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">{selectedUser.phoneNumber || 'N/A'}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedUser.status)}`}>
-                    {selectedUser.status}
-                  </span>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
-                  <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">{selectedUser.id}</div>
-                </div>
-              </div>
-
-              {/* Financial Info */}
-              <div className="border-t pt-4">
-                <h4 className="text-md font-semibold text-gray-800 mb-3">Financial Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Wallet Balance</label>
-                    <div className="text-lg font-semibold text-green-600">{formatCurrency(selectedUser.balance)}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Points</label>
-                    <div className="text-lg font-semibold text-blue-600">{selectedUser.points || 0}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Total Earnings</label>
-                    <div className="text-lg font-semibold text-purple-600">{formatCurrency(selectedUser.totalEarnings)}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Referral Info */}
-              <div className="border-t pt-4">
-                <h4 className="text-md font-semibold text-gray-800 mb-3">Referral Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Referred By</label>
-                    <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">{selectedUser.referredBy || 'N/A'}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Referral Count</label>
-                    <div className="text-lg font-semibold text-orange-600">{selectedUser.referralCount || 0}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Info */}
-              <div className="border-t pt-4">
-                <h4 className="text-md font-semibold text-gray-800 mb-3">Account Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
-                    <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">{formatDate(selectedUser.createdAt)}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
-                    <div className="text-sm text-gray-800 bg-gray-50 p-2 rounded">{formatDate(selectedUser.updatedAt)}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="border-t pt-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => {
-                      setShowUserDetailsModal(false);
-                      openUpdatePasswordModal(selectedUser);
+            <TableBody>
+              {loading && users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ py: 6, textAlign: 'center' }}>
+                    <CircularProgress size={32} sx={{ color: '#6366f1', mb: 1.5 }} />
+                    <Typography sx={{ color: textSecondary, fontSize: '0.84rem' }}>
+                      Executing high-speed directory query...
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ py: 6, textAlign: 'center' }}>
+                    <Typography sx={{ color: textSecondary, fontSize: '0.9rem' }}>
+                      No user accounts found matching your query criteria.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => (
+                  <TableRow
+                    key={user.id}
+                    hover
+                    sx={{
+                      '&:hover': { backgroundColor: rowHover },
+                      transition: 'background-color 0.15s'
                     }}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                   >
-                    Update Password
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowUserDetailsModal(false);
-                      openUpdateReferralModal(selectedUser);
-                    }}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-                  >
-                    Update Referral
-                  </button>
-                  <button
-                    onClick={() => setShowUserDetailsModal(false)}
-                    className="col-span-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Update Password Modal */}
-      {showUpdatePasswordModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-800">Update Password for {selectedUser.username}</h3>
-              <button
-                onClick={() => setShowUpdatePasswordModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleUpdatePassword} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                <input
-                  type="password"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
-              {passwordUpdateError && (
-                <p className="text-red-600 text-sm">{passwordUpdateError}</p>
-              )}
-              {passwordUpdateSuccess && (
-                <p className="text-green-600 text-sm">{passwordUpdateSuccess}</p>
-              )}
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowUpdatePasswordModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={passwordUpdateLoading}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed"
-                >
-                  {passwordUpdateLoading ? 'Updating...' : 'Update Password'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Update Wallet Modal */}
-      {showUpdateWalletModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-800">Update Wallet Balance for {selectedUser.username}</h3>
-              <button
-                onClick={() => setShowUpdateWalletModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleUpdateWallet} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Current Balance</label>
-                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
-                  {formatCurrency(selectedUser.balance)}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Balance</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-800"
-                  value={newWalletBalance}
-                  onChange={(e) => setNewWalletBalance(e.target.value)}
-                />
-              </div>
-              {walletUpdateError && (
-                <p className="text-red-600 text-sm">{walletUpdateError}</p>
-              )}
-              {walletUpdateSuccess && (
-                <p className="text-green-600 text-sm">{walletUpdateSuccess}</p>
-              )}
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowUpdateWalletModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={walletUpdateLoading}
-                  className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-yellow-400 disabled:cursor-not-allowed"
-                >
-                  {walletUpdateLoading ? 'Updating...' : 'Update Wallet'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Update Points Modal */}
-      {showUpdatePointsModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-800">Update Points for {selectedUser.username}</h3>
-              <button
-                onClick={() => setShowUpdatePointsModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleUpdatePoints} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Current Points</label>
-                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
-                  {selectedUser.points || 0}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Points</label>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                  value={newPoints}
-                  onChange={(e) => setNewPoints(e.target.value)}
-                />
-              </div>
-              {pointsUpdateError && (
-                <p className="text-red-600 text-sm">{pointsUpdateError}</p>
-              )}
-              {pointsUpdateSuccess && (
-                <p className="text-green-600 text-sm">{pointsUpdateSuccess}</p>
-              )}
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowUpdatePointsModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={pointsUpdateLoading}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed"
-                >
-                  {pointsUpdateLoading ? 'Updating...' : 'Update Points'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Update Rank Modal */}
-      {showUpdateRankModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-800">Update Rank for {selectedUser.username}</h3>
-              <button
-                onClick={() => setShowUpdateRankModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleUpdateRank} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Current Rank</label>
-                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
-                  {selectedUser.rank?.title || 'No Rank'}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Rank</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800"
-                  value={newRankId}
-                  onChange={(e) => setNewRankId(e.target.value)}
-                >
-                  <option value="">No Rank</option>
-                  {ranks.map((rank) => (
-                    <option key={rank.id} value={rank.id}>
-                      {rank.title} (Required: {rank.required_points} points)
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {rankUpdateError && (
-                <p className="text-red-600 text-sm">{rankUpdateError}</p>
-              )}
-              {rankUpdateSuccess && (
-                <p className="text-green-600 text-sm">{rankUpdateSuccess}</p>
-              )}
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowUpdateRankModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={rankUpdateLoading}
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed"
-                >
-                  {rankUpdateLoading ? 'Updating...' : 'Update Rank'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Update Referral Modal */}
-      {showUpdateReferralModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-800">Update Referral for {selectedUser.username}</h3>
-              <button
-                onClick={() => setShowUpdateReferralModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleUpdateReferral} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Current Referral</label>
-                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                  {selectedUser.referredBy || 'No referral'}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Referral Username</label>
-                <div className="relative referral-dropdown">
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800"
-                    value={referralSearchTerm}
-                    onChange={(e) => {
-                      setReferralSearchTerm(e.target.value);
-                      setReferralDropdownOpen(true);
-                      if (e.target.value === '') {
-                        setNewReferral('');
-                      }
-                    }}
-                    onFocus={() => setReferralDropdownOpen(true)}
-                    placeholder="Search and select username or leave empty to remove referral"
-                  />
-                  
-                  {/* Dropdown Arrow */}
-                  <button
-                    type="button"
-                    onClick={() => setReferralDropdownOpen(!referralDropdownOpen)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className={`w-5 h-5 transition-transform ${referralDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {referralDropdownOpen && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {/* Clear/Remove Referral Option */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNewReferral('');
-                          setReferralSearchTerm('');
-                          setReferralDropdownOpen(false);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 border-b border-gray-100"
-                      >
-                        <span className="text-red-600">Remove referral (no referrer)</span>
-                      </button>
-                      
-                      {/* Username Options */}
-                      {getFilteredUsernames().map((user) => (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => {
-                            setNewReferral(user.username);
-                            setReferralSearchTerm(user.username);
-                            setReferralDropdownOpen(false);
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 0,
+                            backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                            color: '#6366f1',
+                            border: '1px solid rgba(99, 102, 241, 0.3)',
+                            fontWeight: 800,
+                            fontSize: '0.85rem'
                           }}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">@{user.username}</span>
-                            <span className="text-xs text-gray-500">{user.fullname || 'No name'}</span>
-                          </div>
-                        </button>
-                      ))}
-                      
-                      {/* No Results */}
-                      {getFilteredUsernames().length === 0 && referralSearchTerm && (
-                        <div className="px-3 py-2 text-sm text-gray-500">
-                          No users found matching &quot;{referralSearchTerm}&quot;
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Search and select a username from the dropdown, or leave empty to remove the referral.
-                </p>
-              </div>
-              
-              {referralUpdateError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-600 text-sm">{referralUpdateError}</p>
-                </div>
+                          {user.fullname?.charAt(0) || user.username?.charAt(0) || 'U'}
+                        </Avatar>
+                        <Box>
+                          <Typography sx={{ color: textPrimary, fontWeight: 700, fontSize: '0.88rem' }}>
+                            {user.fullname || 'Unnamed Member'}
+                          </Typography>
+                          <Typography sx={{ color: '#6366f1', fontFamily: 'monospace', fontSize: '0.76rem', fontWeight: 600 }}>
+                            @{user.username}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+
+                    <TableCell>
+                      <Typography sx={{ color: textPrimary, fontSize: '0.84rem' }}>
+                        {user.email || '—'}
+                      </Typography>
+                      <Typography sx={{ color: textSecondary, fontSize: '0.76rem' }}>
+                        {user.phoneNumber || 'No phone recorded'}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell>
+                      <Typography sx={{ color: '#10b981', fontWeight: 700, fontFamily: 'monospace', fontSize: '0.88rem' }}>
+                        {formatCurrency(user.balance)}
+                      </Typography>
+                      <Typography sx={{ color: '#f59e0b', fontSize: '0.76rem', fontWeight: 600 }}>
+                        {user.points || 0} pts
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell>
+                      <Chip
+                        label={user.rank?.title || 'STANDARD MEMBER'}
+                        size="small"
+                        sx={{
+                          borderRadius: 0,
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          backgroundColor: isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.05)',
+                          color: isLight ? '#4f46e5' : '#818cf8',
+                          border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(255, 255, 255, 0.1)'}`
+                        }}
+                      />
+                      <Typography sx={{ color: textSecondary, fontSize: '0.72rem', mt: 0.3 }}>
+                        Sponsor: {user.referredBy ? `@${user.referredBy}` : 'Direct'}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell>{getStatusBadge(user.status)}</TableCell>
+
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.8 }}>
+                        <Tooltip title="View Profile Snapshot">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowUserDetailsModal(true);
+                            }}
+                            sx={{ color: '#38bdf8', borderRadius: 0, border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(56, 189, 248, 0.3)'}`, p: 0.6 }}
+                          >
+                            <VisibilityIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Reset Credentials">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setActionError('');
+                              setShowUpdatePasswordModal(true);
+                            }}
+                            sx={{ color: '#f87171', borderRadius: 0, border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(248, 113, 113, 0.3)'}`, p: 0.6 }}
+                          >
+                            <LockResetIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Calibrate Wallet Balance">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setNewWalletBalance(user.balance || '0');
+                              setActionError('');
+                              setShowUpdateWalletModal(true);
+                            }}
+                            sx={{ color: '#10b981', borderRadius: 0, border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(16, 185, 129, 0.3)'}`, p: 0.6 }}
+                          >
+                            <AccountBalanceWalletIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Adjust Reward Points">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setNewPoints(user.points || '0');
+                              setActionError('');
+                              setShowUpdatePointsModal(true);
+                            }}
+                            sx={{ color: '#f59e0b', borderRadius: 0, border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(245, 158, 11, 0.3)'}`, p: 0.6 }}
+                          >
+                            <StarsIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Assign Rank Placement">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setNewRankId(user.rankId || '');
+                              setActionError('');
+                              setShowUpdateRankModal(true);
+                            }}
+                            sx={{ color: '#818cf8', borderRadius: 0, border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(129, 140, 248, 0.3)'}`, p: 0.6 }}
+                          >
+                            <WorkspacePremiumIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Reassign Sponsor Network">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setNewReferral(user.referredBy || '');
+                              setActionError('');
+                              setShowUpdateReferralModal(true);
+                            }}
+                            sx={{ color: '#a78bfa', borderRadius: 0, border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(167, 139, 250, 0.3)'}`, p: 0.6 }}
+                          >
+                            <ShareIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+
+                        {user.status === 'active' ? (
+                          <Tooltip title="Suspend Account">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleToggleStatus(user, 'suspended')}
+                              sx={{ color: '#ef4444', borderRadius: 0, border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(239, 68, 68, 0.3)'}`, p: 0.6 }}
+                            >
+                              <BlockIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip title="Reactivate Account">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleToggleStatus(user, 'active')}
+                              sx={{ color: '#10b981', borderRadius: 0, border: `1px solid ${isLight ? '#cbd5e1' : 'rgba(16, 185, 129, 0.3)'}`, p: 0.6 }}
+                            >
+                              <CheckCircleIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
-              
-              {referralUpdateSuccess && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-green-600 text-sm">{referralUpdateSuccess}</p>
-                </div>
-              )}
-              
-              <div className="flex space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowUpdateReferralModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={referralUpdateLoading}
-                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-orange-400 disabled:cursor-not-allowed"
-                >
-                  {referralUpdateLoading ? 'Updating...' : 'Update Referral'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Server-Side Table Pagination with Sharp Corners */}
+        <TablePagination
+          component="div"
+          count={totalCount}
+          page={page}
+          onPageChange={(_, newPage) => setPage(newPage)}
+          rowsPerPage={pageSize}
+          onRowsPerPageChange={(e) => {
+            setPageSize(parseInt(e.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+          sx={{
+            borderTop: cardBorder,
+            color: textSecondary,
+            '& .MuiTablePagination-select': { borderRadius: 0 },
+            '& .MuiIconButton-root': { borderRadius: 0 }
+          }}
+        />
+      </Card>
+
+      {/* Snapshot Dialog */}
+      <Dialog
+        open={showUserDetailsModal}
+        onClose={() => setShowUserDetailsModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 0, backgroundColor: cardBg, border: cardBorder } }}
+      >
+        <DialogTitle sx={{ borderBottom: cardBorder, p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary }}>Member Dossier Profile</Typography>
+          <IconButton onClick={() => setShowUserDetailsModal(false)} sx={{ color: textSecondary, borderRadius: 0 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          {selectedUser && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+              <Box sx={{ p: 1.5, backgroundColor: inputBg, border: cardBorder }}>
+                <Typography variant="caption" sx={{ color: textSecondary }}>Full Legal Name</Typography>
+                <Typography variant="body2" sx={{ color: textPrimary, fontWeight: 700 }}>{selectedUser.fullname}</Typography>
+              </Box>
+              <Box sx={{ p: 1.5, backgroundColor: inputBg, border: cardBorder }}>
+                <Typography variant="caption" sx={{ color: textSecondary }}>Username & Email</Typography>
+                <Typography variant="body2" sx={{ color: '#38bdf8', fontWeight: 600 }}>@{selectedUser.username} • {selectedUser.email}</Typography>
+              </Box>
+              <Box sx={{ p: 1.5, backgroundColor: inputBg, border: cardBorder }}>
+                <Typography variant="caption" sx={{ color: textSecondary }}>Wallet Balance & Points</Typography>
+                <Typography variant="body2" sx={{ color: '#10b981', fontWeight: 800 }}>{formatCurrency(selectedUser.balance)} • Points: {selectedUser.points || 0}</Typography>
+              </Box>
+              <Box sx={{ p: 1.5, backgroundColor: inputBg, border: cardBorder }}>
+                <Typography variant="caption" sx={{ color: textSecondary }}>Direct Referral Sponsor</Typography>
+                <Typography variant="body2" sx={{ color: '#6366f1', fontWeight: 700 }}>{selectedUser.referredBy ? `@${selectedUser.referredBy}` : 'None (Direct Root)'}</Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: cardBorder }}>
+          <Button onClick={() => setShowUserDetailsModal(false)} variant="outlined" size="small" sx={{ borderRadius: 0, color: textPrimary, borderColor: isLight ? '#cbd5e1' : 'rgba(255,255,255,0.2)' }}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog
+        open={showUpdatePasswordModal}
+        onClose={() => setShowUpdatePasswordModal(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 0, backgroundColor: cardBg, border: cardBorder } }}
+      >
+        <DialogTitle sx={{ borderBottom: cardBorder, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>Reset User Password</Typography>
+          <IconButton onClick={() => setShowUpdatePasswordModal(false)} sx={{ color: textSecondary, borderRadius: 0 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <form onSubmit={handleUpdatePassword}>
+          <DialogContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {actionError && <Alert severity="error" sx={{ borderRadius: 0, py: 0.5 }}>{actionError}</Alert>}
+            <Typography variant="caption" sx={{ color: textSecondary }}>Updating credentials for @{selectedUser?.username}</Typography>
+            <TextField
+              fullWidth
+              size="small"
+              type="password"
+              label="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              type="password"
+              label="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setNewConfirmPassword(e.target.value)}
+              required
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2, borderTop: cardBorder }}>
+            <Button onClick={() => setShowUpdatePasswordModal(false)} size="small" sx={{ borderRadius: 0, color: textSecondary }}>Cancel</Button>
+            <Button type="submit" variant="contained" size="small" disabled={actionLoading} sx={{ borderRadius: 0, backgroundColor: '#6366f1', color: '#fff', '&:hover': { backgroundColor: '#4f46e5' } }}>
+              {actionLoading ? 'Updating...' : 'Commit Password'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Wallet Balance Dialog */}
+      <Dialog
+        open={showUpdateWalletModal}
+        onClose={() => setShowUpdateWalletModal(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 0, backgroundColor: cardBg, border: cardBorder } }}
+      >
+        <DialogTitle sx={{ borderBottom: cardBorder, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>Calibrate Wallet Balance</Typography>
+          <IconButton onClick={() => setShowUpdateWalletModal(false)} sx={{ color: textSecondary, borderRadius: 0 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <form onSubmit={handleUpdateWallet}>
+          <DialogContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {actionError && <Alert severity="error" sx={{ borderRadius: 0, py: 0.5 }}>{actionError}</Alert>}
+            <Typography variant="caption" sx={{ color: textSecondary }}>Calibrating wallet for @{selectedUser?.username}</Typography>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              label="Balance (USD)"
+              value={newWalletBalance}
+              onChange={(e) => setNewWalletBalance(e.target.value)}
+              inputProps={{ step: '0.01', min: '0' }}
+              required
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2, borderTop: cardBorder }}>
+            <Button onClick={() => setShowUpdateWalletModal(false)} size="small" sx={{ borderRadius: 0, color: textSecondary }}>Cancel</Button>
+            <Button type="submit" variant="contained" size="small" disabled={actionLoading} sx={{ borderRadius: 0, backgroundColor: '#10b981', color: '#fff', '&:hover': { backgroundColor: '#059669' } }}>
+              {actionLoading ? 'Saving...' : 'Update Balance'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Points Dialog */}
+      <Dialog
+        open={showUpdatePointsModal}
+        onClose={() => setShowUpdatePointsModal(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 0, backgroundColor: cardBg, border: cardBorder } }}
+      >
+        <DialogTitle sx={{ borderBottom: cardBorder, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>Adjust Reward Points</Typography>
+          <IconButton onClick={() => setShowUpdatePointsModal(false)} sx={{ color: textSecondary, borderRadius: 0 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <form onSubmit={handleUpdatePoints}>
+          <DialogContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {actionError && <Alert severity="error" sx={{ borderRadius: 0, py: 0.5 }}>{actionError}</Alert>}
+            <Typography variant="caption" sx={{ color: textSecondary }}>Adjusting rewards points for @{selectedUser?.username}</Typography>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              label="Reward Points"
+              value={newPoints}
+              onChange={(e) => setNewPoints(e.target.value)}
+              inputProps={{ step: '1', min: '0' }}
+              required
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2, borderTop: cardBorder }}>
+            <Button onClick={() => setShowUpdatePointsModal(false)} size="small" sx={{ borderRadius: 0, color: textSecondary }}>Cancel</Button>
+            <Button type="submit" variant="contained" size="small" disabled={actionLoading} sx={{ borderRadius: 0, backgroundColor: '#f59e0b', color: '#fff', '&:hover': { backgroundColor: '#d97706' } }}>
+              {actionLoading ? 'Saving...' : 'Commit Points'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Rank Qualification Dialog */}
+      <Dialog
+        open={showUpdateRankModal}
+        onClose={() => setShowUpdateRankModal(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 0, backgroundColor: cardBg, border: cardBorder } }}
+      >
+        <DialogTitle sx={{ borderBottom: cardBorder, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>Set Rank Qualification</Typography>
+          <IconButton onClick={() => setShowUpdateRankModal(false)} sx={{ color: textSecondary, borderRadius: 0 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <form onSubmit={handleUpdateRank}>
+          <DialogContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {actionError && <Alert severity="error" sx={{ borderRadius: 0, py: 0.5 }}>{actionError}</Alert>}
+            <Typography variant="caption" sx={{ color: textSecondary }}>Designate rank qualification for @{selectedUser?.username}</Typography>
+            <FormControl fullWidth size="small">
+              <Select
+                value={newRankId}
+                onChange={(e) => setNewRankId(e.target.value)}
+                displayEmpty
+                sx={{ borderRadius: 0 }}
+              >
+                <MenuItem value="" sx={{ borderRadius: 0 }}>No Rank Assigned (Standard)</MenuItem>
+                {ranks.map((r) => (
+                  <MenuItem key={r.id} value={r.id} sx={{ borderRadius: 0 }}>
+                    {r.title} ({r.required_points || 0} pts)
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </DialogContent>
+          <DialogActions sx={{ p: 2, borderTop: cardBorder }}>
+            <Button onClick={() => setShowUpdateRankModal(false)} size="small" sx={{ borderRadius: 0, color: textSecondary }}>Cancel</Button>
+            <Button type="submit" variant="contained" size="small" disabled={actionLoading} sx={{ borderRadius: 0, backgroundColor: '#6366f1', color: '#fff', '&:hover': { backgroundColor: '#4f46e5' } }}>
+              {actionLoading ? 'Saving...' : 'Apply Rank'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Sponsor Referral Dialog */}
+      <Dialog
+        open={showUpdateReferralModal}
+        onClose={() => setShowUpdateReferralModal(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 0, backgroundColor: cardBg, border: cardBorder } }}
+      >
+        <DialogTitle sx={{ borderBottom: cardBorder, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>Reassign Sponsor Placement</Typography>
+          <IconButton onClick={() => setShowUpdateReferralModal(false)} sx={{ color: textSecondary, borderRadius: 0 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <form onSubmit={handleUpdateReferral}>
+          <DialogContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {actionError && <Alert severity="error" sx={{ borderRadius: 0, py: 0.5 }}>{actionError}</Alert>}
+            <Typography variant="caption" sx={{ color: textSecondary }}>Reassign direct referral parent for @{selectedUser?.username}</Typography>
+            <TextField
+              fullWidth
+              size="small"
+              label="Sponsor Username"
+              value={newReferral}
+              onChange={(e) => setNewReferral(e.target.value)}
+              placeholder="e.g. root_sponsor"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2, borderTop: cardBorder }}>
+            <Button onClick={() => setShowUpdateReferralModal(false)} size="small" sx={{ borderRadius: 0, color: textSecondary }}>Cancel</Button>
+            <Button type="submit" variant="contained" size="small" disabled={actionLoading} sx={{ borderRadius: 0, backgroundColor: '#818cf8', color: '#fff', '&:hover': { backgroundColor: '#6366f1' } }}>
+              {actionLoading ? 'Saving...' : 'Reassign Sponsor'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+    </Box>
   );
 }

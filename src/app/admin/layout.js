@@ -1,216 +1,198 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import {
+  Box,
+  Drawer,
+  AppBar,
+  Toolbar,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Typography,
+  IconButton,
+  Avatar,
+  Menu,
+  MenuItem,
+  Badge,
+  Chip,
+  Tooltip,
+  Button,
+  useMediaQuery,
+  useTheme,
+  CircularProgress
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import CloseIcon from "@mui/icons-material/Close";
+import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
+import CardGiftcardOutlinedIcon from "@mui/icons-material/CardGiftcardOutlined";
+import WorkspacePremiumOutlinedIcon from "@mui/icons-material/WorkspacePremiumOutlined";
+import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
+import SwapHorizOutlinedIcon from "@mui/icons-material/SwapHorizOutlined";
+import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
+import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
+import VerifiedUserOutlinedIcon from "@mui/icons-material/VerifiedUserOutlined";
+import CollectionsOutlinedIcon from "@mui/icons-material/CollectionsOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
+import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
+import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
 
-// Admin menu items with icons and descriptions
+const DRAWER_WIDTH = 270;
+
 const adminMenuItems = [
   {
     label: "Dashboard",
     href: "/admin/dashboard",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
-      </svg>
-    ),
-    description: "Overview and analytics"
+    icon: <DashboardOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "OVERVIEW"
   },
   {
     label: "User Management",
     href: "/admin/user-management",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-      </svg>
-    ),
-    description: "View users and update passwords"
-  },
-  {
-    label: "Product Management",
-    href: "/admin/products",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-      </svg>
-    ),
-    description: "Manage products and inventory"
-  },
-  {
-    label: "Order Management",
-    href: "/admin/orders",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-      </svg>
-    ),
-    description: "Process and manage orders"
-  },
-  {
-    label: "Package Management",
-    href: "/admin/packages",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-    description: "Manage packages and subscriptions"
-  },
-  {
-    label: "Rank Management",
-    href: "/admin/ranks",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-      </svg>
-    ),
-    description: "Manage user ranks and permissions"
-  },
-  {
-    label: "Bank Accounts",
-    href: "/admin/bank-accounts",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-      </svg>
-    ),
-    description: "Manage company bank accounts"
-  },
-  {
-    label: "Direct Transfers",
-    href: "/admin/transfers",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-      </svg>
-    ),
-    description: "Transfer funds directly to user accounts"
-  },
-  {
-    label: "Withdrawal Requests",
-    href: "/admin/withdrawals",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-      </svg>
-    ),
-    description: "Process withdrawal requests"
-  },
-  {
-    label: "Package Requests",
-    href: "/admin/package-requests",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-    description: "Review package requests"
+    icon: <PeopleAltOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "MEMBERSHIP"
   },
   {
     label: "KYC Verification",
     href: "/admin/kyc-verification",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
-    description: "Review and verify user KYC submissions"
+    icon: <VerifiedUserOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "MEMBERSHIP"
+  },
+  {
+    label: "Package Requests",
+    href: "/admin/package-requests",
+    icon: <AssignmentTurnedInOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "FINANCIAL & PACKAGES"
+  },
+  {
+    label: "Withdrawal Requests",
+    href: "/admin/withdrawals",
+    icon: <PaymentsOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "FINANCIAL & PACKAGES"
+  },
+  {
+    label: "Direct Transfers",
+    href: "/admin/transfers",
+    icon: <SwapHorizOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "FINANCIAL & PACKAGES"
+  },
+  {
+    label: "Bank Accounts",
+    href: "/admin/bank-accounts",
+    icon: <AccountBalanceOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "FINANCIAL & PACKAGES"
+  },
+  {
+    label: "Package Plans",
+    href: "/admin/packages",
+    icon: <CardGiftcardOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "COMMERCE & CATALOG"
+  },
+  {
+    label: "Product Catalog",
+    href: "/admin/products",
+    icon: <Inventory2OutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "COMMERCE & CATALOG"
+  },
+  {
+    label: "Order Tracking",
+    href: "/admin/orders",
+    icon: <ReceiptLongOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "COMMERCE & CATALOG"
+  },
+  {
+    label: "Rank Qualifications",
+    href: "/admin/ranks",
+    icon: <WorkspacePremiumOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "COMMERCE & CATALOG"
   },
   {
     label: "Slider Images",
     href: "/admin/slider-images",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-    description: "Manage homepage slider images"
+    icon: <CollectionsOutlinedIcon sx={{ fontSize: 20 }} />,
+    category: "SYSTEM & CMS"
   }
 ];
 
-export default function AdminLayout({ children }) {
+function AdminLayoutShell({ children }) {
   const [admin, setAdmin] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
   const pathname = usePathname();
   const router = useRouter();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up("lg"));
+  const { isLight, toggleTheme } = useAdminTheme();
 
-  // Check if current path is login page
-  const isLoginPage = pathname === '/admin/login';
+  const isLoginPage = pathname === "/admin/login" || pathname === "/admin/signup";
 
   useEffect(() => {
-    // If it's the login page, clear any existing admin data and don't check authentication
     if (isLoginPage) {
-      // Clear any existing admin data from localStorage
-      localStorage.removeItem('admin');
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('user');
-      localStorage.removeItem('auth-token');
+      localStorage.removeItem("admin");
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("auth-token");
       return;
     }
 
-    // CRITICAL: Check if admin is logged in via server-side validation
     const checkAdminAuth = async () => {
       try {
-        console.log('Checking admin authentication...');
-        
-        // Get admin token from localStorage for Authorization header
-        const adminToken = localStorage.getItem('adminToken');
-        
-        const response = await fetch('/api/admin/stats', {
-          method: 'GET',
-          credentials: 'include', // Include cookies
+        const adminToken = localStorage.getItem("adminToken");
+
+        const response = await fetch("/api/admin/stats", {
+          method: "GET",
+          credentials: "include",
           headers: {
-            'Content-Type': 'application/json',
-            ...(adminToken && { 'Authorization': `Bearer ${adminToken}` }),
-          },
+            "Content-Type": "application/json",
+            ...(adminToken && { Authorization: `Bearer ${adminToken}` })
+          }
         });
 
-        console.log('Admin stats response status:', response.status);
-
         if (!response.ok) {
-          console.log('Admin authentication failed, status:', response.status);
-          // Admin not authenticated, clear localStorage and redirect
-          localStorage.removeItem('admin');
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('user');
-          localStorage.removeItem('auth-token');
-          router.push('/admin/login');
+          localStorage.removeItem("admin");
+          localStorage.removeItem("adminToken");
+          localStorage.removeItem("user");
+          localStorage.removeItem("auth-token");
+          router.push("/admin/login");
           return;
         }
 
         const data = await response.json();
-        console.log('Admin stats response data:', data);
-        
         if (data.success) {
-          // Admin is authenticated, get admin data from localStorage
-          const adminData = localStorage.getItem('admin');
+          const adminData = localStorage.getItem("admin");
           if (adminData) {
             try {
-              const parsedAdmin = JSON.parse(adminData);
-              setAdmin(parsedAdmin);
-              console.log('Admin data loaded successfully');
-            } catch (error) {
-              console.error('Error parsing admin data:', error);
-              router.push('/admin/login');
+              setAdmin(JSON.parse(adminData));
+            } catch (err) {
+              console.error("Error parsing admin data:", err);
+              router.push("/admin/login");
             }
           } else {
-            console.log('No admin data in localStorage, redirecting to login');
-            router.push('/admin/login');
+            router.push("/admin/login");
           }
         } else {
-          // Authentication failed
-          console.log('Admin authentication failed, clearing data');
-          localStorage.removeItem('admin');
-          localStorage.removeItem('adminToken');
-          router.push('/admin/login');
+          localStorage.removeItem("admin");
+          localStorage.removeItem("adminToken");
+          router.push("/admin/login");
         }
       } catch (error) {
-        console.error('Admin auth check failed:', error);
-        localStorage.removeItem('admin');
-        localStorage.removeItem('adminToken');
-        router.push('/admin/login');
+        console.error("Admin auth check failed:", error);
+        localStorage.removeItem("admin");
+        localStorage.removeItem("adminToken");
+        router.push("/admin/login");
       }
     };
 
@@ -219,213 +201,733 @@ export default function AdminLayout({ children }) {
 
   const handleLogout = async () => {
     try {
-      // Call logout API to invalidate server-side session
-      await fetch('/api/admin/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
+      await fetch("/api/admin/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include"
       });
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
-      // CRITICAL: Clear ALL authentication data
-      localStorage.removeItem('admin');
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('user');
-      localStorage.removeItem('auth-token');
-      
-      // Clear any other potential auth data
-      localStorage.removeItem('token');
-      localStorage.removeItem('auth');
-      
-      // Redirect to admin login
-      router.push('/admin/login');
+      localStorage.removeItem("admin");
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("auth-token");
+      localStorage.removeItem("token");
+      localStorage.removeItem("auth");
+      router.push("/admin/login");
     }
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // If it's the login page, render children without layout
   if (isLoginPage) {
     return <>{children}</>;
   }
 
-  // Show loading spinner while checking authentication
   if (!admin) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
-      </div>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: isLight ? "#f1f5f9" : "#070a12",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2
+        }}
+      >
+        <CircularProgress size={44} sx={{ color: "#6366f1" }} />
+        <Typography
+          variant="body2"
+          sx={{
+            color: isLight ? "#64748b" : "rgba(255,255,255,0.6)",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            fontSize: "0.75rem",
+            fontWeight: 600
+          }}
+        >
+          Validating Security Credentials...
+        </Typography>
+      </Box>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex h-screen">
-        {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 lg:w-64`}>
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between h-16 px-4 lg:px-6 border-b border-gray-200 flex-shrink-0">
-            <div className="flex items-center">
-              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg mr-3">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <h1 className="text-lg lg:text-xl font-bold text-gray-900">Admin Panel</h1>
-            </div>
-            <button
-              onClick={toggleSidebar}
-              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+  // Dynamic colors based on theme
+  const drawerBg = isLight ? "#ffffff" : "#0a0e17";
+  const drawerBorder = isLight ? "1px solid #e2e8f0" : "1px solid rgba(255,255,255,0.06)";
+  const brandHeaderBg = isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.4)";
+  const brandTitleColor = isLight ? "#0f172a" : "#ffffff";
+  const brandSubColor = isLight ? "#64748b" : "rgba(255,255,255,0.45)";
+  const categoryHeaderColor = isLight ? "#64748b" : "rgba(255,255,255,0.38)";
+  const itemTextColor = isLight ? "#334155" : "rgba(255,255,255,0.72)";
+  const itemIconColor = isLight ? "#64748b" : "rgba(255,255,255,0.55)";
+  const sidebarFooterBg = isLight ? "#f8fafc" : "rgba(10, 14, 23, 0.95)";
+  const appBarBg = isLight ? "rgba(255, 255, 255, 0.92)" : "rgba(10, 14, 23, 0.85)";
+  const appBarBorder = isLight ? "1px solid #e2e8f0" : "1px solid rgba(255,255,255,0.06)";
+  const appBarTitleColor = isLight ? "#0f172a" : "#ffffff";
+  const mainBg = isLight ? "#f1f5f9" : "#070a12";
+  const footerBg = isLight ? "#ffffff" : "#080c14";
+  const footerBorder = isLight ? "1px solid #e2e8f0" : "1px solid rgba(255,255,255,0.05)";
+  const footerTextColor = isLight ? "#64748b" : "rgba(255,255,255,0.4)";
+
+  // Group menu items by category
+  const categories = Array.from(new Set(adminMenuItems.map((i) => i.category)));
+
+  const drawerContent = (
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: drawerBg,
+        borderRight: drawerBorder,
+        borderRadius: 0,
+        overflow: "hidden"
+      }}
+    >
+      {/* Brand Header */}
+      <Box
+        sx={{
+          p: 2.5,
+          borderBottom: drawerBorder,
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          backgroundColor: brandHeaderBg,
+          borderRadius: 0
+        }}
+      >
+        <Box
+          sx={{
+            position: "relative",
+            width: 40,
+            height: 40,
+            backgroundColor: "rgba(99, 102, 241, 0.12)",
+            border: "1px solid rgba(99, 102, 241, 0.3)",
+            borderRadius: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            flexShrink: 0
+          }}
+        >
+          <Image
+            src="/images/logo.png"
+            alt="Logo"
+            width={32}
+            height={32}
+            style={{ objectFit: "contain" }}
+          />
+        </Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 800,
+                color: brandTitleColor,
+                letterSpacing: "0.04em",
+                lineHeight: 1.2,
+                fontSize: "1rem"
+              }}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+              LEDORA
+            </Typography>
+            <Chip
+              label="ADMIN"
+              size="small"
+              sx={{
+                height: 18,
+                fontSize: "0.62rem",
+                fontWeight: 700,
+                backgroundColor: "rgba(99, 102, 241, 0.15)",
+                color: "#6366f1",
+                border: "1px solid rgba(99, 102, 241, 0.3)",
+                borderRadius: 0,
+                px: 0.3
+              }}
+            />
+          </Box>
+          <Typography
+            variant="caption"
+            sx={{
+              color: brandSubColor,
+              fontSize: "0.7rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase"
+            }}
+          >
+            Management Portal
+          </Typography>
+        </Box>
+        {!isDesktop && (
+          <IconButton
+            onClick={() => setMobileOpen(false)}
+            sx={{ color: itemIconColor, borderRadius: 0 }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        )}
+      </Box>
 
-          {/* Admin Profile */}
-          <div className="px-4 lg:px-6 py-4 border-b border-gray-200 flex-shrink-0">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm">
-                    {admin?.username?.charAt(0).toUpperCase() || "A"}
-                  </span>
-                </div>
-              </div>
-              <div className="ml-3 min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {admin?.fullName || admin?.username || "Admin"}
-                </p>
-                <p className="text-xs text-gray-500 capitalize truncate">{admin?.role || "admin"}</p>
-              </div>
-            </div>
-          </div>
+      {/* Nav List */}
+      <Box sx={{ flex: 1, overflowY: "auto", py: 2 }}>
+        {categories.map((cat) => (
+          <Box key={cat} sx={{ mb: 2.2 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                px: 3,
+                py: 0.6,
+                display: "block",
+                color: categoryHeaderColor,
+                fontWeight: 700,
+                fontSize: "0.68rem",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase"
+              }}
+            >
+              {cat}
+            </Typography>
+            <List disablePadding>
+              {adminMenuItems
+                .filter((item) => item.category === cat)
+                .map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <ListItem key={item.href} disablePadding sx={{ px: 1.5, py: 0.25 }}>
+                      <ListItemButton
+                        component={Link}
+                        href={item.href}
+                        onClick={() => {
+                          if (!isDesktop) setMobileOpen(false);
+                        }}
+                        sx={{
+                          py: 0.85,
+                          px: 1.6,
+                          borderRadius: 0,
+                          backgroundColor: isActive
+                            ? isLight ? "rgba(99, 102, 241, 0.12)" : "rgba(99, 102, 241, 0.18)"
+                            : "transparent",
+                          borderLeft: isActive
+                            ? "3px solid #6366f1"
+                            : "3px solid transparent",
+                          color: isActive
+                            ? isLight ? "#4f46e5" : "#ffffff"
+                            : itemTextColor,
+                          transition: "all 0.15s ease",
+                          "&:hover": {
+                            backgroundColor: isActive
+                              ? isLight ? "rgba(99, 102, 241, 0.18)" : "rgba(99, 102, 241, 0.25)"
+                              : isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)",
+                            color: isLight ? "#0f172a" : "#ffffff",
+                            "& .MuiListItemIcon-root": {
+                              color: "#6366f1"
+                            }
+                          }
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            minWidth: 34,
+                            color: isActive ? "#6366f1" : itemIconColor,
+                            transition: "color 0.15s"
+                          }}
+                        >
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.label}
+                          primaryTypographyProps={{
+                            fontSize: "0.84rem",
+                            fontWeight: isActive ? 700 : 500,
+                            color: isActive
+                              ? isLight ? "#4f46e5" : "#ffffff"
+                              : itemTextColor
+                          }}
+                        />
+                        {isActive && (
+                          <ArrowForwardIosIcon
+                            sx={{ fontSize: 10, color: "#6366f1", ml: 0.5 }}
+                          />
+                        )}
+                      </ListItemButton>
+                    </ListItem>
+                  );
+                })}
+            </List>
+          </Box>
+        ))}
+      </Box>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-3 lg:px-4 py-6 space-y-1 overflow-y-auto light-sidebar-scrollbar min-h-0">
-            {adminMenuItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg"
-                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                  }`}
-                  title={item.description}
-                  onClick={() => {
-                    // Close sidebar on mobile when clicking a menu item
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
+      {/* Sidebar Footer: Logout & Powered By */}
+      <Box
+        sx={{
+          p: 2,
+          borderTop: drawerBorder,
+          backgroundColor: sidebarFooterBg,
+          borderRadius: 0
+        }}
+      >
+        <ListItemButton
+          onClick={handleLogout}
+          sx={{
+            py: 1,
+            px: 1.5,
+            borderRadius: 0,
+            border: "1px solid rgba(239, 68, 68, 0.25)",
+            backgroundColor: "rgba(239, 68, 68, 0.06)",
+            color: "#f87171",
+            mb: 1.5,
+            "&:hover": {
+              backgroundColor: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.4)"
+            }
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 32, color: "#f87171" }}>
+            <LogoutOutlinedIcon sx={{ fontSize: 18 }} />
+          </ListItemIcon>
+          <ListItemText
+            primary="Sign Out"
+            primaryTypographyProps={{
+              fontSize: "0.82rem",
+              fontWeight: 600,
+              color: "#f87171"
+            }}
+          />
+        </ListItemButton>
+
+        {/* Mandatory RAPIDTECHPRO link */}
+        <Box sx={{ textAlign: "center", pt: 0.5 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: isLight ? "#64748b" : "rgba(255,255,255,0.4)",
+              fontSize: "0.7rem",
+              letterSpacing: "0.04em",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.5
+            }}
+          >
+            Powerd By :
+            <Box
+              component="a"
+              href="https://rapidtechpro.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                color: "#6366f1",
+                textDecoration: "none",
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                transition: "color 0.2s",
+                "&:hover": {
+                  color: "#4f46e5",
+                  textDecoration: "underline"
+                }
+              }}
+            >
+              RAPIDTECHPRO
+            </Box>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+
+  return (
+    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: mainBg }}>
+      {/* Top App Bar */}
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          width: { lg: `calc(100% - ${DRAWER_WIDTH}px)` },
+          ml: { lg: `${DRAWER_WIDTH}px` },
+          backgroundColor: appBarBg,
+          backdropFilter: "blur(12px)",
+          borderBottom: appBarBorder,
+          borderRadius: 0,
+          color: appBarTitleColor
+        }}
+      >
+        <Toolbar sx={{ minHeight: 64, px: { xs: 2, sm: 3 } }}>
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={() => setMobileOpen(true)}
+            sx={{ mr: 2, display: { lg: "none" }, borderRadius: 0 }}
+          >
+            <MenuIcon />
+          </IconButton>
+
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <AdminPanelSettingsOutlinedIcon
+                sx={{ fontSize: 20, color: "#6366f1" }}
+              />
+              <Typography
+                variant="h6"
+                noWrap
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: "0.95rem", sm: "1.1rem" },
+                  color: appBarTitleColor,
+                  letterSpacing: "0.02em"
+                }}
+              >
+                Control Console
+              </Typography>
+              <Chip
+                label="LIVE SYSTEM"
+                size="small"
+                sx={{
+                  height: 20,
+                  fontSize: "0.62rem",
+                  fontWeight: 700,
+                  backgroundColor: "rgba(16, 185, 129, 0.15)",
+                  color: "#10b981",
+                  border: "1px solid rgba(16, 185, 129, 0.3)",
+                  borderRadius: 0,
+                  display: { xs: "none", sm: "inline-flex" }
+                }}
+              />
+            </Box>
+          </Box>
+
+          {/* Right Action Icons & Theme Toggle */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            {/* Theme Toggle Button */}
+            <Tooltip title={isLight ? "Switch to Dark Mode" : "Switch to Light Mode"}>
+              <Button
+                onClick={toggleTheme}
+                size="small"
+                variant="outlined"
+                startIcon={
+                  isLight ? (
+                    <DarkModeOutlinedIcon sx={{ fontSize: 18, color: "#4f46e5" }} />
+                  ) : (
+                    <LightModeOutlinedIcon sx={{ fontSize: 18, color: "#fbbf24" }} />
+                  )
+                }
+                sx={{
+                  borderRadius: 0,
+                  borderColor: isLight ? "#cbd5e1" : "rgba(255,255,255,0.15)",
+                  color: isLight ? "#0f172a" : "#ffffff",
+                  backgroundColor: isLight ? "#f8fafc" : "rgba(255,255,255,0.04)",
+                  textTransform: "uppercase",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  px: 1.5,
+                  py: 0.6,
+                  "&:hover": {
+                    borderColor: "#6366f1",
+                    backgroundColor: isLight ? "#e2e8f0" : "rgba(99, 102, 241, 0.15)"
+                  }
+                }}
+              >
+                {isLight ? "Dark" : "Light"}
+              </Button>
+            </Tooltip>
+
+            <Tooltip title="View Frontend Portal">
+              <IconButton
+                component={Link}
+                href="/"
+                target="_blank"
+                sx={{
+                  color: isLight ? "#475569" : "rgba(255,255,255,0.7)",
+                  border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 0,
+                  p: 1,
+                  "&:hover": {
+                    backgroundColor: isLight ? "#f1f5f9" : "rgba(255,255,255,0.05)",
+                    color: isLight ? "#0f172a" : "#ffffff"
+                  }
+                }}
+              >
+                <OpenInNewIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Admin Notifications">
+              <IconButton
+                sx={{
+                  color: isLight ? "#475569" : "rgba(255,255,255,0.7)",
+                  border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 0,
+                  p: 1,
+                  "&:hover": {
+                    backgroundColor: isLight ? "#f1f5f9" : "rgba(255,255,255,0.05)",
+                    color: isLight ? "#0f172a" : "#ffffff"
+                  }
+                }}
+              >
+                <Badge
+                  variant="dot"
+                  sx={{
+                    "& .MuiBadge-badge": {
+                      backgroundColor: "#6366f1",
+                      borderRadius: 0
                     }
                   }}
                 >
-                  <span className={`mr-3 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-500'}`}>
-                    {item.icon}
-                  </span>
-                  <span className="truncate">{item.label}</span>
-                  {isActive && (
-                    <div className="ml-auto w-2 h-2 bg-white rounded-full flex-shrink-0"></div>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+                  <NotificationsOutlinedIcon sx={{ fontSize: 18 }} />
+                </Badge>
+              </IconButton>
+            </Tooltip>
 
-          {/* Logout Button - Sticky Bottom */}
-          <div className="p-3 lg:p-4 border-t border-gray-200 flex-shrink-0 bg-white">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-all duration-200"
+            {/* Admin Profile Menu Trigger */}
+            <Box
+              onClick={(e) => setAnchorEl(e.currentTarget)}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.2,
+                cursor: "pointer",
+                p: 0.6,
+                px: 1.2,
+                border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.08)",
+                backgroundColor: isLight ? "#f8fafc" : "rgba(255,255,255,0.02)",
+                borderRadius: 0,
+                transition: "all 0.2s",
+                "&:hover": {
+                  backgroundColor: isLight ? "#e2e8f0" : "rgba(255,255,255,0.06)",
+                  borderColor: "rgba(99, 102, 241, 0.4)"
+                }
+              }}
             >
-              <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              <span className="truncate">Logout</span>
-            </button>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
-          {/* Header */}
-          <header className="bg-white shadow-sm border-b border-gray-200">
-            <div className="flex items-center justify-between h-16 px-4 lg:px-6">
-              {/* Left side */}
-              <div className="flex items-center min-w-0 flex-1">
-                <button
-                  onClick={toggleSidebar}
-                  className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 lg:hidden mr-3"
+              <Avatar
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 0,
+                  background: "linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)",
+                  fontSize: "0.8rem",
+                  fontWeight: 700
+                }}
+              >
+                {admin?.username?.charAt(0).toUpperCase() || "A"}
+              </Avatar>
+              <Box sx={{ display: { xs: "none", md: "block" }, textAlign: "left" }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: isLight ? "#0f172a" : "#ffffff",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    lineHeight: 1.1
+                  }}
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-lg lg:text-2xl font-bold text-gray-900 truncate">Admin Dashboard</h1>
-                  <p className="text-xs lg:text-sm text-gray-500 truncate">Welcome back, {admin?.fullName || admin?.username || "Admin"}!</p>
-                </div>
-              </div>
+                  {admin?.fullName || admin?.username || "Admin"}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: isLight ? "#64748b" : "rgba(255,255,255,0.45)",
+                    fontSize: "0.68rem"
+                  }}
+                >
+                  Super Admin
+                </Typography>
+              </Box>
+            </Box>
 
-              {/* Right side */}
-              <div className="flex items-center space-x-2 lg:space-x-4 flex-shrink-0">
-                {/* Notifications */}
-                <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg relative">
-                  <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.19 4.19A2 2 0 006 3h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z" />
-                  </svg>
-                  {notifications.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                      {notifications.length}
-                    </span>
-                  )}
-                </button>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={() => setAnchorEl(null)}
+              PaperProps={{
+                sx: {
+                  backgroundColor: isLight ? "#ffffff" : "#0d131f",
+                  border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 0,
+                  minWidth: 180,
+                  mt: 1,
+                  boxShadow: isLight
+                    ? "0 10px 25px rgba(0,0,0,0.1)"
+                    : "0 10px 30px rgba(0,0,0,0.5)"
+                }
+              }}
+            >
+              <MenuItem
+                component={Link}
+                href="/admin/user-management"
+                onClick={() => setAnchorEl(null)}
+                sx={{
+                  color: isLight ? "#0f172a" : "rgba(255,255,255,0.85)",
+                  fontSize: "0.85rem",
+                  py: 1,
+                  borderRadius: 0,
+                  "&:hover": { backgroundColor: "rgba(99, 102, 241, 0.12)" }
+                }}
+              >
+                User Accounts
+              </MenuItem>
+              <MenuItem
+                component={Link}
+                href="/admin/bank-accounts"
+                onClick={() => setAnchorEl(null)}
+                sx={{
+                  color: isLight ? "#0f172a" : "rgba(255,255,255,0.85)",
+                  fontSize: "0.85rem",
+                  py: 1,
+                  borderRadius: 0,
+                  "&:hover": { backgroundColor: "rgba(99, 102, 241, 0.12)" }
+                }}
+              >
+                Banking Setup
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                  handleLogout();
+                }}
+                sx={{
+                  color: "#f87171",
+                  fontSize: "0.85rem",
+                  py: 1,
+                  borderRadius: 0,
+                  borderTop: isLight ? "1px solid #e2e8f0" : "1px solid rgba(255,255,255,0.06)",
+                  "&:hover": { backgroundColor: "rgba(239, 68, 68, 0.1)" }
+                }}
+              >
+                Log Out
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Toolbar>
+      </AppBar>
 
-                {/* Admin Menu */}
-                <div className="relative">
-                  <button className="flex items-center space-x-2 lg:space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
-                    <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold text-sm">
-                        {admin?.username?.charAt(0).toUpperCase() || "A"}
-                      </span>
-                    </div>
-                    <div className="hidden lg:block text-left">
-                      <p className="text-sm font-medium text-gray-900 truncate">{admin?.fullName || admin?.username || "Admin"}</p>
-                      <p className="text-xs text-gray-500 capitalize truncate">{admin?.role || "admin"}</p>
-                    </div>
-                    <svg className="w-4 h-4 text-gray-400 hidden lg:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </header>
+      {/* Navigation Drawer - Mobile and Desktop */}
+      <Box
+        component="nav"
+        sx={{ width: { lg: DRAWER_WIDTH }, flexShrink: { lg: 0 } }}
+      >
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: "block", lg: "none" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: DRAWER_WIDTH,
+              borderRadius: 0,
+              borderRight: drawerBorder,
+              backgroundColor: drawerBg
+            }
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: "none", lg: "block" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: DRAWER_WIDTH,
+              borderRadius: 0,
+              borderRight: drawerBorder,
+              backgroundColor: drawerBg
+            }
+          }}
+          open
+        >
+          {drawerContent}
+        </Drawer>
+      </Box>
 
-          {/* Page Content */}
-          <main className="flex-1 overflow-y-auto bg-gray-50">
-            <div className="p-4 lg:p-6">
-              {children}
-            </div>
-          </main>
-        </div>
+      {/* Main Content Area */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          width: { lg: `calc(100% - ${DRAWER_WIDTH}px)` },
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          backgroundColor: mainBg,
+          pt: 8
+        }}
+      >
+        <Box sx={{ flex: 1, p: { xs: 2, sm: 3, md: 4 } }}>{children}</Box>
 
-        {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
-            onClick={toggleSidebar}
-          />
-        )}
-      </div>
-    </div>
+        {/* Global Admin Footer */}
+        <Box
+          component="footer"
+          sx={{
+            py: 2.5,
+            px: 3,
+            borderTop: footerBorder,
+            backgroundColor: footerBg,
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1.5,
+            borderRadius: 0
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{
+              color: footerTextColor,
+              fontSize: "0.75rem",
+              letterSpacing: "0.03em"
+            }}
+          >
+            © {new Date().getFullYear()} Ledora Global Enterprise Management Console.
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: isLight ? "#475569" : "rgba(255,255,255,0.5)",
+              fontSize: "0.75rem",
+              letterSpacing: "0.03em",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.6
+            }}
+          >
+            Powerd By :
+            <Box
+              component="a"
+              href="https://rapidtechpro.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                color: "#6366f1",
+                textDecoration: "none",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                transition: "color 0.2s",
+                "&:hover": {
+                  color: "#4f46e5",
+                  textDecoration: "underline"
+                }
+              }}
+            >
+              RAPIDTECHPRO
+            </Box>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+export default function AdminLayout({ children }) {
+  return (
+    <AdminThemeProvider>
+      <AdminLayoutShell>{children}</AdminLayoutShell>
+    </AdminThemeProvider>
   );
 }

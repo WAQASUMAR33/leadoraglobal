@@ -1,7 +1,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  Button,
+  IconButton,
+  Chip,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Tooltip
+} from '@mui/material';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
+import SyncIcon from '@mui/icons-material/Sync';
 
 export default function AdminBankAccounts() {
   const [bankAccounts, setBankAccounts] = useState([]);
@@ -33,27 +56,25 @@ export default function AdminBankAccounts() {
   const applyFilters = () => {
     let filtered = [...bankAccounts];
 
-    // Search filter
     if (filters.search) {
+      const q = filters.search.toLowerCase();
       filtered = filtered.filter(account => 
-        account.bank_title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        account.account_title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        account.bank_accountno.toLowerCase().includes(filters.search.toLowerCase()) ||
-        account.iban_no.toLowerCase().includes(filters.search.toLowerCase())
+        (account.bank_title || '').toLowerCase().includes(q) ||
+        (account.account_title || '').toLowerCase().includes(q) ||
+        (account.bank_accountno || '').toLowerCase().includes(q) ||
+        (account.iban_no || '').toLowerCase().includes(q)
       );
     }
 
-    // Bank title filter
     if (filters.bankTitle) {
       filtered = filtered.filter(account => 
-        account.bank_title.toLowerCase().includes(filters.bankTitle.toLowerCase())
+        (account.bank_title || '').toLowerCase().includes(filters.bankTitle.toLowerCase())
       );
     }
 
-    // Account title filter
     if (filters.accountTitle) {
       filtered = filtered.filter(account => 
-        account.account_title.toLowerCase().includes(filters.accountTitle.toLowerCase())
+        (account.account_title || '').toLowerCase().includes(filters.accountTitle.toLowerCase())
       );
     }
 
@@ -66,15 +87,12 @@ export default function AdminBankAccounts() {
   }, [bankAccounts, filters]);
 
   const clearFilters = () => {
-    setFilters({
-      search: '',
-      bankTitle: '',
-      accountTitle: ''
-    });
+    setFilters({ search: '', bankTitle: '', accountTitle: '' });
   };
 
   const fetchBankAccounts = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/admin/bank_management', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
@@ -181,324 +199,518 @@ export default function AdminBankAccounts() {
     setShowDeleteModal(true);
   };
 
-  if (loading) {
+  if (loading && bankAccounts.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 350, gap: 2 }}>
+        <CircularProgress size={40} sx={{ color: '#6366f1' }} />
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Loading Banking Gateways...
+        </Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <Link
-            href="https://steelblue-cod-355377.hostingersite.com/uploadImage.php"
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+            <AccountBalanceIcon sx={{ color: '#fbbf24', fontSize: 26 }} />
+            <Typography variant="h5" sx={{ fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+              Company Bank Accounts
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+            Configure active settlement deposit accounts presented to members during package purchases.
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button
+            onClick={fetchBankAccounts}
+            variant="outlined"
+            size="small"
+            startIcon={<SyncIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              borderRadius: 0,
+              borderColor: 'rgba(255,255,255,0.15)',
+              color: '#ffffff',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              '&:hover': { borderColor: '#818cf8', backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+            }}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            <span>Back</span>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Bank Account Management</h1>
-            <p className="text-gray-600">Manage company bank accounts</p>
-          </div>
-        </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          <span>Add Bank Account</span>
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-end">
-          {/* Search */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Search Bank Accounts</label>
-            <input
-              type="text"
-              placeholder="Search by bank title, account title, account number, or IBAN..."
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-gray-800"
-            />
-          </div>
-
-          {/* Bank Title Filter */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Bank Title</label>
-            <input
-              type="text"
-              placeholder="Filter by bank title..."
-              value={filters.bankTitle}
-              onChange={(e) => setFilters({ ...filters, bankTitle: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-gray-800"
-            />
-          </div>
-
-          {/* Account Title Filter */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Account Title</label>
-            <input
-              type="text"
-              placeholder="Filter by account title..."
-              value={filters.accountTitle}
-              onChange={(e) => setFilters({ ...filters, accountTitle: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-gray-800"
-            />
-          </div>
-
-          {/* Clear Filters */}
-          <div>
-            <button
-              onClick={clearFilters}
-              className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-300 font-semibold"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-
-        {/* Results Count */}
-        <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredBankAccounts.length} of {bankAccounts.length} bank accounts
-        </div>
-      </div>
-
-      {/* Bank Accounts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredBankAccounts.map((bankAccount) => (
-          <div key={bankAccount.id} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold text-gray-800">{bankAccount.bank_title}</h3>
-                <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                  Active
-                </span>
-              </div>
-              <div className="space-y-2 mb-4">
-                <div>
-                  <p className="text-sm text-gray-500">Account Title</p>
-                  <p className="text-gray-800 font-medium">{bankAccount.account_title}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Account Number</p>
-                  <p className="text-gray-800 font-mono text-sm">{bankAccount.bank_accountno}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">IBAN</p>
-                  <p className="text-gray-800 font-mono text-sm">{bankAccount.iban_no}</p>
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => openEditModal(bankAccount)}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => openDeleteModal(bankAccount)}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredBankAccounts.length === 0 && (
-        <div className="text-center py-12">
-          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-          </svg>
-          <h3 className="text-lg font-medium text-gray-800 mb-2">No bank accounts found</h3>
-          <p className="text-gray-500 mb-4">Get started by adding your first bank account</p>
-          <button
+            Sync
+          </Button>
+          <Button
             onClick={() => setShowAddModal(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg"
+            variant="contained"
+            size="small"
+            startIcon={<AddIcon sx={{ fontSize: 18 }} />}
+            sx={{
+              borderRadius: 0,
+              backgroundColor: '#6366f1',
+              color: '#ffffff',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              px: 2,
+              '&:hover': { backgroundColor: '#4f46e5' }
+            }}
           >
             Add Bank Account
-          </button>
-        </div>
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Filter Card */}
+      <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <CardContent sx={{ p: 2.5 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search by bank name, title, or account number..."
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.4)', mr: 1, fontSize: 20 }} />
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 0,
+                    backgroundColor: 'rgba(255,255,255,0.02)',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    color: '#ffffff',
+                    fontSize: '0.85rem'
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Filter by bank title..."
+                value={filters.bankTitle}
+                onChange={(e) => setFilters({ ...filters, bankTitle: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 0,
+                    backgroundColor: 'rgba(255,255,255,0.02)',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    color: '#ffffff',
+                    fontSize: '0.85rem'
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={2}>
+              <Button
+                fullWidth
+                variant="outlined"
+                size="small"
+                onClick={clearFilters}
+                sx={{
+                  borderRadius: 0,
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: 'rgba(255,255,255,0.7)',
+                  py: 1,
+                  fontSize: '0.8rem'
+                }}
+              >
+                Clear
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Accounts Grid */}
+      <Grid container spacing={2.5}>
+        {filteredBankAccounts.map((account) => (
+          <Grid item xs={12} sm={6} lg={4} key={account.id}>
+            <Card
+              sx={{
+                borderRadius: 0,
+                backgroundColor: '#0c1220',
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.005) 100%)',
+                position: 'relative',
+                transition: 'border-color 0.2s',
+                '&:hover': {
+                  borderColor: 'rgba(99, 102, 241, 0.4)'
+                }
+              }}
+            >
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#ffffff', fontSize: '1.05rem' }}>
+                    {account.bank_title}
+                  </Typography>
+                  <Chip
+                    label="ACTIVE DEPOSIT GATEWAY"
+                    size="small"
+                    sx={{
+                      borderRadius: 0,
+                      height: 20,
+                      fontSize: '0.62rem',
+                      fontWeight: 700,
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      color: '#34d399',
+                      border: '1px solid rgba(16, 185, 129, 0.3)'
+                    }}
+                  />
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.2, mb: 2.5 }}>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Account Title
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 600 }}>
+                      {account.account_title}
+                    </Typography>
+                  </Box>
+
+                  <Box>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Account Number
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>
+                      {account.bank_accountno}
+                    </Typography>
+                  </Box>
+
+                  <Box>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      IBAN
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#a78bfa', fontWeight: 700, fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                      {account.iban_no || 'N/A'}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    startIcon={<EditIcon sx={{ fontSize: 14 }} />}
+                    onClick={() => openEditModal(account)}
+                    sx={{
+                      borderRadius: 0,
+                      borderColor: 'rgba(99, 102, 241, 0.3)',
+                      color: '#818cf8',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)'
+                      }
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    startIcon={<DeleteOutlineIcon sx={{ fontSize: 14 }} />}
+                    onClick={() => openDeleteModal(account)}
+                    sx={{
+                      borderRadius: 0,
+                      borderColor: 'rgba(239, 68, 68, 0.3)',
+                      color: '#f87171',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)'
+                      }
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {filteredBankAccounts.length === 0 && (
+        <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(255,255,255,0.08)', p: 6, textAlign: 'center' }}>
+          <AccountBalanceIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)', mb: 1.5 }} />
+          <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 600 }}>
+            No Bank Accounts Configured
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.5, display: 'block', mb: 2 }}>
+            Register your company receiving accounts so users can send investment funds.
+          </Typography>
+          <Button
+            onClick={() => setShowAddModal(true)}
+            variant="contained"
+            size="small"
+            sx={{ borderRadius: 0, backgroundColor: '#6366f1' }}
+          >
+            Create First Account
+          </Button>
+        </Card>
       )}
 
-      {/* Add Bank Account Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-purple-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Add New Bank Account</h2>
-            <form onSubmit={handleAddBankAccount} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bank Title</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.bank_title}
-                  onChange={(e) => setFormData({ ...formData, bank_title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                  placeholder="e.g., HBL Bank, UBL Bank"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Account Title</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.account_title}
-                  onChange={(e) => setFormData({ ...formData, account_title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                  placeholder="Account holder name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.bank_accountno}
-                  onChange={(e) => setFormData({ ...formData, bank_accountno: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                  placeholder="Account number"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">IBAN Number</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.iban_no}
-                  onChange={(e) => setFormData({ ...formData, iban_no: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                  placeholder="IBAN number"
-                />
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  type="submit"
-                  disabled={addLoading}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
-                >
-                  {addLoading ? 'Adding...' : 'Add Bank Account'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Add Modal */}
+      <Dialog
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            backgroundColor: '#0d131f',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: '#ffffff'
+          }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.06)', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#ffffff' }}>
+            Add Company Bank Account
+          </Typography>
+          <IconButton onClick={() => setShowAddModal(false)} sx={{ color: 'rgba(255,255,255,0.6)', borderRadius: 0 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <form onSubmit={handleAddBankAccount}>
+          <DialogContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              required
+              fullWidth
+              size="small"
+              label="Bank Title"
+              placeholder="e.g. Meezan Bank, HBL, JazzCash"
+              value={formData.bank_title}
+              onChange={(e) => setFormData({ ...formData, bank_title: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{
+                sx: {
+                  borderRadius: 0,
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#ffffff'
+                }
+              }}
+            />
+            <TextField
+              required
+              fullWidth
+              size="small"
+              label="Account Title"
+              placeholder="e.g. Ledora Global (Pvt) Ltd"
+              value={formData.account_title}
+              onChange={(e) => setFormData({ ...formData, account_title: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{
+                sx: {
+                  borderRadius: 0,
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#ffffff'
+                }
+              }}
+            />
+            <TextField
+              required
+              fullWidth
+              size="small"
+              label="Account Number"
+              placeholder="e.g. 010203040506"
+              value={formData.bank_accountno}
+              onChange={(e) => setFormData({ ...formData, bank_accountno: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{
+                sx: {
+                  borderRadius: 0,
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#ffffff',
+                  fontFamily: 'monospace'
+                }
+              }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="IBAN Number"
+              placeholder="PK... (Optional)"
+              value={formData.iban_no}
+              onChange={(e) => setFormData({ ...formData, iban_no: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{
+                sx: {
+                  borderRadius: 0,
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#ffffff',
+                  fontFamily: 'monospace'
+                }
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <Button onClick={() => setShowAddModal(false)} variant="outlined" size="small" sx={{ borderRadius: 0, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={addLoading} variant="contained" size="small" sx={{ borderRadius: 0, backgroundColor: '#6366f1', color: '#ffffff', fontWeight: 700 }}>
+              {addLoading ? 'Saving...' : 'Create Account'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
-      {/* Edit Bank Account Modal */}
-      {showEditModal && selectedBankAccount && (
-        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-purple-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Edit Bank Account</h2>
-            <form onSubmit={handleEditBankAccount} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bank Title</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.bank_title}
-                  onChange={(e) => setFormData({ ...formData, bank_title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Account Title</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.account_title}
-                  onChange={(e) => setFormData({ ...formData, account_title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.bank_accountno}
-                  onChange={(e) => setFormData({ ...formData, bank_accountno: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">IBAN Number</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.iban_no}
-                  onChange={(e) => setFormData({ ...formData, iban_no: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
-                />
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
-                >
-                  {editLoading ? 'Updating...' : 'Update Bank Account'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Edit Modal */}
+      <Dialog
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            backgroundColor: '#0d131f',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: '#ffffff'
+          }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.06)', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#ffffff' }}>
+            Edit Bank Account
+          </Typography>
+          <IconButton onClick={() => setShowEditModal(false)} sx={{ color: 'rgba(255,255,255,0.6)', borderRadius: 0 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <form onSubmit={handleEditBankAccount}>
+          <DialogContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              required
+              fullWidth
+              size="small"
+              label="Bank Title"
+              value={formData.bank_title}
+              onChange={(e) => setFormData({ ...formData, bank_title: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{
+                sx: {
+                  borderRadius: 0,
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#ffffff'
+                }
+              }}
+            />
+            <TextField
+              required
+              fullWidth
+              size="small"
+              label="Account Title"
+              value={formData.account_title}
+              onChange={(e) => setFormData({ ...formData, account_title: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{
+                sx: {
+                  borderRadius: 0,
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#ffffff'
+                }
+              }}
+            />
+            <TextField
+              required
+              fullWidth
+              size="small"
+              label="Account Number"
+              value={formData.bank_accountno}
+              onChange={(e) => setFormData({ ...formData, bank_accountno: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{
+                sx: {
+                  borderRadius: 0,
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#ffffff',
+                  fontFamily: 'monospace'
+                }
+              }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="IBAN Number"
+              value={formData.iban_no}
+              onChange={(e) => setFormData({ ...formData, iban_no: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{
+                sx: {
+                  borderRadius: 0,
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#ffffff',
+                  fontFamily: 'monospace'
+                }
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <Button onClick={() => setShowEditModal(false)} variant="outlined" size="small" sx={{ borderRadius: 0, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={editLoading} variant="contained" size="small" sx={{ borderRadius: 0, backgroundColor: '#6366f1', color: '#ffffff', fontWeight: 700 }}>
+              {editLoading ? 'Updating...' : 'Save Changes'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedBankAccount && (
-        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-red-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Delete Bank Account</h2>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete the bank account for &quot;{selectedBankAccount.bank_title}&quot;? This action cannot be undone.
-            </p>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleDeleteBankAccount}
-                disabled={deleteLoading}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white py-2 rounded-lg transition-colors"
-              >
-                {deleteLoading ? 'Deleting...' : 'Delete'}
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <Dialog
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 0,
+            backgroundColor: '#0d131f',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#ffffff'
+          }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.06)', p: 2.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#f87171' }}>
+            Delete Bank Account?
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+            Are you sure you want to delete <strong>{selectedBankAccount?.bank_title}</strong> ({selectedBankAccount?.bank_accountno})? Members will no longer see this receiving account.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <Button onClick={() => setShowDeleteModal(false)} variant="outlined" size="small" sx={{ borderRadius: 0, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteBankAccount} disabled={deleteLoading} variant="contained" size="small" sx={{ borderRadius: 0, backgroundColor: '#ef4444', color: '#ffffff', fontWeight: 700 }}>
+            {deleteLoading ? 'Deleting...' : 'Delete Permanently'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }

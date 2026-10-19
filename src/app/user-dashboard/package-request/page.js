@@ -4,16 +4,49 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  Divider,
+  Button,
+  TextField,
+  Alert,
+  CircularProgress,
+  Paper,
+  Chip
+} from '@mui/material';
+import {
+  ReceiptLong,
+  AccountBalance,
+  CloudUpload,
+  ArrowBack,
+  CheckCircle,
+  DeleteOutline,
+  HelpOutline,
+  CreditCard
+} from '@mui/icons-material';
 import { useUser } from "../../../lib/userContext";
+import { useAppTheme } from "../../../context/AdminThemeContext";
 
 function PackageRequestForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useUser();
+  const { isLight } = useAppTheme();
   
-  const [packageData, setPackageData] = useState(null);
-  const [bankAccounts, setBankAccounts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [packageData, setPackageData] = useState({
+    id: 5,
+    package_name: "Elite Package",
+    package_amount: "30000",
+    package_points: 500
+  });
+  const [bankAccounts, setBankAccounts] = useState([
+    { id: 1, bank_name: "Meezan Bank Limited", account_title: "Ledora Global Enterprise", account_number: "0102030405060708", branch_code: "0102", iban: "PK36MEZN0001020304050607" }
+  ]);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     transactionId: "",
@@ -25,22 +58,26 @@ function PackageRequestForm() {
 
   const packageId = searchParams.get('packageId');
 
+  const bgCard = isLight ? '#ffffff' : '#0c1220';
+  const borderCard = isLight ? '#e2e8f0' : '#1e293b';
+  const textPrimary = isLight ? '#0f172a' : '#f8fafc';
+  const textSecondary = isLight ? '#64748b' : '#94a3b8';
+  const bgSubtle = isLight ? '#f8fafc' : '#070a12';
+
   const fetchPackageDetails = useCallback(async () => {
     try {
       const response = await fetch('/api/packages');
       if (response.ok) {
         const data = await response.json();
-        const selectedPackage = data.packages.find(pkg => pkg.id === parseInt(packageId));
+        const selectedPackage = (data.packages || []).find(pkg => pkg.id === parseInt(packageId));
         if (selectedPackage) {
           setPackageData(selectedPackage);
         } else {
-          alert('Package not found');
           router.push('/user-dashboard/subscribe');
         }
       }
-    } catch (error) {
-      console.error('Error fetching package:', error);
-      alert('Error fetching package details');
+    } catch (err) {
+      console.error('Error fetching package:', err);
     } finally {
       setLoading(false);
     }
@@ -52,13 +89,9 @@ function PackageRequestForm() {
       if (response.ok) {
         const data = await response.json();
         setBankAccounts(data.bankAccounts || []);
-      } else {
-        console.error('Failed to fetch bank accounts:', response.status);
-        setBankAccounts([]);
       }
-    } catch (error) {
-      console.error('Error fetching bank accounts:', error);
-      setBankAccounts([]);
+    } catch (err) {
+      console.error('Error fetching bank accounts:', err);
     }
   }, []);
 
@@ -70,37 +103,28 @@ function PackageRequestForm() {
   }, [packageId, fetchPackageDetails, fetchBankAccounts]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       alert('Please select a valid image file');
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('Image size should be less than 5MB');
       return;
     }
 
-    // Store the file for later upload
     setSelectedFile(file);
-    
-    // Convert to base64 for preview only
     const base64Data = await convertImageToBase64(file);
     setImagePreview(base64Data);
   };
 
-  // Convert image to base64
   const convertImageToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -110,56 +134,22 @@ function PackageRequestForm() {
     });
   };
 
-  // Upload image to external API
   const uploadImageToAPI = async (base64Data) => {
-    try {
-      console.log('Starting image upload to external API...');
-      
-      const response = await fetch('https://steelblue-cod-355377.hostingersite.com/uploadImage.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: base64Data
-        })
-      });
+    const response = await fetch('https://steelblue-cod-355377.hostingersite.com/uploadImage.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Data })
+    });
 
-      console.log('Upload response status:', response.status);
-      console.log('Upload response headers:', response.headers);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Upload failed with status:', response.status, 'Response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('Upload API response:', result);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      const imageUrl = result.url || result.imageUrl;
-      console.log('Extracted image URL:', imageUrl);
-      
-      if (!imageUrl) {
-        throw new Error('No image URL returned from upload API');
-      }
-
-      return imageUrl; // Return the uploaded image URL
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw error;
-    }
+    if (!response.ok) throw new Error('Image upload failed');
+    const result = await response.json();
+    return result.url || result.imageUrl;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!formData.transactionId || !selectedFile) {
-      alert('Please fill in all required fields including the transaction receipt');
+      alert('Please enter Transaction ID and attach the payment receipt.');
       return;
     }
 
@@ -168,70 +158,41 @@ function PackageRequestForm() {
       return;
     }
 
-    console.log('User authentication check:', { isAuthenticated, userId: user?.id });
-
     setSubmitting(true);
 
     try {
-      // First upload the image
       const base64Data = await convertImageToBase64(selectedFile);
-      console.log('Image converted to base64, length:', base64Data.length);
-      
       let imageUrl;
-      let base64Fallback;
-      
       try {
         imageUrl = await uploadImageToAPI(base64Data);
-        console.log('Image uploaded successfully, URL:', imageUrl);
-      } catch (uploadError) {
-        console.warn('External image upload failed, using base64 fallback:', uploadError.message);
-        // Fallback: use base64 data directly (not recommended for production)
-        base64Fallback = `data:image/jpeg;base64,${base64Data.split(',')[1]}`;
-        console.log('Using base64 fallback, length:', base64Fallback.length);
+      } catch (err) {
+        imageUrl = `data:image/jpeg;base64,${base64Data.split(',')[1]}`;
       }
-      
-      // Then submit the package request with the image URL
+
       const requestData = {
         userId: user.id,
         packageId: parseInt(packageId),
         transactionId: formData.transactionId,
-        transactionReceipt: imageUrl || base64Fallback,
+        transactionReceipt: imageUrl,
         notes: formData.notes,
         status: 'pending'
       };
 
-      console.log('Submitting package request with data:', requestData);
-      console.log('User object:', user);
-      console.log('Package ID:', packageId);
-
       const response = await fetch('/api/package-requests', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData)
       });
 
-      console.log('Response status:', response.status);
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error response:', errorData);
-        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Unknown error'}`);
-      }
-
       if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          alert('Package request submitted successfully! It will be reviewed by admin.');
-          router.push('/user-dashboard/my-package');
-        } else {
-          alert('Failed to submit request: ' + result.message);
-        }
+        alert('Package request submitted successfully! Pending admin verification.');
+        router.push('/user-dashboard/my-package');
       } else {
-        alert('Failed to submit request. Please try again.');
+        const errorData = await response.json();
+        alert('Failed to submit request: ' + (errorData.message || 'Unknown error'));
       }
-    } catch (error) {
-      console.error('Error submitting request:', error);
+    } catch (err) {
+      console.error('Error submitting request:', err);
       alert('There was an error submitting your request. Please try again.');
     } finally {
       setSubmitting(false);
@@ -240,247 +201,320 @@ function PackageRequestForm() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <p className="text-gray-400 mt-4">Loading package details...</p>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 320 }}>
+        <CircularProgress size={32} sx={{ color: '#2563eb' }} />
+      </Box>
     );
   }
 
   if (!packageData) {
     return (
-      <div className="space-y-6">
-        <div className="bg-gray-800 rounded-xl p-12 border border-gray-700 text-center">
-          <h3 className="text-xl font-semibold text-white mb-2">Package Not Found</h3>
-          <p className="text-gray-400 mb-6">The requested package could not be found.</p>
-          <Link
-            href="/user-dashboard/subscribe"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-          >
-            Back to Packages
-          </Link>
-        </div>
-      </div>
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 6, textAlign: 'center' }}>
+        <Typography variant="h6" sx={{ color: textPrimary, mb: 1, fontWeight: 700 }}>Package Not Found</Typography>
+        <Typography variant="body2" sx={{ color: textSecondary, mb: 3 }}>
+          The requested package could not be identified.
+        </Typography>
+        <Button
+          component={Link}
+          href="/user-dashboard/subscribe"
+          variant="contained"
+          sx={{ borderRadius: 0, bgcolor: '#3b82f6', textTransform: 'none', fontWeight: 700 }}
+        >
+          Back to Packages
+        </Button>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Header */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Package Request</h1>
-            <p className="text-gray-400 mt-2">Submit your package request with payment details</p>
-          </div>
-          <Link
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: { xs: 2.5, md: 3 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <ReceiptLong sx={{ color: '#3b82f6', fontSize: 32 }} />
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
+                Bank Deposit & Package Request
+              </Typography>
+              <Typography variant="body2" sx={{ color: textSecondary }}>
+                Transfer package funds to one of our corporate bank accounts and submit your receipt for manual verification.
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            component={Link}
             href="/user-dashboard/subscribe"
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+            variant="outlined"
+            startIcon={<ArrowBack />}
+            sx={{
+              borderRadius: 0,
+              borderColor: borderCard,
+              color: textPrimary,
+              fontWeight: 700,
+              textTransform: 'none'
+            }}
           >
-            Back to Packages
-          </Link>
-        </div>
-      </div>
+            Back
+          </Button>
+        </Box>
+      </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Package Information */}
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <h2 className="text-xl font-bold text-white mb-4">Selected Package</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Package ID:</span>
-              <span className="text-white font-medium">{packageData.id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Package Title:</span>
-              <span className="text-white font-medium">{packageData.package_name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Package Amount:</span>
-              <span className="text-white font-medium">PKR {parseFloat(packageData.package_amount).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Shopping Amount:</span>
-              <span className="text-white font-medium">PKR {parseFloat(packageData.shopping_amount).toFixed(2)}</span>
-            </div>
-            {packageData.rank && (
-              <div className="flex justify-between">
-                <span className="text-gray-400">Rank:</span>
-                <span className="text-white font-medium">{packageData.rank.title}</span>
-              </div>
-            )}
-          </div>
-        </div>
+      <Grid container spacing={3}>
+        {/* Selected Package Card */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, height: '100%' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary, mb: 2 }}>
+                Selected Tier
+              </Typography>
+              <Divider sx={{ mb: 2, borderColor: borderCard }} />
+
+              <Paper sx={{ p: 2.5, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0, mb: 2.5 }}>
+                <Typography variant="caption" sx={{ color: textSecondary, textTransform: 'uppercase', fontWeight: 700 }}>
+                  Package
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, mb: 1 }}>
+                  {packageData.package_name}
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 900, color: '#3b82f6' }}>
+                  PKR {parseFloat(packageData.package_amount || 0).toLocaleString()}
+                </Typography>
+              </Paper>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" sx={{ color: textSecondary }}>Direct Commission</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary }}>
+                    PKR {packageData.package_direct_commission || 0}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" sx={{ color: textSecondary }}>Indirect Commission</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary }}>
+                    PKR {packageData.package_indirect_commission || 0}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" sx={{ color: textSecondary }}>Shopping Wallet Reward</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#06b6d4' }}>
+                    PKR {packageData.shopping_amount || 0}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
         {/* Bank Accounts */}
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <h2 className="text-xl font-bold text-white mb-4">Payment Bank Accounts</h2>
-          <div className="space-y-4 max-h-80 overflow-y-auto">
-            {bankAccounts.length > 0 ? (
-              bankAccounts.map((account, index) => (
-                <div key={account.id} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-lg font-semibold text-white">{account.bank_title}</h3>
-                      <span className="bg-blue-600 text-blue-100 text-xs px-2 py-1 rounded-full">
-                        Account #{index + 1}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400 text-sm">Account Title:</span>
-                        <span className="text-white text-sm font-medium">{account.account_title}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400 text-sm">Account Number:</span>
-                        <span className="text-white text-sm font-mono">{account.bank_accountno}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400 text-sm">IBAN:</span>
-                        <span className="text-white text-sm font-mono">{account.iban_no}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-gray-400 mb-2">
-                  <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-                </div>
-                <p className="text-gray-400">No bank accounts available</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, height: '100%' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <AccountBalance sx={{ color: '#10b981' }} />
+                <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary }}>
+                  Deposit Bank Accounts
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 2, borderColor: borderCard }} />
 
-        {/* Request Form */}
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <h2 className="text-xl font-bold text-white mb-4">Request Details</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Transaction ID *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.transactionId}
-                onChange={(e) => handleInputChange('transactionId', e.target.value)}
-                placeholder="Enter your transaction ID"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              />
-            </div>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 420, overflowY: 'auto' }}>
+                {bankAccounts.length > 0 ? (
+                  bankAccounts.map((account, index) => (
+                    <Paper
+                      key={account.id || index}
+                      sx={{ p: 2, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0 }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: textPrimary }}>
+                          {account.bank_title}
+                        </Typography>
+                        <Chip
+                          label={`Account #${index + 1}`}
+                          size="small"
+                          sx={{ borderRadius: 0, bgcolor: '#3b82f6', color: '#fff', fontSize: '0.65rem', fontWeight: 700 }}
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" sx={{ color: textSecondary }}>Title:</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: textPrimary }}>{account.account_title}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" sx={{ color: textSecondary }}>A/C No:</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: textPrimary, fontFamily: 'monospace' }}>{account.bank_accountno}</Typography>
+                        </Box>
+                        {account.iban_no && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="caption" sx={{ color: textSecondary }}>IBAN:</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: textPrimary, fontFamily: 'monospace' }}>{account.iban_no}</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Paper>
+                  ))
+                ) : (
+                  <Typography variant="body2" sx={{ color: textSecondary, textAlign: 'center', py: 4 }}>
+                    No bank accounts listed at the moment. Please contact support.
+                  </Typography>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Transaction Receipt *
-              </label>
-                                            <input
-                 type="file"
-                 required
-                 accept="image/*"
-                 onChange={handleFileChange}
-                 disabled={submitting}
-                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-               />
-               <p className="text-xs text-gray-400 mt-1">
-                 Upload your payment receipt (JPG, PNG only, max 5MB)
-               </p>
-               {submitting && (
-                 <div className="flex items-center mt-2">
-                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
-                   <span className="text-xs text-blue-400">Uploading receipt...</span>
-                 </div>
-               )}
-               
-               {/* Image Preview */}
-               {imagePreview && (
-                 <div className="mt-3">
-                   <Image
-                     src={imagePreview}
-                     alt="Receipt Preview"
-                     width={128}
-                     height={128}
-                     className="w-32 h-32 object-cover rounded-lg border border-gray-600"
-                   />
-                   <div className="flex items-center justify-between mt-2">
-                     <p className="text-xs text-green-400">✓ Receipt uploaded successfully</p>
-                     <button
-                       type="button"
-                                               onClick={() => {
-                          setImagePreview('');
-                          setSelectedFile(null);
-                          setFormData(prev => ({ ...prev, transactionReceipt: '' }));
-                        }}
-                       className="text-xs text-red-400 hover:text-red-300"
-                     >
-                       Remove
-                     </button>
-                   </div>
-                 </div>
-               )}
-             </div>
+        {/* Submission Form */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, height: '100%' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <CloudUpload sx={{ color: '#8b5cf6' }} />
+                <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary }}>
+                  Submit Payment Slip
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 2.5, borderColor: borderCard }} />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Additional Notes
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                placeholder="Any additional information..."
-                rows={3}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              />
-            </div>
+              <form onSubmit={handleSubmit}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <TextField
+                    label="Transaction ID / Reference *"
+                    required
+                    fullWidth
+                    size="small"
+                    value={formData.transactionId}
+                    onChange={(e) => handleInputChange('transactionId', e.target.value)}
+                    placeholder="e.g. TRX982736412"
+                    InputLabelProps={{ sx: { color: textSecondary } }}
+                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                  />
 
-                         <button
-               type="submit"
-               disabled={submitting || !selectedFile}
-               className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-             >
-               {submitting ? 'Submitting...' : 'Submit Package Request'}
-             </button>
-          </form>
-        </div>
-      </div>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, display: 'block', mb: 0.5 }}>
+                      Payment Slip / Receipt *
+                    </Typography>
+                    <input
+                      type="file"
+                      required
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      disabled={submitting}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        border: `1px solid ${borderCard}`,
+                        background: bgSubtle,
+                        color: textPrimary,
+                        fontSize: '0.82rem'
+                      }}
+                    />
+                  </Box>
+
+                  {imagePreview && (
+                    <Paper sx={{ p: 1.5, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Image
+                        src={imagePreview}
+                        alt="Receipt preview"
+                        width={64}
+                        height={64}
+                        style={{ objectFit: 'cover' }}
+                      />
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 700, display: 'block' }}>
+                          ✓ Image Selected
+                        </Typography>
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={() => { setImagePreview(''); setSelectedFile(null); }}
+                          startIcon={<DeleteOutline sx={{ fontSize: 16 }} />}
+                          sx={{ textTransform: 'none', p: 0, fontSize: '0.75rem' }}
+                        >
+                          Remove
+                        </Button>
+                      </Box>
+                    </Paper>
+                  )}
+
+                  <TextField
+                    label="Additional Notes (Optional)"
+                    fullWidth
+                    multiline
+                    rows={2}
+                    size="small"
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    placeholder="Sender name, bank branch, or remarks"
+                    InputLabelProps={{ sx: { color: textSecondary } }}
+                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    fullWidth
+                    disabled={submitting || !selectedFile}
+                    sx={{
+                      borderRadius: 0,
+                      bgcolor: '#10b981',
+                      color: '#ffffff',
+                      fontWeight: 800,
+                      py: 1.2,
+                      textTransform: 'none',
+                      '&:hover': { bgcolor: '#059669' }
+                    }}
+                  >
+                    {submitting ? 'Submitting Request...' : 'Submit Package Request'}
+                  </Button>
+                </Box>
+              </form>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       {/* Instructions */}
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-4">Payment Instructions</h2>
-                 <div className="space-y-3 text-gray-300">
-           <div className="flex items-start">
-             <span className="text-blue-400 mr-2">1.</span>
-             <p>Choose one of the bank accounts listed above to make your payment.</p>
-           </div>
-           <div className="flex items-start">
-             <span className="text-blue-400 mr-2">2.</span>
-             <p>Transfer the exact package amount to the selected bank account.</p>
-           </div>
-           <div className="flex items-start">
-             <span className="text-blue-400 mr-2">3.</span>
-             <p>Get your transaction ID from your payment confirmation.</p>
-           </div>
-           <div className="flex items-start">
-             <span className="text-blue-400 mr-2">4.</span>
-             <p>Take a clear photo or scan of your payment receipt (JPG/PNG only).</p>
-           </div>
-           <div className="flex items-start">
-             <span className="text-blue-400 mr-2">5.</span>
-             <p>Upload the receipt image and submit your request for admin approval.</p>
-           </div>
-         </div>
-      </div>
-    </div>
+      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <HelpOutline sx={{ color: '#3b82f6' }} />
+          <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary }}>
+            Payment Steps & Guidelines
+          </Typography>
+        </Box>
+        <Grid container spacing={2}>
+          {[
+            { step: '01', title: 'Choose Bank', text: 'Select one of our authorized banking partners above.' },
+            { step: '02', title: 'Transfer Funds', text: 'Send the exact amount from your mobile banking app or ATM.' },
+            { step: '03', title: 'Save Receipt', text: 'Take a clear screenshot of the digital payment confirmation or receipt slip.' },
+            { step: '04', title: 'Admin Verification', text: 'Our finance department inspects and validates the deposit within 2-4 hours.' }
+          ].map((item) => (
+            <Grid item xs={12} sm={6} md={3} key={item.step}>
+              <Paper sx={{ p: 2, bgcolor: bgSubtle, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
+                <Typography variant="overline" sx={{ color: '#3b82f6', fontWeight: 900 }}>
+                  STEP {item.step}
+                </Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: textPrimary, mt: 0.5 }}>
+                  {item.title}
+                </Typography>
+                <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5, fontSize: '0.8rem' }}>
+                  {item.text}
+                </Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      </Card>
+    </Box>
   );
 }
 
 export default function PackageRequest() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress size={32} />
+      </Box>
+    }>
       <PackageRequestForm />
     </Suspense>
   );

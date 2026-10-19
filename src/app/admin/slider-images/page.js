@@ -21,22 +21,23 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
   Chip,
   Alert,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  Divider
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  Image as ImageIcon,
-  Link as LinkIcon
-} from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import ImageIcon from '@mui/icons-material/Image';
+import LinkIcon from '@mui/icons-material/Link';
+import CloseIcon from '@mui/icons-material/Close';
+import SyncIcon from '@mui/icons-material/Sync';
+import CollectionsIcon from '@mui/icons-material/Collections';
 
 export default function SliderImagesPage() {
   const [sliderImages, setSliderImages] = useState([]);
@@ -56,35 +57,23 @@ export default function SliderImagesPage() {
   });
   const [imagePreview, setImagePreview] = useState(null);
 
-  // Fetch slider images
   const fetchSliderImages = async () => {
     try {
       setLoading(true);
       const adminToken = localStorage.getItem('adminToken');
-      
-      console.log('Fetching slider images...');
-      console.log('Admin token:', adminToken ? 'Present' : 'Missing');
-      
       const response = await fetch('/api/admin/slider-images', {
         headers: {
           'Authorization': `Bearer ${adminToken}`
         }
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error:', errorText);
-        throw new Error(`Failed to fetch slider images: ${response.status} - ${errorText}`);
+        throw new Error('Failed to fetch slider images');
       }
 
       const result = await response.json();
-      console.log('API Result:', result);
       setSliderImages(result.data || []);
     } catch (err) {
-      console.error('Fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -95,55 +84,34 @@ export default function SliderImagesPage() {
     fetchSliderImages();
   }, []);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('Slider images state updated:', sliderImages);
-    console.log('Loading state:', loading);
-    console.log('Error state:', error);
-  }, [sliderImages, loading, error]);
-
-  // Handle file selection
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormData({ ...formData, imageFile: file });
-      
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
+      setFormData(prev => ({ ...prev, imageFile: file }));
+      const reader = new FileReader();
+      reader.onload = (e) => setImagePreview(e.target.result);
+      reader.readAsDataURL(file);
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
       const adminToken = localStorage.getItem('adminToken');
       
-      // Validate that image is selected for new uploads
-      if (!editingImage && !formData.imageFile) {
-        setError('Please select an image file');
-        setLoading(false);
-        return;
-      }
-      
-      // Create FormData for file upload
       const submitData = new FormData();
       submitData.append('title', formData.title);
       submitData.append('description', formData.description || '');
       submitData.append('linkUrl', formData.linkUrl || '');
-      submitData.append('isActive', formData.isActive);
-      submitData.append('sortOrder', formData.sortOrder);
+      submitData.append('isActive', formData.isActive.toString());
+      submitData.append('sortOrder', formData.sortOrder.toString());
       
       if (formData.imageFile) {
         submitData.append('image', formData.imageFile);
       }
 
-      const url = editingImage 
-        ? `/api/admin/upload-slider-image/${editingImage.id}`
-        : '/api/admin/upload-slider-image';
-      
+      const url = editingImage ? `/api/admin/slider-images/${editingImage.id}` : '/api/admin/slider-images';
       const method = editingImage ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -159,20 +127,9 @@ export default function SliderImagesPage() {
         throw new Error(errorData.error || 'Failed to save slider image');
       }
 
-      const result = await response.json();
-      setSuccess(result.message);
+      setSuccess(`Slider image ${editingImage ? 'updated' : 'created'} successfully`);
       setDialogOpen(false);
-      setEditingImage(null);
-      setFormData({
-        title: '',
-        description: '',
-        imageFile: null,
-        imageUrl: '',
-        linkUrl: '',
-        isActive: true,
-        sortOrder: 0
-      });
-      setImagePreview(null);
+      resetForm();
       fetchSliderImages();
     } catch (err) {
       setError(err.message);
@@ -181,36 +138,30 @@ export default function SliderImagesPage() {
     }
   };
 
-  // Handle edit
   const handleEdit = (image) => {
     setEditingImage(image);
     setFormData({
-      title: image.title,
+      title: image.title || '',
       description: image.description || '',
       imageFile: null,
-      imageUrl: image.imageUrl,
+      imageUrl: image.imageUrl || '',
       linkUrl: image.linkUrl || '',
-      isActive: image.isActive,
-      sortOrder: image.sortOrder
+      isActive: image.isActive ?? true,
+      sortOrder: image.sortOrder || 0
     });
-    setImagePreview(image.imageUrl);
+    setImagePreview(image.imageUrl || null);
     setDialogOpen(true);
   };
 
-  // Handle delete
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this slider image?')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to delete this slider image?')) return;
 
     try {
       setLoading(true);
       const adminToken = localStorage.getItem('adminToken');
       const response = await fetch(`/api/admin/slider-images/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
+        headers: { 'Authorization': `Bearer ${adminToken}` }
       });
 
       if (!response.ok) {
@@ -227,7 +178,6 @@ export default function SliderImagesPage() {
     }
   };
 
-  // Handle toggle active status
   const handleToggleActive = async (id, currentStatus) => {
     try {
       setLoading(true);
@@ -243,10 +193,10 @@ export default function SliderImagesPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update slider image');
+        throw new Error(errorData.error || 'Failed to update status');
       }
 
-      setSuccess('Slider image status updated successfully');
+      setSuccess('Slider image status updated');
       fetchSliderImages();
     } catch (err) {
       setError(err.message);
@@ -255,200 +205,214 @@ export default function SliderImagesPage() {
     }
   };
 
-  // Clear messages
-  const clearMessages = () => {
-    setError(null);
-    setSuccess(null);
+  const resetForm = () => {
+    setEditingImage(null);
+    setFormData({
+      title: '',
+      description: '',
+      imageFile: null,
+      imageUrl: '',
+      linkUrl: '',
+      isActive: true,
+      sortOrder: 0
+    });
+    setImagePreview(null);
   };
 
   if (loading && sliderImages.length === 0) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 350, gap: 2 }}>
+        <CircularProgress size={40} sx={{ color: '#6366f1' }} />
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Loading Slider Images...
+        </Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1" sx={{ color: '#212529', fontWeight: 'bold' }}>
-          Slider Images Management
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setEditingImage(null);
-            setFormData({
-              title: '',
-              description: '',
-              imageFile: null,
-              imageUrl: '',
-              linkUrl: '',
-              isActive: true,
-              sortOrder: 0
-            });
-            setImagePreview(null);
-            setDialogOpen(true);
-          }}
-          sx={{
-            backgroundColor: '#007bff',
-            '&:hover': {
-              backgroundColor: '#0056b3'
-            },
-            fontWeight: 'bold',
-            textTransform: 'none',
-            px: 3,
-            py: 1
-          }}
-        >
-          Add New Image
-        </Button>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+            <CollectionsIcon sx={{ color: '#818cf8', fontSize: 26 }} />
+            <Typography variant="h5" sx={{ fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+              Homepage Slider Management
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+            Upload hero promotional banners and configure redirection links on the member portal.
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button
+            onClick={fetchSliderImages}
+            variant="outlined"
+            size="small"
+            startIcon={<SyncIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              borderRadius: 0,
+              borderColor: 'rgba(255,255,255,0.15)',
+              color: '#ffffff',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              '&:hover': { borderColor: '#818cf8', backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+            }}
+          >
+            Sync
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+            onClick={() => {
+              resetForm();
+              setDialogOpen(true);
+            }}
+            sx={{
+              borderRadius: 0,
+              backgroundColor: '#6366f1',
+              color: '#ffffff',
+              fontWeight: 700,
+              px: 2,
+              '&:hover': { backgroundColor: '#4f46e5' }
+            }}
+          >
+            Add New Slide
+          </Button>
+        </Box>
       </Box>
 
-      {/* Messages */}
       {error && (
-        <Alert severity="error" onClose={clearMessages} sx={{ mb: 2, backgroundColor: '#f8d7da', color: '#721c24', border: '1px solid #f5c6cb' }}>
+        <Alert severity="error" sx={{ borderRadius: 0, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
       {success && (
-        <Alert severity="success" onClose={clearMessages} sx={{ mb: 2, backgroundColor: '#d4edda', color: '#155724', border: '1px solid #c3e6cb' }}>
+        <Alert severity="success" sx={{ borderRadius: 0, backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
       )}
 
-      {/* Slider Images Table */}
-      <Card sx={{ backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', border: '1px solid #dee2e6' }}>
-        <CardContent>
-          <TableContainer component={Paper} sx={{ backgroundColor: '#ffffff', boxShadow: 'none' }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#495057', borderBottom: '2px solid #dee2e6' }}>Image</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#495057', borderBottom: '2px solid #dee2e6' }}>Title</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#495057', borderBottom: '2px solid #dee2e6' }}>Description</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#495057', borderBottom: '2px solid #dee2e6' }}>Link URL</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#495057', borderBottom: '2px solid #dee2e6' }}>Sort Order</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#495057', borderBottom: '2px solid #dee2e6' }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#495057', borderBottom: '2px solid #dee2e6' }}>Created</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', color: '#495057', borderBottom: '2px solid #dee2e6' }}>Actions</TableCell>
+      {/* Table Card */}
+      <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <Box sx={{ p: 2.5, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#ffffff', fontSize: '0.95rem' }}>
+            Banners Directory
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            {sliderImages.length} Slides Configured
+          </Typography>
+        </Box>
+
+        {sliderImages.length === 0 ? (
+          <Box sx={{ p: 6, textAlign: 'center' }}>
+            <ImageIcon sx={{ fontSize: 44, color: 'rgba(255,255,255,0.2)', mb: 1.5 }} />
+            <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 600 }}>No Slider Images</Typography>
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHead sx={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                <TableRow>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
+                    PREVIEW
+                  </TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
+                    TITLE & DESCRIPTION
+                  </TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
+                    REDIRECT TARGET
+                  </TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
+                    ORDER
+                  </TableCell>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
+                    VISIBILITY
+                  </TableCell>
+                  <TableCell align="right" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
+                    ACTIONS
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {sliderImages.map((image) => (
-                  <TableRow key={image.id} sx={{ '&:hover': { backgroundColor: '#f8f9fa' } }}>
-                    <TableCell sx={{ borderBottom: '1px solid #dee2e6' }}>
+                  <TableRow key={image.id} sx={{ '&:hover': { backgroundColor: 'rgba(255,255,255,0.02)' }, borderColor: 'rgba(255,255,255,0.04)' }}>
+                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
                       <Box
                         component="img"
                         src={image.imageUrl}
                         alt={image.title}
                         sx={{
                           width: 80,
-                          height: 60,
+                          height: 50,
                           objectFit: 'cover',
-                          borderRadius: 1,
-                          border: '1px solid #dee2e6',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                          borderRadius: 0,
+                          border: '1px solid rgba(255,255,255,0.1)'
                         }}
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #dee2e6' }}>
-                      <Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#212529' }}>
-                        {image.title}
+
+                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
+                      <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 700 }}>{image.title}</Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {image.description || 'No description'}
                       </Typography>
                     </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #dee2e6' }}>
-                      <Typography variant="body2" sx={{ color: '#6c757d' }}>
-                        {image.description ? 
-                          (image.description.length > 50 ? 
-                            `${image.description.substring(0, 50)}...` : 
-                            image.description
-                          ) : 
-                          'No description'
-                        }
-                      </Typography>
-                    </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #dee2e6' }}>
+
+                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
                       {image.linkUrl ? (
-                        <Box display="flex" alignItems="center">
-                          <LinkIcon sx={{ mr: 1, fontSize: 16, color: '#007bff' }} />
-                          <Typography variant="body2" sx={{ color: '#007bff' }}>
-                            {image.linkUrl.length > 30 ? 
-                              `${image.linkUrl.substring(0, 30)}...` : 
-                              image.linkUrl
-                            }
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <LinkIcon sx={{ fontSize: 14, color: '#818cf8' }} />
+                          <Typography variant="caption" sx={{ color: '#818cf8', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {image.linkUrl}
                           </Typography>
                         </Box>
                       ) : (
-                        <Typography variant="body2" sx={{ color: '#6c757d' }}>
-                          No link
-                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>None</Typography>
                       )}
                     </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #dee2e6' }}>
-                      <Chip 
-                        label={image.sortOrder} 
-                        size="small" 
-                        sx={{ 
-                          backgroundColor: '#e3f2fd', 
-                          color: '#1976d2',
-                          border: '1px solid #bbdefb',
-                          fontWeight: 'bold'
+
+                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
+                      <Chip label={`#${image.sortOrder}`} size="small" sx={{ borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.05)', color: '#ffffff', fontWeight: 700, fontSize: '0.7rem' }} />
+                    </TableCell>
+
+                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
+                      <Chip
+                        label={image.isActive ? 'ACTIVE' : 'HIDDEN'}
+                        size="small"
+                        onClick={() => handleToggleActive(image.id, image.isActive)}
+                        sx={{
+                          borderRadius: 0,
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          fontSize: '0.65rem',
+                          backgroundColor: image.isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.05)',
+                          color: image.isActive ? '#34d399' : 'rgba(255,255,255,0.5)',
+                          border: `1px solid ${image.isActive ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.1)'}`
                         }}
                       />
                     </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #dee2e6' }}>
-                      <Tooltip title={image.isActive ? "Click to deactivate" : "Click to activate"}>
+
+                    <TableCell align="right" sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.8 }}>
                         <IconButton
-                          onClick={() => handleToggleActive(image.id, image.isActive)}
-                          sx={{ 
-                            color: image.isActive ? '#28a745' : '#6c757d',
-                            '&:hover': {
-                              backgroundColor: image.isActive ? 'rgba(40, 167, 69, 0.1)' : 'rgba(108, 117, 125, 0.1)'
-                            }
-                          }}
+                          size="small"
+                          onClick={() => handleEdit(image)}
+                          sx={{ color: '#818cf8', border: '1px solid rgba(129, 140, 248, 0.25)', borderRadius: 0, p: 0.8 }}
                         >
-                          {image.isActive ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                          <EditIcon sx={{ fontSize: 15 }} />
                         </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #dee2e6' }}>
-                      <Typography variant="body2" sx={{ color: '#6c757d' }}>
-                        {new Date(image.createdAt).toLocaleDateString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #dee2e6' }}>
-                      <Box display="flex" gap={1}>
-                        <Tooltip title="Edit">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEdit(image)}
-                            sx={{ 
-                              color: '#007bff',
-                              '&:hover': { backgroundColor: 'rgba(0, 123, 255, 0.1)' }
-                            }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDelete(image.id)}
-                            sx={{ 
-                              color: '#dc3545',
-                              '&:hover': { backgroundColor: 'rgba(220, 53, 69, 0.1)' }
-                            }}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(image.id)}
+                          sx={{ color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: 0, p: 0.8 }}
+                        >
+                          <DeleteIcon sx={{ fontSize: 15 }} />
+                        </IconButton>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -456,235 +420,115 @@ export default function SliderImagesPage() {
               </TableBody>
             </Table>
           </TableContainer>
-
-          {sliderImages.length === 0 && (
-            <Box textAlign="center" py={4}>
-              <ImageIcon sx={{ fontSize: 64, color: '#6c757d', mb: 2 }} />
-              <Typography variant="h6" sx={{ color: '#495057', mb: 1 }}>
-                No slider images found
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#6c757d' }}>
-                Click &quot;Add New Image&quot; to create your first slider image
-              </Typography>
-            </Box>
-          )}
-        </CardContent>
+        )}
       </Card>
 
-      {/* Add/Edit Dialog */}
-      <Dialog 
-        open={dialogOpen} 
-        onClose={() => setDialogOpen(false)} 
-        maxWidth="md" 
+      {/* Add / Edit Dialog */}
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: {
-            backgroundColor: '#ffffff',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-            border: '1px solid #dee2e6'
-          }
+          sx: { borderRadius: 0, backgroundColor: '#0d131f', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff' }
         }}
       >
-        <form onSubmit={handleSubmit}>
-          <DialogTitle sx={{ backgroundColor: '#f8f9fa', color: '#212529', fontWeight: 'bold', borderBottom: '1px solid #dee2e6' }}>
+        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.06)', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#ffffff' }}>
             {editingImage ? 'Edit Slider Image' : 'Add New Slider Image'}
-          </DialogTitle>
-          <DialogContent sx={{ backgroundColor: '#ffffff', p: 3 }}>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: '#ffffff !important',
-                      '& fieldset': { borderColor: '#ced4da' },
-                      '&:hover fieldset': { borderColor: '#007bff' },
-                      '&.Mui-focused fieldset': { borderColor: '#007bff' },
-                      '& input': { backgroundColor: '#ffffff !important' }
-                    },
-                    '& .MuiInputLabel-root': { color: '#495057' },
-                    '& .MuiInputLabel-root.Mui-focused': { color: '#007bff' }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  multiline
-                  rows={3}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: '#ffffff !important',
-                      '& fieldset': { borderColor: '#ced4da' },
-                      '&:hover fieldset': { borderColor: '#007bff' },
-                      '&.Mui-focused fieldset': { borderColor: '#007bff' },
-                      '& textarea': { backgroundColor: '#ffffff !important' }
-                    },
-                    '& .MuiInputLabel-root': { color: '#495057' },
-                    '& .MuiInputLabel-root.Mui-focused': { color: '#007bff' }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <input
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  id="image-upload"
-                  type="file"
-                  onChange={handleFileChange}
-                />
-                <label htmlFor="image-upload">
-                  <Button 
-                    variant="outlined" 
-                    component="span" 
-                    startIcon={<ImageIcon />}
-                    sx={{
-                      borderColor: '#ced4da',
-                      color: '#495057',
-                      '&:hover': {
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.04)'
-                      }
-                    }}
-                  >
-                    {editingImage ? 'Change Image' : 'Select Image'}
-                  </Button>
-                </label>
-                {formData.imageFile && (
-                  <Typography variant="body2" sx={{ mt: 1, color: '#6c757d' }}>
-                    Selected: {formData.imageFile.name}
-                  </Typography>
-                )}
-                {!formData.imageFile && editingImage && (
-                  <Typography variant="body2" sx={{ mt: 1, color: '#6c757d' }}>
-                    Current image will be kept if no new image is selected
-                  </Typography>
-                )}
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Link URL"
-                  value={formData.linkUrl}
-                  onChange={(e) => setFormData({ ...formData, linkUrl: e.target.value })}
-                  helperText="Optional: URL to redirect when image is clicked"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: '#ffffff !important',
-                      '& fieldset': { borderColor: '#ced4da' },
-                      '&:hover fieldset': { borderColor: '#007bff' },
-                      '&.Mui-focused fieldset': { borderColor: '#007bff' },
-                      '& input': { backgroundColor: '#ffffff !important' }
-                    },
-                    '& .MuiInputLabel-root': { color: '#495057' },
-                    '& .MuiInputLabel-root.Mui-focused': { color: '#007bff' },
-                    '& .MuiFormHelperText-root': { color: '#6c757d' }
-                  }}
-                />
-              </Grid>
+          </Typography>
+          <IconButton onClick={() => setDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.6)', borderRadius: 0 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <form onSubmit={handleSubmit}>
+          <DialogContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              required
+              fullWidth
+              size="small"
+              label="Banner Title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{ sx: { borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.15)', color: '#ffffff' } }}
+            />
+            <TextField
+              fullWidth
+              multiline
+              rows={2}
+              size="small"
+              label="Description (Optional)"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{ sx: { borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.15)', color: '#ffffff' } }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="Redirect URL (Optional)"
+              value={formData.linkUrl}
+              onChange={(e) => setFormData({ ...formData, linkUrl: e.target.value })}
+              placeholder="e.g. /products or https://..."
+              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+              InputProps={{ sx: { borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.15)', color: '#ffffff' } }}
+            />
+            <Grid container spacing={2}>
               <Grid item xs={6}>
                 <TextField
                   fullWidth
-                  label="Sort Order"
+                  size="small"
                   type="number"
+                  label="Display Priority Order"
                   value={formData.sortOrder}
                   onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                  helperText="Lower numbers appear first"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: '#ffffff !important',
-                      '& fieldset': { borderColor: '#ced4da' },
-                      '&:hover fieldset': { borderColor: '#007bff' },
-                      '&.Mui-focused fieldset': { borderColor: '#007bff' },
-                      '& input': { backgroundColor: '#ffffff !important' }
-                    },
-                    '& .MuiInputLabel-root': { color: '#495057' },
-                    '& .MuiInputLabel-root.Mui-focused': { color: '#007bff' },
-                    '& .MuiFormHelperText-root': { color: '#6c757d' }
-                  }}
+                  InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
+                  InputProps={{ sx: { borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.15)', color: '#ffffff' } }}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={6} sx={{ display: 'flex', alignItems: 'center' }}>
                 <FormControlLabel
                   control={
                     <Switch
                       checked={formData.isActive}
                       onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                       sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': {
-                          color: '#28a745',
-                          '& + .MuiSwitch-track': {
-                            backgroundColor: '#28a745'
-                          }
-                        }
+                        '& .MuiSwitch-switchBase.Mui-checked': { color: '#34d399' },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#34d399' }
                       }}
                     />
                   }
-                  label="Active"
-                  sx={{ color: '#495057' }}
+                  label="Active Display"
+                  sx={{ color: '#ffffff' }}
                 />
               </Grid>
+            </Grid>
+
+            {/* File Upload Box */}
+            <Box sx={{ border: '1px dashed rgba(255,255,255,0.2)', p: 2, textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+              <input accept="image/*" style={{ display: 'none' }} id="slider-upload" type="file" onChange={handleFileChange} />
+              <label htmlFor="slider-upload">
+                <Button component="span" variant="outlined" size="small" startIcon={<ImageIcon />} sx={{ borderRadius: 0, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff', mb: 1 }}>
+                  {editingImage ? 'Replace Image' : 'Select Banner Image'}
+                </Button>
+              </label>
               {imagePreview && (
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom sx={{ color: '#495057', fontWeight: 'bold' }}>
-                    Image Preview:
-                  </Typography>
+                <Box sx={{ mt: 1.5, position: 'relative', width: '100%', height: 140 }}>
                   <Box
                     component="img"
                     src={imagePreview}
                     alt="Preview"
-                    sx={{
-                      maxWidth: '100%',
-                      maxHeight: 200,
-                      objectFit: 'contain',
-                      border: '1px solid #dee2e6',
-                      borderRadius: 1,
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
+                    sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
-                </Grid>
+                </Box>
               )}
-            </Grid>
+            </Box>
           </DialogContent>
-          <DialogActions sx={{ backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6', p: 2 }}>
-            <Button 
-              onClick={() => setDialogOpen(false)}
-              sx={{
-                color: '#6c757d',
-                borderColor: '#ced4da',
-                '&:hover': {
-                  borderColor: '#adb5bd',
-                  backgroundColor: 'rgba(108, 117, 125, 0.04)'
-                }
-              }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
-              disabled={loading}
-              sx={{
-                backgroundColor: '#007bff',
-                '&:hover': {
-                  backgroundColor: '#0056b3'
-                },
-                '&:disabled': {
-                  backgroundColor: '#6c757d'
-                }
-              }}
-            >
-              {loading ? <CircularProgress size={20} sx={{ color: '#ffffff' }} /> : (editingImage ? 'Update' : 'Create')}
+          <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <Button onClick={() => setDialogOpen(false)} variant="outlined" size="small" sx={{ borderRadius: 0, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}>Cancel</Button>
+            <Button type="submit" disabled={loading} variant="contained" size="small" sx={{ borderRadius: 0, backgroundColor: '#6366f1', color: '#ffffff', fontWeight: 700 }}>
+              {loading ? 'Saving...' : editingImage ? 'Update Slide' : 'Upload Slide'}
             </Button>
           </DialogActions>
         </form>
