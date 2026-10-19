@@ -102,10 +102,10 @@ export default function UserDashboardHome() {
           }
         }
       } catch (err) {
-        console.warn("Using fallback member telemetry:", err);
+        console.warn("Using fallback member data:", err);
       }
 
-      // Default high-fidelity telemetry
+      // Default statistics
       setDashboardData({
         user: {
           id: user?.id || 1,
@@ -209,7 +209,7 @@ export default function UserDashboardHome() {
   };
 
   const formatCurrency = (amount) => {
-    return `$${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `PKR ${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const { user: userData, stats, recentActivity } = dashboardData || {};
@@ -317,7 +317,7 @@ export default function UserDashboardHome() {
     },
   ];
 
-  // Quick Action Matrix (6 equal-width pods)
+  // Quick Action Grid (6 equal-width cards)
   const quickActions = [
     { label: "Official Store", icon: <ShoppingBagOutlined sx={{ fontSize: 26 }} />, href: "/user-dashboard/shop", color: "#06b6d4", desc: "Catalog Redeeming", pill: "Catalog" },
     { label: "Request Payout", icon: <AccountBalanceWalletOutlined sx={{ fontSize: 26 }} />, href: "/user-dashboard/withdraw", color: "#10b981", desc: "Withdraw Funds", pill: "Instant" },
@@ -443,7 +443,7 @@ export default function UserDashboardHome() {
             zIndex: 1
           }}
         >
-          {/* Left Column: Avatar & Personal Telemetry */}
+          {/* Left Column: Avatar & Member Profile */}
           <Stack direction={{ xs: "column", sm: "row" }} spacing={3} alignItems={{ xs: "flex-start", sm: "center" }}>
             <Avatar
               sx={{
@@ -857,7 +857,7 @@ export default function UserDashboardHome() {
         ))}
       </Box>
 
-      {/* 4. VISUAL TELEMETRY & ANALYTICS CENTER (CSS GRID: 1.8fr 1.2fr FULL WIDTH) */}
+      {/* 4. FINANCIAL CHARTS & WALLET COMPOSITION (CSS GRID: 1.8fr 1.2fr FULL WIDTH) */}
       <Box
         sx={{
           display: "grid",
@@ -1011,7 +1011,7 @@ export default function UserDashboardHome() {
                                 fontSize="11"
                                 fontWeight="800"
                               >
-                                {p.data.label}: ${((p.data.direct + p.data.indirect) / 1000).toFixed(1)}k Total
+                                {p.data.label}: PKR {((p.data.direct + p.data.indirect) / 1000).toFixed(1)}k Total
                               </text>
                               <text
                                 x={Math.min(480, Math.max(10, p.x - 70)) + 70}
@@ -1021,7 +1021,7 @@ export default function UserDashboardHome() {
                                 fontSize="9"
                                 fontWeight="600"
                               >
-                                Direct: ${(p.data.direct / 1000).toFixed(1)}k • Team: ${(p.data.indirect / 1000).toFixed(1)}k
+                                Direct: PKR {(p.data.direct / 1000).toFixed(1)}k • Team: PKR {(p.data.indirect / 1000).toFixed(1)}k
                               </text>
                             </g>
                           )}
@@ -1502,7 +1502,7 @@ export default function UserDashboardHome() {
         </Collapse>
       </Card>
 
-      {/* 7. PORTAL QUICK OPERATIONS MATRIX (CSS GRID: 6 EQUAL FULL-WIDTH COLUMNS) */}
+      {/* 7. PORTAL QUICK OPERATIONS (CSS GRID: 6 EQUAL FULL-WIDTH COLUMNS) */}
       <Box sx={{ width: "100%", boxSizing: "border-box" }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
           <Typography sx={{ fontWeight: 900, color: textPrimary, fontSize: "1rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
@@ -1590,7 +1590,7 @@ export default function UserDashboardHome() {
         </Box>
       </Box>
 
-      {/* 8. RECENT TELEMETRY ACTIVITY LEDGER (FULL WIDTH) */}
+      {/* 8. RECENT TRANSACTIONS ACTIVITY LEDGER (FULL WIDTH) */}
       <Card sx={{ width: "100%", boxSizing: "border-box", borderRadius: 0, backgroundColor: cardBg, border: cardBorder }}>
         <Box
           sx={{
@@ -1609,10 +1609,10 @@ export default function UserDashboardHome() {
             <Inventory2Outlined sx={{ color: "#6366f1", fontSize: 24 }} />
             <Box>
               <Typography sx={{ fontWeight: 800, color: textPrimary, fontSize: "0.95rem", letterSpacing: "0.04em" }}>
-                RECENT ACCOUNT TRANSACTIONS & TELEMETRY
+                RECENT ACCOUNT TRANSACTIONS & ACTIVITY
               </Typography>
               <Typography variant="caption" sx={{ color: textMuted, fontSize: "0.72rem" }}>
-                Audited ledger entries & real-time operation records
+                Account history & recent transaction records
               </Typography>
             </Box>
           </Box>

@@ -400,7 +400,7 @@ export default function UserManagementPage() {
   };
 
   const formatCurrency = (amount) => {
-    return `$${parseFloat(amount || 0).toFixed(2)}`;
+    return `PKR ${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   // Color tokens
@@ -785,7 +785,7 @@ export default function UserManagementPage() {
         PaperProps={{ sx: { borderRadius: 0, backgroundColor: cardBg, border: cardBorder } }}
       >
         <DialogTitle sx={{ borderBottom: cardBorder, p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary }}>Member Dossier Profile</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary }}>Member Profile Details</Typography>
           <IconButton onClick={() => setShowUserDetailsModal(false)} sx={{ color: textSecondary, borderRadius: 0 }}>
             <CloseIcon fontSize="small" />
           </IconButton>

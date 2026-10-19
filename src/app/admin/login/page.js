@@ -136,8 +136,8 @@ export default function AdminLogin() {
             color: "#94a3b8",
           }}
         >
-          Secure administrative control terminal. Manage member packages, process withdrawal requests,
-          monitor downline genealogy, and oversee platform finances.
+          Administrative dashboard access. Review member packages, process withdrawal requests,
+          monitor downline networks, and oversee platform finances.
         </Typography>
 
         {/* 3 Admin Control Cards - Sharp Corners */}
@@ -157,10 +157,10 @@ export default function AdminLogin() {
             <Security sx={{ color: "#a78bfa", fontSize: 24 }} />
             <Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
-                Role-Based Permission Guard
+                Role-Based Access Control
               </Typography>
               <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                Protected with edge runtime JWT & session verification.
+                Protected with secure administrator authentication.
               </Typography>
             </Box>
           </Box>
@@ -183,7 +183,7 @@ export default function AdminLogin() {
                 Approvals & Member Oversight
               </Typography>
               <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                One-click review of package activations & KYC profiles.
+                Review package activations, downline trees, and KYC requests.
               </Typography>
             </Box>
           </Box>
@@ -206,7 +206,7 @@ export default function AdminLogin() {
                 Financial Clearing & Payouts
               </Typography>
               <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                Secure processing of JazzCash, EasyPaisa, & Bank transfers.
+                Process JazzCash, EasyPaisa, and Direct Bank transfers.
               </Typography>
             </Box>
           </Box>
@@ -220,8 +220,8 @@ export default function AdminLogin() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          px: { xs: 2.5, sm: 5, md: 8 },
-          py: 6,
+          px: { xs: 2, sm: 4, md: 8 },
+          py: { xs: 4, md: 6 },
           position: "relative",
         }}
       >
@@ -232,7 +232,7 @@ export default function AdminLogin() {
               display: { xs: "flex", lg: "none" },
               flexDirection: "column",
               alignItems: "center",
-              mb: 4,
+              mb: 3,
               textAlign: "center",
             }}
           >
@@ -244,12 +244,12 @@ export default function AdminLogin() {
               style={{
                 borderRadius: "0px",
                 border: "1px solid rgba(255, 255, 255, 0.12)",
-                marginBottom: "14px",
+                marginBottom: "12px",
               }}
               priority
             />
             <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-              Administrative Terminal Access
+              Administrator Sign In
             </Typography>
           </Box>
 
@@ -275,7 +275,7 @@ export default function AdminLogin() {
               }}
             />
 
-            <CardContent sx={{ p: { xs: 3, sm: 4.5 } }}>
+            <CardContent sx={{ p: { xs: 2.5, sm: 4.5 } }}>
               {/* Card Header with Pill Badge */}
               <Box sx={{ mb: 3.5 }}>
                 <Box

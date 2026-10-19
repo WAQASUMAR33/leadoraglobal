@@ -194,10 +194,10 @@ export default function ShopPage() {
           const maxCanAdd = Math.max(0, remainingAmount - currentCartTotal);
           alert(
             `Shopping amount limit reached!\n\n` +
-            `Available shopping amount: $${remainingAmount.toFixed(2)}\n` +
-            `Current cart total: $${currentCartTotal.toFixed(2)}\n` +
-            `You can add products worth: $${maxCanAdd.toFixed(2)}\n\n` +
-            `This product costs: $${productPrice.toFixed(2)}`
+            `Available shopping amount: PKR ${remainingAmount.toFixed(2)}\n` +
+            `Current cart total: PKR ${currentCartTotal.toFixed(2)}\n` +
+            `You can add products worth: PKR ${maxCanAdd.toFixed(2)}\n\n` +
+            `This product costs: PKR ${productPrice.toFixed(2)}`
           );
           return;
         }
@@ -417,11 +417,11 @@ export default function ShopPage() {
                   <Box>
                     <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, mb: 1.5 }}>
                       <Typography variant="h6" sx={{ fontWeight: 800, color: "#10b981", fontSize: "1.1rem" }}>
-                        ${(salePrice || price).toFixed(2)}
+                        PKR {(salePrice || price).toLocaleString()}
                       </Typography>
                       {salePrice && (
                         <Typography variant="caption" sx={{ color: textSecondary, textDecoration: "line-through" }}>
-                          ${price.toFixed(2)}
+                          PKR {price.toLocaleString()}
                         </Typography>
                       )}
                     </Box>

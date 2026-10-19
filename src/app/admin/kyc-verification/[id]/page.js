@@ -173,7 +173,7 @@ export default function KYCDetailPage() {
       <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
         <CircularProgress sx={{ color: '#818cf8', mb: 2 }} />
         <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem', letterSpacing: '0.05em' }}>
-          LOADING KYC DOSSIER...
+          LOADING KYC APPLICATION...
         </Typography>
       </Box>
     );
@@ -214,7 +214,7 @@ export default function KYCDetailPage() {
           KYC DIRECTORY
         </Link>
         <Typography sx={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600 }}>
-          DOSSIER #{params.id}
+          APPLICATION #{params.id}
         </Typography>
       </Breadcrumbs>
 
@@ -240,7 +240,7 @@ export default function KYCDetailPage() {
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 1 }}>
               <VerifiedUserIcon sx={{ color: '#818cf8', fontSize: 28 }} />
-              KYC Dossier Review
+              KYC Application Review
             </Typography>
             <Typography variant="body2" sx={{ color: '#64748b' }}>
               Submission Reference: #{params.id} • Submitted {formatDate(kycSubmission.createdAt)}

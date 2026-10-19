@@ -238,11 +238,11 @@ export default function CheckoutPage() {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
           <ShoppingCartCheckoutIcon sx={{ color: "#6366f1", fontSize: 28 }} />
           <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: "-0.02em" }}>
-            Order Fulfillment & Dispatch
+            Checkout & Shipping Details
           </Typography>
         </Box>
         <Typography variant="body2" sx={{ color: textSecondary }}>
-          Enter consignee shipping coordinates and confirm redemption.
+          Enter your delivery address and confirm your order.
         </Typography>
       </Box>
 
@@ -251,12 +251,12 @@ export default function CheckoutPage() {
           {/* Left Column: Shipping Address & Payment Verification */}
           <Grid item xs={12} lg={8}>
             <Stack spacing={3}>
-              {/* Consignee Address Card */}
+              {/* Delivery Address Card */}
               <Card sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder }}>
                 <Box sx={{ p: 2, px: 2.5, backgroundColor: isLight ? "#f8fafc" : "#0f172a", borderBottom: cardBorder, display: "flex", alignItems: "center", gap: 1 }}>
                   <LocalShippingIcon sx={{ color: "#38bdf8", fontSize: 20 }} />
                   <Typography sx={{ fontWeight: 800, color: textPrimary, fontSize: "0.9rem", letterSpacing: "0.04em" }}>
-                    SHIPPING DESTINATION
+                    DELIVERY ADDRESS
                   </Typography>
                 </Box>
                 <CardContent sx={{ p: 2.5 }}>
@@ -432,11 +432,11 @@ export default function CheckoutPage() {
                           {item.title}
                         </Typography>
                         <Typography variant="caption" sx={{ color: textSecondary }}>
-                          Qty: {item.quantity} × ${parseFloat(item.sale_price || item.price).toFixed(2)}
+                          Qty: {item.quantity} × PKR {parseFloat(item.sale_price || item.price).toLocaleString()}
                         </Typography>
                       </Box>
                       <Typography variant="body2" sx={{ fontWeight: 800, color: textPrimary }}>
-                        ${(parseFloat(item.sale_price || item.price) * item.quantity).toFixed(2)}
+                        PKR {(parseFloat(item.sale_price || item.price) * item.quantity).toLocaleString()}
                       </Typography>
                     </Box>
                   ))}
@@ -445,7 +445,7 @@ export default function CheckoutPage() {
 
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>Total Payable</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: "#10b981" }}>${subtotal.toFixed(2)}</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: "#10b981" }}>PKR {subtotal.toLocaleString()}</Typography>
                   </Box>
 
                   <Button
