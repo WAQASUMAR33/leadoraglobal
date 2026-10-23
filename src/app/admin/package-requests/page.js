@@ -68,7 +68,7 @@ export default function PackageRequests() {
 
   useEffect(() => {
     fetchPackageRequests(1);
-  }, [selectedStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedStatus]);
 
   const fetchPackageRequests = async (page = 1) => {
     try {

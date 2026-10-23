@@ -489,25 +489,12 @@ export async function updateUserPackageAndRank(packageRequestId) {
 
     const { user, package: packageData } = packageRequest;
     const packageAmount = parseFloat(packageData.package_amount);
-    const packageExpiryDate = new Date();
-    packageExpiryDate.setFullYear(packageExpiryDate.getFullYear() + 1); // 1 year expiry
-
-    // Check if user already has a package
-    const currentPackage = user.currentPackageId;
-    const existingPackage = user.packageId;
-    
-    if (currentPackage && currentPackage === packageData.id) {
-      console.log(`User ${user.username} already has package ${packageData.package_name}. This appears to be a renewal.`);
-    } else if (currentPackage && currentPackage !== packageData.id) {
-      console.log(`User ${user.username} is upgrading from package ${currentPackage} to ${packageData.package_name}.`);
-    }
-
-    // Update user's package (allow renewals and upgrades)
+    // Update user's package (packages do not expire)
     await prisma.user.update({
       where: { id: user.id },
       data: {
         currentPackageId: packageData.id,
-        packageExpiryDate: packageExpiryDate,
+        packageExpiryDate: null,
         packageId: packageData.id
       }
     });
@@ -582,27 +569,12 @@ export async function updateUserPackageAndRankInTransaction(packageRequestId, tx
   }
 
   const { user, package: packageData } = packageRequest;
-  const packageExpiryDate = new Date();
-  packageExpiryDate.setFullYear(packageExpiryDate.getFullYear() + 1); // 1 year expiry
-
-  // Check if this is a balance payment (shopping amount should be 0)
-  const isBalancePayment = packageRequest.transactionId && 
-                          packageRequest.transactionId.startsWith('BAL_') && 
-                          packageRequest.transactionReceipt === 'Paid from user balance';
-  
-  // For balance payments, set shopping amount to 0 since user already "paid" from their balance
-  const effectiveShoppingAmount = isBalancePayment ? 0 : parseFloat(packageData.shopping_amount);
-  
-  console.log(`Package activation for user ${user.username}: ${packageData.package_name}`);
-  console.log(`Payment method: ${isBalancePayment ? 'Balance Payment' : 'Regular Payment'}`);
-  console.log(`Shopping amount: ${effectiveShoppingAmount} (original: ${packageData.shopping_amount})`);
-
-  // Update user's package (allow renewals and upgrades)
+  // Update user's package (packages do not expire)
   await tx.user.update({
     where: { id: user.id },
     data: {
       currentPackageId: packageData.id,
-      packageExpiryDate: packageExpiryDate,
+      packageExpiryDate: null,
       packageId: packageData.id
     }
   });

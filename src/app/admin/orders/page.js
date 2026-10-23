@@ -118,7 +118,6 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders, usernameFilter, statusFilter, paymentStatusFilter]);
 
   const handleViewOrder = (order) => {

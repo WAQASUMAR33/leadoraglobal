@@ -1301,7 +1301,7 @@ export default function UserDashboardHome() {
               PACKAGE HORIZON & VALIDITY STATUS
             </Typography>
             <Typography variant="subtitle1" sx={{ color: "#10b981", fontWeight: 900, my: 0.6 }}>
-              Active through {userData?.packageExpiryDate ? new Date(userData.packageExpiryDate).toLocaleDateString() : "Oct 22, 2026"}
+              Lifetime Active Status
             </Typography>
             <Typography variant="caption" sx={{ color: textSecondary, display: "block", lineHeight: 1.6, mb: 1.5 }}>
               Active institutional privileges include 10-tier genealogy matching overrides, unlimited daily withdrawal ceilings, and full merchandise catalog allocations.

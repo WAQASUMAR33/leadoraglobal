@@ -98,7 +98,6 @@ export default function AdminPackages() {
 
   useEffect(() => {
     applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [packages, filters]);
 
   const fetchPackages = async () => {

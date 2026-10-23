@@ -32,9 +32,7 @@ export async function POST(request) {
       }
     });
 
-    const hasActivePackage = user.currentPackageId && 
-                            user.packageExpiryDate && 
-                            new Date(user.packageExpiryDate) > new Date();
+    const hasActivePackage = Boolean(user?.currentPackageId);
 
     // Validate payment proof for users without active packages
     if (!hasActivePackage) {
