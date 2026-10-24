@@ -38,7 +38,11 @@ import {
   Payment,
   ShoppingCart,
   CalendarToday,
-  AttachMoney
+  AttachMoney,
+  Receipt,
+  OpenInNew,
+  Close,
+  Image as ImageIcon
 } from '@mui/icons-material';
 
 export default function AdminOrdersPage() {
@@ -52,6 +56,7 @@ export default function AdminOrdersPage() {
   const [newStatus, setNewStatus] = useState('');
   const [newPaymentStatus, setNewPaymentStatus] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
   
   // Filter states
   const [usernameFilter, setUsernameFilter] = useState('');
@@ -394,12 +399,45 @@ export default function AdminOrdersPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={order.paymentStatus}
-                        color={getPaymentStatusColor(order.paymentStatus)}
-                        size="small"
-                        variant="outlined"
-                      />
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-start' }}>
+                        <Chip
+                          label={order.paymentStatus}
+                          color={getPaymentStatusColor(order.paymentStatus)}
+                          size="small"
+                          variant="outlined"
+                        />
+                        {order.paymentMethod && (
+                          <Typography variant="caption" sx={{ color: '#666', textTransform: 'capitalize', fontSize: '0.72rem' }}>
+                            {order.paymentMethod}
+                          </Typography>
+                        )}
+                        {order.paymentProof && (
+                          <Chip
+                            icon={<Receipt sx={{ fontSize: '14px !important' }} />}
+                            label="Receipt"
+                            size="small"
+                            color="info"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewImage({
+                                url: order.paymentProof,
+                                title: `Payment Receipt - ${order.orderNumber}`,
+                                transactionId: order.transactionId,
+                                method: order.paymentMethod
+                              });
+                            }}
+                            sx={{
+                              height: 22,
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              bgcolor: '#e3f2fd',
+                              color: '#1565c0',
+                              '&:hover': { bgcolor: '#bbdefb' }
+                            }}
+                          />
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell sx={{ color: '#333' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -556,6 +594,166 @@ export default function AdminOrdersPage() {
 
               <Divider sx={{ my: 3, borderColor: '#e0e0e0' }} />
 
+              {/* Payment Information & Proof */}
+              <Typography variant="h6" gutterBottom sx={{ color: '#333', fontWeight: 'bold', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Payment sx={{ color: '#1976d2' }} />
+                Payment Information &amp; Proof
+              </Typography>
+              <Grid container spacing={3} sx={{ mb: 1 }}>
+                <Grid item xs={12} md={selectedOrder.paymentProof ? 6 : 12}>
+                  <Card variant="outlined" sx={{ bgcolor: '#f8f9fa', borderColor: '#dee2e6', height: '100%' }}>
+                    <CardContent>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#333', mb: 2 }}>
+                        💳 Payment Details
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>Payment Method</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#333', textTransform: 'capitalize' }}>
+                            {selectedOrder.paymentMethod || 'Not specified'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>Transaction ID / Ref #</Typography>
+                          <Typography variant="body2" sx={{ 
+                            fontWeight: 'bold', 
+                            color: '#1976d2',
+                            bgcolor: '#e3f2fd',
+                            px: 1.5,
+                            py: 0.5,
+                            borderRadius: 1,
+                            display: 'inline-block',
+                            fontFamily: 'monospace',
+                            fontSize: '0.9rem',
+                            border: '1px solid #90caf9'
+                          }}>
+                            {selectedOrder.transactionId || 'N/A'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>Payment Status</Typography>
+                          <Chip
+                            label={selectedOrder.paymentStatus}
+                            color={getPaymentStatusColor(selectedOrder.paymentStatus)}
+                            size="small"
+                            sx={{ fontWeight: 'bold', mt: 0.5 }}
+                          />
+                        </Box>
+                        {selectedOrder.paymentDetails && (
+                          <Box>
+                            <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>Additional Details</Typography>
+                            <Typography variant="caption" sx={{ color: '#555', wordBreak: 'break-all', display: 'block', bgcolor: '#ffffff', p: 1, borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                              {typeof selectedOrder.paymentDetails === 'string' 
+                                ? selectedOrder.paymentDetails 
+                                : JSON.stringify(selectedOrder.paymentDetails, null, 2)}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {selectedOrder.paymentProof ? (
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined" sx={{ bgcolor: '#f8f9fa', borderColor: '#dee2e6', height: '100%' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#333' }}>
+                            🧾 Payment Proof / Receipt
+                          </Typography>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<OpenInNew sx={{ fontSize: '15px !important' }} />}
+                            onClick={() => window.open(selectedOrder.paymentProof, '_blank')}
+                            sx={{ textTransform: 'none', fontSize: '0.75rem', py: 0.3 }}
+                          >
+                            Open Original
+                          </Button>
+                        </Box>
+                        <Box
+                          onClick={() => setPreviewImage({
+                            url: selectedOrder.paymentProof,
+                            title: `Payment Receipt - ${selectedOrder.orderNumber}`,
+                            transactionId: selectedOrder.transactionId,
+                            method: selectedOrder.paymentMethod
+                          })}
+                          sx={{
+                            position: 'relative',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            border: '2px dashed #90caf9',
+                            bgcolor: '#ffffff',
+                            cursor: 'pointer',
+                            maxHeight: 220,
+                            minHeight: 140,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              borderColor: '#1976d2',
+                              boxShadow: '0 4px 12px rgba(25, 118, 210, 0.15)',
+                              '& .hover-overlay': { opacity: 1 }
+                            }
+                          }}
+                        >
+                          <Box
+                            component="img"
+                            src={selectedOrder.paymentProof}
+                            alt="Payment Proof Receipt"
+                            sx={{
+                              maxWidth: '100%',
+                              maxHeight: 220,
+                              objectFit: 'contain',
+                              display: 'block'
+                            }}
+                          />
+                          <Box
+                            className="hover-overlay"
+                            sx={{
+                              position: 'absolute',
+                              inset: 0,
+                              bgcolor: 'rgba(0, 0, 0, 0.45)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#ffffff',
+                              opacity: 0,
+                              transition: 'opacity 0.2s ease'
+                            }}
+                          >
+                            <Visibility sx={{ fontSize: 32, mb: 0.5 }} />
+                            <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                              Click to Enlarge Receipt
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ) : (
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined" sx={{ bgcolor: '#fffde7', borderColor: '#ffe082', height: '100%' }}>
+                      <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%' }}>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ color: '#856404', fontWeight: 'bold' }}>
+                            ⚠️ No Payment Proof Uploaded
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#856404', display: 'block', mt: 0.5 }}>
+                            This order was placed without manual slip upload (e.g. user had active package or balance).
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                )}
+              </Grid>
+
+              <Divider sx={{ my: 3, borderColor: '#e0e0e0' }} />
+
               {/* Order Items */}
               <Typography variant="h6" gutterBottom sx={{ color: '#333', fontWeight: 'bold', mb: 2 }}>
                 🛒 Order Items
@@ -704,6 +902,33 @@ export default function AdminOrdersPage() {
             <Typography variant="body2" sx={{ color: '#666' }} gutterBottom>
               Amount: {formatCurrency(selectedOrder?.totalAmount)}
             </Typography>
+
+            {selectedOrder?.paymentProof && (
+              <Box sx={{ mt: 2, mb: 1, p: 1.5, bgcolor: '#f0f7ff', borderRadius: 1.5, border: '1px solid #bbdefb' }}>
+                <Typography variant="caption" sx={{ color: '#1976d2', fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                  💳 Attached Payment Proof:
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                  <Typography variant="body2" sx={{ color: '#333', fontSize: '0.85rem' }}>
+                    Tx ID: <strong>{selectedOrder.transactionId || 'N/A'}</strong> ({selectedOrder.paymentMethod || 'Manual'})
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Receipt sx={{ fontSize: '15px !important' }} />}
+                    onClick={() => setPreviewImage({
+                      url: selectedOrder.paymentProof,
+                      title: `Payment Receipt - ${selectedOrder.orderNumber}`,
+                      transactionId: selectedOrder.transactionId,
+                      method: selectedOrder.paymentMethod
+                    })}
+                    sx={{ textTransform: 'none', py: 0.2, fontSize: '0.75rem' }}
+                  >
+                    View Receipt
+                  </Button>
+                </Box>
+              </Box>
+            )}
             
             <FormControl fullWidth sx={{ mt: 3 }}>
               <InputLabel sx={{ color: '#666' }}>Order Status</InputLabel>
@@ -780,6 +1005,98 @@ export default function AdminOrdersPage() {
             disabled={updating}
           >
             {updating ? 'Updating...' : 'Update Status'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Payment Receipt Full Preview Dialog */}
+      <Dialog
+        open={Boolean(previewImage)}
+        onClose={() => setPreviewImage(null)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { bgcolor: '#ffffff', borderRadius: 2 }
+        }}
+      >
+        <DialogTitle sx={{ 
+          bgcolor: '#f8f9fa', 
+          borderBottom: '1px solid #e0e0e0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          py: 1.5,
+          px: 2.5
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Receipt sx={{ color: '#1976d2' }} />
+            <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#333' }}>
+              {previewImage?.title || 'Payment Receipt'}
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={() => setPreviewImage(null)}>
+            <Close fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 2, textAlign: 'center', bgcolor: '#f5f5f5' }}>
+          {previewImage?.transactionId && (
+            <Box sx={{ mb: 1.5, display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Chip 
+                label={`Transaction ID: ${previewImage.transactionId}`} 
+                size="small" 
+                sx={{ fontFamily: 'monospace', fontWeight: 'bold', bgcolor: '#ffffff', border: '1px solid #e0e0e0' }} 
+              />
+              {previewImage?.method && (
+                <Chip 
+                  label={`Method: ${previewImage.method}`} 
+                  size="small" 
+                  color="primary" 
+                  sx={{ textTransform: 'capitalize' }} 
+                />
+              )}
+            </Box>
+          )}
+          <Box
+            sx={{
+              maxWidth: '100%',
+              maxHeight: '70vh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'auto',
+              p: 1,
+              bgcolor: '#ffffff',
+              borderRadius: 1,
+              boxShadow: 'inset 0 0 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            <Box
+              component="img"
+              src={previewImage?.url}
+              alt="Payment Receipt Preview"
+              sx={{
+                maxWidth: '100%',
+                maxHeight: '65vh',
+                objectFit: 'contain',
+                borderRadius: 1
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 2.5, py: 1.5, bgcolor: '#f8f9fa', borderTop: '1px solid #e0e0e0' }}>
+          <Button
+            startIcon={<OpenInNew />}
+            onClick={() => window.open(previewImage?.url, '_blank')}
+            variant="outlined"
+            sx={{ textTransform: 'none' }}
+          >
+            Open in New Tab
+          </Button>
+          <Button
+            onClick={() => setPreviewImage(null)}
+            variant="contained"
+            sx={{ bgcolor: '#1976d2', textTransform: 'none' }}
+          >
+            Close
           </Button>
         </DialogActions>
       </Dialog>
