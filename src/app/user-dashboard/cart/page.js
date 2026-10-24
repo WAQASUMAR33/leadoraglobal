@@ -83,8 +83,8 @@ export default function CartPage() {
       if (newCartTotal > remainingAmount) {
         alert(
           `Shopping amount limit reached!\n\n` +
-          `Available shopping balance: PKR ${remainingAmount.toFixed(2)}\n` +
-          `New cart total: PKR ${newCartTotal.toFixed(2)}`
+          `Available shopping balance: $${remainingAmount.toFixed(2)}\n` +
+          `New cart total: $${newCartTotal.toFixed(2)}`
         );
         return;
       }
@@ -230,7 +230,7 @@ export default function CartPage() {
                             {item.title}
                           </Typography>
                           <Typography variant="caption" sx={{ color: textSecondary, display: "block", mb: 0.8 }}>
-                            Unit Price: PKR {itemPrice.toLocaleString()}
+                            Unit Price: ${itemPrice.toFixed(2)}
                           </Typography>
 
                           {/* Stepper Controls */}
@@ -267,7 +267,7 @@ export default function CartPage() {
 
                         <Box sx={{ textAlign: "right" }}>
                           <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#10b981" }}>
-                            PKR {itemTotal.toLocaleString()}
+                            ${itemTotal.toFixed(2)}
                           </Typography>
                         </Box>
                       </Box>
@@ -290,7 +290,7 @@ export default function CartPage() {
                 <Stack spacing={1.5}>
                   <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                     <Typography variant="body2" sx={{ color: textSecondary }}>Subtotal ({cart.length} items)</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary }}>PKR {subtotal.toLocaleString()}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary }}>${subtotal.toFixed(2)}</Typography>
                   </Box>
                   <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                     <Typography variant="body2" sx={{ color: textSecondary }}>Shipping & Handling</Typography>
@@ -301,7 +301,7 @@ export default function CartPage() {
 
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>Total Payable</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: "#10b981" }}>PKR {subtotal.toLocaleString()}</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: "#10b981" }}>${subtotal.toFixed(2)}</Typography>
                   </Box>
 
                   <Button

@@ -19,6 +19,7 @@ import {
   FormControlLabel,
   Checkbox,
   CircularProgress,
+  Divider,
   Collapse,
 } from "@mui/material";
 import {
@@ -31,6 +32,7 @@ import {
   Storefront,
   AccountBalanceWallet,
   CheckCircle,
+  AdminPanelSettings,
 } from "@mui/icons-material";
 
 function LoginForm() {
@@ -38,18 +40,23 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const { login } = useUser();
 
+  // form state
   const [form, setForm] = useState({
     username: "",
     password: "",
   });
 
+  // UI state
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
+  // Validation state
   const [errors, setErrors] = useState({});
 
+  // Auto-focus username field on mount
   useEffect(() => {
     const usernameInput = document.getElementById("username");
     if (usernameInput) {
@@ -57,6 +64,7 @@ function LoginForm() {
     }
   }, []);
 
+  // Clear messages after 6 seconds
   useEffect(() => {
     if (message || error) {
       const timer = setTimeout(() => {
@@ -67,44 +75,54 @@ function LoginForm() {
     }
   }, [message, error]);
 
+  // Update form field
   const updateField = (field) => (e) => {
     const value = e.target.value;
     setForm({ ...form, [field]: value });
+
+    // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors({ ...errors, [field]: "" });
     }
   };
 
+  // Validation functions
   const validateField = (field, value) => {
     switch (field) {
       case "username":
         if (!value || !value.trim()) return "Username is required";
         if (value.trim().length < 3) return "Username must be at least 3 characters";
         return "";
+
       case "password":
         if (!value) return "Password is required";
         return "";
+
       default:
         return "";
     }
   };
 
+  // Validate all fields
   const validateForm = () => {
     const newErrors = {};
     Object.keys(form).forEach((field) => {
-      const err = validateField(field, form[field]);
-      if (err) newErrors[field] = err;
+      const error = validateField(field, form[field]);
+      if (error) newErrors[field] = error;
     });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // Handle form submission
   async function onSubmit(e) {
     e.preventDefault();
     setMessage(null);
     setError(null);
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      return;
+    }
 
     setLoading(true);
 
@@ -124,15 +142,24 @@ function LoginForm() {
         setError(data?.message || "Invalid username or password. Please try again.");
       } else {
         setMessage("Login successful! Redirecting to your dashboard...");
+
+        // Store user data using UserContext
         login(data.user, data.token);
-        setForm({ username: "", password: "" });
+
+        // Clear form
+        setForm({
+          username: "",
+          password: "",
+        });
+
+        // Redirect to dashboard after a delay
         setTimeout(() => {
           router.push("/user-dashboard");
-        }, 1200);
+        }, 1500);
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError("Unable to connect to the server. Please check your internet connection and try again.");
+      setError("Network error. Please check your internet connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -143,12 +170,11 @@ function LoginForm() {
       sx={{
         minHeight: "100vh",
         display: "flex",
-        background: "linear-gradient(135deg, #070a12 0%, #0d1322 50%, #111a2e 100%)",
+        background: "linear-gradient(135deg, #090d16 0%, #0f172a 50%, #172033 100%)",
         position: "relative",
-        overflowX: "hidden",
       }}
     >
-      {/* Left Column - Desktop Branding (hidden on mobile) */}
+      {/* Left Half - Logo, Branding & Feature Showcase */}
       <Box
         sx={{
           width: "50%",
@@ -160,43 +186,46 @@ function LoginForm() {
           px: { lg: 6, xl: 8 },
           py: 6,
           position: "relative",
-          borderRight: "1px solid rgba(255, 255, 255, 0.08)",
         }}
       >
+        {/* Ledora Global Image - Square sharp corners */}
         <Box sx={{ mb: 4 }}>
           <Image
             src="/leadora_global.jpg"
             alt="Ledora Global"
-            width={320}
-            height={200}
+            width={340}
+            height={220}
             style={{
-              maxWidth: "320px",
+              maxWidth: "340px",
               height: "auto",
               borderRadius: "0px",
-              boxShadow: "0 16px 40px rgba(0, 0, 0, 0.6)",
+              boxShadow: "0 12px 36px rgba(0, 0, 0, 0.6)",
               border: "1px solid rgba(255, 255, 255, 0.12)",
             }}
             priority
           />
         </Box>
 
+        {/* Tagline */}
+
         <Typography
           variant="h6"
           sx={{
-            mb: 4.5,
+            mb: 5,
+            opacity: 0.85,
             lineHeight: 1.6,
             textAlign: "center",
-            maxWidth: 460,
-            fontSize: "1rem",
+            maxWidth: 480,
+            fontSize: "1.05rem",
             color: "#94a3b8",
-            fontWeight: 500,
           }}
         >
-          Sign in to access your member account, manage packages, monitor team earnings, and shop through our online catalog.
+          Sign in to your account to access your dashboard, manage packages, track network commissions,
+          and explore our direct e-commerce platform.
         </Typography>
 
-        {/* 3 Real Feature Cards */}
-        <Stack spacing={2} sx={{ width: "100%", maxWidth: 420 }}>
+        {/* 3 Crisp Value Cards - Sharp Corners */}
+        <Stack spacing={2} sx={{ width: "100%", maxWidth: 440 }}>
           <Box
             sx={{
               p: 2,
@@ -204,18 +233,18 @@ function LoginForm() {
               alignItems: "center",
               gap: 2,
               borderRadius: 0,
-              backgroundColor: "rgba(15, 23, 42, 0.6)",
+              backgroundColor: "rgba(30, 41, 59, 0.5)",
               border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderLeft: "4px solid #6366f1",
+              borderLeft: "3px solid #6366f1",
             }}
           >
             <TrendingUp sx={{ color: "#818cf8", fontSize: 24 }} />
             <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#f8fafc" }}>
-                Multi-Level Commission Tracking
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
+                Multi-Tier Commission Engine
               </Typography>
               <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                Track direct referral bonuses and downline team matching rewards.
+                Real-time upline and downline commission tracking.
               </Typography>
             </Box>
           </Box>
@@ -227,18 +256,18 @@ function LoginForm() {
               alignItems: "center",
               gap: 2,
               borderRadius: 0,
-              backgroundColor: "rgba(15, 23, 42, 0.6)",
+              backgroundColor: "rgba(30, 41, 59, 0.5)",
               border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderLeft: "4px solid #06b6d4",
+              borderLeft: "3px solid #06b6d4",
             }}
           >
             <Storefront sx={{ color: "#22d3ee", fontSize: 24 }} />
             <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#f8fafc" }}>
-                E-Commerce Shopping Wallet
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
+                Integrated E-Commerce Wallet
               </Typography>
               <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                Redeem shopping wallet points on health, beauty, and wellness products.
+                Redeem shopping points directly on catalog products.
               </Typography>
             </Box>
           </Box>
@@ -250,107 +279,157 @@ function LoginForm() {
               alignItems: "center",
               gap: 2,
               borderRadius: 0,
-              backgroundColor: "rgba(15, 23, 42, 0.6)",
+              backgroundColor: "rgba(30, 41, 59, 0.5)",
               border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderLeft: "4px solid #10b981",
+              borderLeft: "3px solid #10b981",
             }}
           >
             <AccountBalanceWallet sx={{ color: "#34d399", fontSize: 24 }} />
             <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#f8fafc" }}>
-                Fast Local Withdrawals
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
+                Verified PKR Withdrawals
               </Typography>
               <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                Direct bank wire, JazzCash, and EasyPaisa account payout disbursal.
+                Fast payouts via JazzCash, EasyPaisa, or Bank Wire.
               </Typography>
             </Box>
           </Box>
         </Stack>
       </Box>
 
-      {/* Right Column - Login Form (Full width on mobile) */}
+      {/* Right Half - Login Form */}
       <Box
         sx={{
           width: { xs: "100%", lg: "50%" },
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          px: { xs: 2, sm: 4, md: 6 },
-          py: { xs: 4, sm: 6 },
+          px: { xs: 2.5, sm: 5, md: 8 },
+          py: 6,
         }}
       >
-        <Box sx={{ width: "100%", maxWidth: 440 }}>
-          {/* Mobile Brand Logo */}
+        <Box sx={{ width: "100%", maxWidth: 460 }}>
+          {/* Mobile Logo & Title */}
           <Box
             sx={{
               display: { xs: "flex", lg: "none" },
               flexDirection: "column",
               alignItems: "center",
-              mb: 3,
+              mb: 4,
               textAlign: "center",
             }}
           >
             <Image
               src="/leadora_global.jpg"
               alt="Ledora Global"
-              width={160}
-              height={100}
+              width={180}
+              height={110}
               style={{
                 borderRadius: "0px",
-                border: "1px solid rgba(255, 255, 255, 0.12)",
-                marginBottom: "12px",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                marginBottom: "16px",
               }}
               priority
             />
-            <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: "0.85rem" }}>
-              Sign in with your username to access your account
+            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              Sign in with your username to continue
             </Typography>
           </Box>
 
-          {/* Login Card */}
+          {/* Login Card - Sharp Corners & Rich Aesthetics */}
           <Card
             sx={{
               width: "100%",
               borderRadius: 0,
-              backgroundColor: "rgba(12, 18, 32, 0.9)",
-              backdropFilter: "blur(20px)",
+              backgroundColor: "rgba(13, 19, 33, 0.85)",
+              backdropFilter: "blur(24px)",
               border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderTop: "4px solid #6366f1",
-              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.6)",
+              position: "relative",
+              overflow: "hidden",
+              boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 45px -10px rgba(99, 102, 241, 0.18)",
             }}
           >
-            <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
-              <Box sx={{ mb: 3 }}>
+            {/* Top Multi-Color Accent Gradient Bar */}
+            <Box
+              sx={{
+                height: 3,
+                width: "100%",
+                background: "linear-gradient(90deg, #6366f1 0%, #06b6d4 50%, #a855f7 100%)",
+              }}
+            />
+
+            <CardContent sx={{ p: { xs: 3, sm: 4.5 } }}>
+              {/* Card Header with Pill Badge */}
+              <Box sx={{ mb: 3.5 }}>
+                <Box
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    px: 1.25,
+                    py: 0.4,
+                    mb: 1.5,
+                    backgroundColor: "rgba(99, 102, 241, 0.12)",
+                    border: "1px solid rgba(99, 102, 241, 0.3)",
+                    borderRadius: 0,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 6,
+                      height: 6,
+                      backgroundColor: "#818cf8",
+                      borderRadius: 0,
+                      boxShadow: "0 0 8px #818cf8",
+                    }}
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "#818cf8",
+                      fontWeight: 700,
+                      fontSize: "0.72rem",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Member Authentication
+                  </Typography>
+                </Box>
+
                 <Typography
-                  variant="h5"
+                  variant="h4"
                   component="h1"
                   sx={{
-                    fontWeight: 900,
-                    fontSize: { xs: "1.5rem", sm: "1.75rem" },
+                    fontWeight: 800,
+                    fontSize: { xs: "1.75rem", sm: "2rem" },
                     letterSpacing: "-0.02em",
-                    color: "#f8fafc",
+                    background: "linear-gradient(135deg, #ffffff 0%, #e2e8f0 70%, #94a3b8 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
                     mb: 0.5,
                   }}
                 >
-                  Member Sign In
+                  Sign In
                 </Typography>
-                <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: "0.88rem" }}>
+                <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: "0.925rem" }}>
                   Enter your credentials to access your dashboard.
                 </Typography>
               </Box>
 
               {/* Success / Error Alerts */}
               <Collapse in={!!message || !!error}>
-                <Box sx={{ mb: 2.5 }}>
+                <Box sx={{ mb: 3 }}>
                   {message && (
                     <Alert
                       severity="success"
                       icon={<CheckCircle fontSize="inherit" />}
                       sx={{
                         borderRadius: 0,
-                        backgroundColor: "rgba(16, 185, 129, 0.15)",
+                        backgroundColor: "rgba(16, 185, 129, 0.12)",
                         color: "#34d399",
                         border: "1px solid rgba(16, 185, 129, 0.3)",
+                        borderLeft: "4px solid #10b981",
                       }}
                     >
                       {message}
@@ -361,9 +440,10 @@ function LoginForm() {
                       severity="error"
                       sx={{
                         borderRadius: 0,
-                        backgroundColor: "rgba(239, 68, 68, 0.15)",
+                        backgroundColor: "rgba(239, 68, 68, 0.12)",
                         color: "#f87171",
                         border: "1px solid rgba(239, 68, 68, 0.3)",
+                        borderLeft: "4px solid #ef4444",
                       }}
                     >
                       {error}
@@ -374,19 +454,17 @@ function LoginForm() {
 
               {/* Login Form */}
               <Box component="form" onSubmit={onSubmit} noValidate>
-                <Stack spacing={2.2}>
+                <Stack spacing={2.5}>
                   {/* Username Field */}
                   <Box>
                     <Typography
                       variant="caption"
                       sx={{
                         display: "block",
-                        mb: 0.6,
-                        fontWeight: 700,
+                        mb: 0.75,
+                        fontWeight: 600,
                         color: "#cbd5e1",
-                        fontSize: "0.78rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
+                        fontSize: "0.8rem",
                       }}
                     >
                       Username
@@ -398,7 +476,6 @@ function LoginForm() {
                       value={form.username}
                       onChange={updateField("username")}
                       fullWidth
-                      size="small"
                       disabled={loading}
                       error={!!errors.username}
                       helperText={errors.username}
@@ -406,16 +483,20 @@ function LoginForm() {
                         input: {
                           sx: {
                             borderRadius: 0,
-                            backgroundColor: "rgba(15, 23, 42, 0.7)",
-                            color: "#f8fafc",
-                            fontSize: "0.9rem",
-                            "& fieldset": { borderColor: "rgba(255, 255, 255, 0.15)" },
-                            "&:hover fieldset": { borderColor: "#6366f1" },
-                            "&.Mui-focused fieldset": { borderColor: "#818cf8" },
+                            backgroundColor: "rgba(15, 23, 42, 0.65)",
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              backgroundColor: "rgba(15, 23, 42, 0.9)",
+                            },
                           },
                           startAdornment: (
                             <InputAdornment position="start">
-                              <PersonOutline sx={{ color: "#818cf8", fontSize: 20 }} />
+                              <PersonOutline
+                                sx={{
+                                  color: errors.username ? "error.main" : "#818cf8",
+                                  fontSize: 22,
+                                }}
+                              />
                             </InputAdornment>
                           ),
                         },
@@ -425,15 +506,13 @@ function LoginForm() {
 
                   {/* Password Field */}
                   <Box>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.6 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
                       <Typography
                         variant="caption"
                         sx={{
-                          fontWeight: 700,
+                          fontWeight: 600,
                           color: "#cbd5e1",
-                          fontSize: "0.78rem",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.04em",
+                          fontSize: "0.8rem",
                         }}
                       >
                         Password
@@ -442,9 +521,9 @@ function LoginForm() {
                         href="/forgot-password"
                         style={{
                           color: "#818cf8",
-                          fontSize: "0.78rem",
+                          fontSize: "0.8rem",
                           textDecoration: "none",
-                          fontWeight: 700,
+                          fontWeight: 600,
                         }}
                       >
                         Forgot password?
@@ -454,11 +533,10 @@ function LoginForm() {
                       id="password"
                       name="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder="••••••••••••"
                       value={form.password}
                       onChange={updateField("password")}
                       fullWidth
-                      size="small"
                       disabled={loading}
                       error={!!errors.password}
                       helperText={errors.password}
@@ -466,16 +544,20 @@ function LoginForm() {
                         input: {
                           sx: {
                             borderRadius: 0,
-                            backgroundColor: "rgba(15, 23, 42, 0.7)",
-                            color: "#f8fafc",
-                            fontSize: "0.9rem",
-                            "& fieldset": { borderColor: "rgba(255, 255, 255, 0.15)" },
-                            "&:hover fieldset": { borderColor: "#6366f1" },
-                            "&.Mui-focused fieldset": { borderColor: "#818cf8" },
+                            backgroundColor: "rgba(15, 23, 42, 0.65)",
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              backgroundColor: "rgba(15, 23, 42, 0.9)",
+                            },
                           },
                           startAdornment: (
                             <InputAdornment position="start">
-                              <LockOutlined sx={{ color: "#818cf8", fontSize: 20 }} />
+                              <LockOutlined
+                                sx={{
+                                  color: errors.password ? "error.main" : "#818cf8",
+                                  fontSize: 22,
+                                }}
+                              />
                             </InputAdornment>
                           ),
                           endAdornment: (
@@ -506,19 +588,21 @@ function LoginForm() {
                         sx={{
                           borderRadius: 0,
                           color: "#64748b",
-                          "&.Mui-checked": { color: "#6366f1" },
+                          "&.Mui-checked": {
+                            color: "#6366f1",
+                          },
                         }}
                       />
                     }
                     label={
-                      <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: "0.82rem" }}>
-                        Remember me on this device
+                      <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+                        Remember me on this browser
                       </Typography>
                     }
-                    sx={{ ml: -0.5 }}
+                    sx={{ ml: -0.5, mt: -0.5 }}
                   />
 
-                  {/* Submit Button */}
+                  {/* Submit Button - Sharp, Gradient & Glowing */}
                   <Button
                     type="submit"
                     fullWidth
@@ -526,24 +610,37 @@ function LoginForm() {
                     size="large"
                     disabled={loading}
                     sx={{
-                      py: 1.3,
-                      fontSize: "0.95rem",
-                      fontWeight: 800,
+                      py: 1.6,
+                      fontSize: "1.025rem",
+                      fontWeight: 700,
                       letterSpacing: "0.03em",
                       borderRadius: 0,
-                      backgroundColor: "#6366f1",
-                      boxShadow: "0 4px 20px rgba(99, 102, 241, 0.4)",
+                      background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #3b82f6 100%)",
+                      boxShadow: "0 8px 25px -4px rgba(99, 102, 241, 0.5)",
+                      transition: "all 0.25s ease",
                       "&:hover": {
-                        backgroundColor: "#4f46e5",
-                        boxShadow: "0 6px 25px rgba(99, 102, 241, 0.6)",
+                        background: "linear-gradient(135deg, #4f46e5 0%, #4338ca 50%, #2563eb 100%)",
+                        boxShadow: "0 12px 30px -4px rgba(99, 102, 241, 0.7)",
+                        transform: "translateY(-1px)",
                       },
                     }}
-                    endIcon={loading ? null : <ArrowForward sx={{ fontSize: 18 }} />}
+                    endIcon={
+                      loading ? null : (
+                        <ArrowForward
+                          sx={{
+                            transition: "transform 0.2s ease-in-out",
+                            ".MuiButton-root:hover &": {
+                              transform: "translateX(5px)",
+                            },
+                          }}
+                        />
+                      )
+                    }
                   >
                     {loading ? (
                       <Stack direction="row" spacing={1.5} alignItems="center">
-                        <CircularProgress size={18} color="inherit" />
-                        <span>Verifying...</span>
+                        <CircularProgress size={20} color="inherit" />
+                        <span>Verifying Credentials...</span>
                       </Stack>
                     ) : (
                       "Sign In"
@@ -553,15 +650,15 @@ function LoginForm() {
               </Box>
 
               {/* Sign up prompt */}
-              <Box sx={{ textAlign: "center", mt: 3, pt: 2, borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: "0.85rem" }}>
+              <Box sx={{ textAlign: "center", mt: 3, pt: 2.5, borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                <Typography variant="body2" sx={{ color: "#94a3b8" }}>
                   Don&apos;t have an account?{" "}
                   <Link
                     href="/signup"
                     style={{
                       color: "#818cf8",
                       textDecoration: "none",
-                      fontWeight: 800,
+                      fontWeight: 700,
                     }}
                   >
                     Sign up here
@@ -569,9 +666,9 @@ function LoginForm() {
                 </Typography>
               </Box>
 
-              {/* Mandatory RapidTechPro Attribution */}
+              {/* Powered By Footer */}
               <Box sx={{ mt: 2.5, textAlign: "center" }}>
-                <Typography variant="caption" sx={{ color: "#64748b", fontSize: "0.75rem" }}>
+                <Typography variant="caption" sx={{ color: "#64748b", fontSize: "0.8rem" }}>
                   Powerd By :{" "}
                   <a
                     href="https://rapidtechpro.com/"
@@ -606,10 +703,10 @@ export default function LoginPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#070a12",
+            backgroundColor: "#080c14",
           }}
         >
-          <CircularProgress sx={{ color: "#6366f1" }} />
+          <CircularProgress color="primary" />
         </Box>
       }
     >

@@ -136,7 +136,7 @@ export default function AdminDashboard() {
             fontWeight: 700
           }}
         >
-          Aggregating Platform Statistics & Reports...
+          Aggregating Real-Time Telemetry & Statistics...
         </Typography>
       </Box>
     );
@@ -194,7 +194,7 @@ export default function AdminDashboard() {
   const pendingStroke = (kycPendingPct / 100) * circumference;
   const rejectedStroke = (kycRejectedPct / 100) * circumference;
 
-  // Primary KPI Overview Cards
+  // Primary KPI Telemetry Cards
   const statCards = [
     {
       title: 'TOTAL REGISTERED MEMBERS',
@@ -207,7 +207,7 @@ export default function AdminDashboard() {
     },
     {
       title: 'TOTAL CAPITAL REVENUE',
-      value: `PKR ${(stats.financials?.totalPackageRevenue || 0).toLocaleString()}`,
+      value: `$${(stats.financials?.totalPackageRevenue || 0).toLocaleString()}`,
       subValue: `${stats.packageRequests?.approved || 0} Packages Cleared`,
       icon: <AccountBalanceWalletIcon sx={{ fontSize: 26, color: '#34d399' }} />,
       indicatorColor: '#34d399',
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
     },
     {
       title: 'TOTAL WITHDRAWALS DISBURSED',
-      value: `PKR ${(stats.financials?.totalWithdrawalsPaid || 0).toLocaleString()}`,
+      value: `$${(stats.financials?.totalWithdrawalsPaid || 0).toLocaleString()}`,
       subValue: `${stats.withdrawals?.pending || 0} Payouts Pending`,
       icon: <PaymentsOutlinedIcon sx={{ fontSize: 26, color: '#f87171' }} />,
       indicatorColor: '#f87171',
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
       icon: <VerifiedUserOutlinedIcon sx={{ fontSize: 26, color: '#fbbf24' }} />,
       indicatorColor: '#fbbf24',
       link: '/admin/kyc-verification',
-      linkLabel: 'Review Applications'
+      linkLabel: 'Audit Dossiers'
     }
   ];
 
@@ -301,7 +301,7 @@ export default function AdminDashboard() {
         </Box>
       </Box>
 
-      {/* Primary KPI Overview Cards */}
+      {/* Primary KPI Telemetry Cards */}
       <Grid container spacing={2.5}>
         {statCards.map((card, idx) => (
           <Grid item xs={12} sm={6} lg={3} key={idx}>
@@ -593,10 +593,10 @@ export default function AdminDashboard() {
                       {flowData[hoveredFlowIndex].month} Capital Flow
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#6366f1', fontWeight: 800 }}>
-                      Inflow: PKR {flowData[hoveredFlowIndex].inflow.toLocaleString()}
+                      Inflow: ${flowData[hoveredFlowIndex].inflow.toLocaleString()}
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#f87171', fontWeight: 800 }}>
-                      Outflow: PKR {flowData[hoveredFlowIndex].outflow.toLocaleString()}
+                      Outflow: ${flowData[hoveredFlowIndex].outflow.toLocaleString()}
                     </Typography>
                   </Paper>
                 )}
@@ -609,7 +609,7 @@ export default function AdminDashboard() {
                     Gross Packages
                   </Typography>
                   <Typography variant="subtitle1" sx={{ color: '#6366f1', fontWeight: 800 }}>
-                    PKR {(stats.financials?.totalPackageRevenue || 0).toLocaleString()}
+                    ${(stats.financials?.totalPackageRevenue || 0).toLocaleString()}
                   </Typography>
                 </Grid>
 
@@ -618,7 +618,7 @@ export default function AdminDashboard() {
                     Net Disbursed
                   </Typography>
                   <Typography variant="subtitle1" sx={{ color: '#f87171', fontWeight: 800 }}>
-                    PKR {(stats.financials?.totalWithdrawalsPaid || 0).toLocaleString()}
+                    ${(stats.financials?.totalWithdrawalsPaid || 0).toLocaleString()}
                   </Typography>
                 </Grid>
 
@@ -627,7 +627,7 @@ export default function AdminDashboard() {
                     Pending Outflow
                   </Typography>
                   <Typography variant="subtitle1" sx={{ color: '#fbbf24', fontWeight: 800 }}>
-                    PKR {(stats.financials?.pendingWithdrawalsAmount || 0).toLocaleString()}
+                    ${(stats.financials?.pendingWithdrawalsAmount || 0).toLocaleString()}
                   </Typography>
                 </Grid>
 
@@ -636,7 +636,7 @@ export default function AdminDashboard() {
                     User Balance Reserve
                   </Typography>
                   <Typography variant="subtitle1" sx={{ color: '#10b981', fontWeight: 800 }}>
-                    PKR {(stats.financials?.totalUserBalance || 0).toLocaleString()}
+                    ${(stats.financials?.totalUserBalance || 0).toLocaleString()}
                   </Typography>
                 </Grid>
               </Grid>
@@ -753,7 +753,7 @@ export default function AdminDashboard() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.02)', border: cardBorder }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ width: 10, height: 10, backgroundColor: '#ef4444' }} />
-                    <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: textPrimary }}>Rejected Applications</Typography>
+                    <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: textPrimary }}>Rejected Dossiers</Typography>
                   </Box>
                   <Typography sx={{ fontWeight: 800, color: '#ef4444', fontSize: '0.85rem' }}>
                     {kycRejected} ({kycRejectedPct}%)

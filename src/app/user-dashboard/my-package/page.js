@@ -171,7 +171,7 @@ export default function MyPackagePage() {
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 350, gap: 2 }}>
         <CircularProgress size={40} sx={{ color: '#6366f1' }} />
         <Typography sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>
-          LOADING PACKAGE DETAILS...
+          LOADING PACKAGE DOSSIER...
         </Typography>
       </Box>
     );
@@ -243,7 +243,7 @@ export default function MyPackagePage() {
                 {getStatusChip(userPackage?.status || 'active')}
               </Box>
               <Typography variant="body2" sx={{ color: textSecondary, mb: 2 }}>
-                Package Investment Capital: <strong style={{ color: '#10b981' }}>PKR {parseFloat(pkg.package_amount || pkg.amount || 0).toLocaleString()}</strong>
+                Package Investment Capital: <strong style={{ color: '#10b981' }}>${parseFloat(pkg.package_amount || pkg.amount || 0).toFixed(2)}</strong>
               </Typography>
             </Grid>
 
@@ -253,7 +253,7 @@ export default function MyPackagePage() {
                   <Box sx={{ p: 1.5, backgroundColor: isLight ? "#f8fafc" : "rgba(255,255,255,0.02)", border: cardBorder }}>
                     <Typography variant="caption" sx={{ color: textSecondary }}>Direct Bonus</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#6366f1" }}>
-                      PKR {parseFloat(pkg.package_direct_commission || 0).toLocaleString()}
+                      ${parseFloat(pkg.package_direct_commission || 0).toFixed(2)}
                     </Typography>
                   </Box>
                 </Grid>
@@ -261,7 +261,7 @@ export default function MyPackagePage() {
                   <Box sx={{ p: 1.5, backgroundColor: isLight ? "#f8fafc" : "rgba(255,255,255,0.02)", border: cardBorder }}>
                     <Typography variant="caption" sx={{ color: textSecondary }}>Shopping Limit</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#10b981" }}>
-                      PKR {parseFloat(pkg.package_shopping_amount || 0).toLocaleString()}
+                      ${parseFloat(pkg.package_shopping_amount || 0).toFixed(2)}
                     </Typography>
                   </Box>
                 </Grid>
@@ -321,7 +321,7 @@ export default function MyPackagePage() {
                       {req.package?.package_name || req.packageName || 'Package Tier'}
                     </TableCell>
                     <TableCell sx={{ fontWeight: 800, color: "#10b981", fontFamily: "monospace" }}>
-                      PKR {parseFloat(req.package?.package_amount || req.amount || 0).toLocaleString()}
+                      ${parseFloat(req.package?.package_amount || req.amount || 0).toFixed(2)}
                     </TableCell>
                     <TableCell sx={{ color: textSecondary, fontFamily: "monospace", fontSize: "0.8rem" }}>
                       {req.transactionId || '—'}

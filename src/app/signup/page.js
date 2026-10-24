@@ -414,7 +414,7 @@ function SignupForm() {
           alignItems: "center",
           justifyContent: "center",
           px: { xs: 2, sm: 4, md: 6, xl: 8 },
-          py: { xs: 3, md: 6 },
+          py: { xs: 4, md: 6 },
           position: "relative",
         }}
       >
@@ -425,7 +425,7 @@ function SignupForm() {
               display: { xs: "flex", lg: "none" },
               flexDirection: "column",
               alignItems: "center",
-              mb: 2.5,
+              mb: 3,
               textAlign: "center",
             }}
           >
@@ -437,7 +437,7 @@ function SignupForm() {
               style={{
                 borderRadius: "0px",
                 border: "1px solid rgba(255, 255, 255, 0.12)",
-                marginBottom: "12px",
+                marginBottom: "14px",
               }}
               priority
             />
@@ -468,7 +468,7 @@ function SignupForm() {
               }}
             />
 
-            <CardContent sx={{ p: { xs: 2.25, sm: 4 } }}>
+            <CardContent sx={{ p: { xs: 3, sm: 4.5 } }}>
               {/* Card Header with Pill Badge */}
               <Box sx={{ mb: 3.5 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -891,7 +891,7 @@ function SignupForm() {
                           </Box>
                         </Stack>
                         <Typography variant="caption" sx={{ color: "#34d399", fontWeight: 600, fontSize: "0.75rem" }}>
-                          Active Sponsor
+                          Active Node
                         </Typography>
                       </Box>
                     )}

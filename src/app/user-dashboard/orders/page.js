@@ -223,7 +223,7 @@ export default function OrdersPage() {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                   {getStatusChip(order.status)}
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#10b981" }}>
-                    PKR {parseFloat(order.totalAmount).toLocaleString()}
+                    ${parseFloat(order.totalAmount).toFixed(2)}
                   </Typography>
                 </Box>
               </Box>
@@ -246,11 +246,11 @@ export default function OrdersPage() {
                           {item.product?.title || 'Merchandise Item'}
                         </Typography>
                         <Typography variant="caption" sx={{ color: textSecondary }}>
-                          Quantity: {item.quantity} × PKR {parseFloat(item.price).toLocaleString()}
+                          Quantity: {item.quantity} × ${parseFloat(item.price).toFixed(2)}
                         </Typography>
                       </Box>
                       <Typography variant="body2" sx={{ fontWeight: 800, color: textPrimary }}>
-                        PKR {(parseFloat(item.price) * item.quantity).toLocaleString()}
+                        ${(parseFloat(item.price) * item.quantity).toFixed(2)}
                       </Typography>
                     </Box>
                   ))}
