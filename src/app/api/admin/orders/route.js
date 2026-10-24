@@ -14,6 +14,8 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
+    const paymentStatus = searchParams.get('paymentStatus');
+    const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 50;
     const skip = (page - 1) * limit;
@@ -22,6 +24,19 @@ export async function GET(request) {
     const where = {};
     if (status && status !== 'all') {
       where.status = status;
+    }
+    if (paymentStatus && paymentStatus !== 'all') {
+      where.paymentStatus = paymentStatus;
+    }
+    if (search && search.trim()) {
+      const trimmed = search.trim();
+      where.OR = [
+        { orderNumber: { contains: trimmed } },
+        { transactionId: { contains: trimmed } },
+        { user: { username: { contains: trimmed } } },
+        { user: { fullname: { contains: trimmed } } },
+        { user: { email: { contains: trimmed } } }
+      ];
     }
 
     const orders = await prisma.order.findMany({

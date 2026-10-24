@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function AdminWithdrawalsPage() {
   const [withdrawals, setWithdrawals] = useState([]);
@@ -17,7 +17,12 @@ export default function AdminWithdrawalsPage() {
     search: '',
     status: 'all'
   });
-  const [filteredWithdrawals, setFilteredWithdrawals] = useState([]);
+
+  // Pagination states (default 50 records per page)
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Withdrawal status options
   const statusOptions = [
@@ -27,52 +32,31 @@ export default function AdminWithdrawalsPage() {
     { value: 'processing', label: 'Processing', color: 'bg-blue-100 text-blue-800' }
   ];
 
-  useEffect(() => {
-    fetchWithdrawals();
-  }, []);
-
-  const applyFilters = useCallback(() => {
-    let filtered = [...withdrawals];
-
-    // Search filter
-    if (filters.search) {
-      filtered = filtered.filter(withdrawal => 
-        withdrawal.withdrawalRef.toLowerCase().includes(filters.search.toLowerCase()) ||
-        (withdrawal.user?.fullname || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-        (withdrawal.user?.username || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-        (withdrawal.user?.email || '').toLowerCase().includes(filters.search.toLowerCase())
-      );
-    }
-
-    // Status filter
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(withdrawal => withdrawal.status === filters.status);
-    }
-
-    setFilteredWithdrawals(filtered);
-  }, [withdrawals, filters]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [withdrawals, filters, applyFilters]);
-
-  const clearFilters = () => {
-    setFilters({
-      search: '',
-      status: 'all'
-    });
-  };
-
-  const fetchWithdrawals = async () => {
+  const fetchWithdrawals = async (targetPage = page, targetLimit = limit, targetFilters = filters) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/withdrawals', {
+      const params = new URLSearchParams({
+        page: targetPage.toString(),
+        limit: targetLimit.toString()
+      });
+      if (targetFilters.status && targetFilters.status !== 'all') {
+        params.append('status', targetFilters.status);
+      }
+      if (targetFilters.search && targetFilters.search.trim()) {
+        params.append('search', targetFilters.search.trim());
+      }
+
+      const response = await fetch(`/api/admin/withdrawals?${params.toString()}`, {
         credentials: 'include'
       });
 
       if (response.ok) {
         const data = await response.json();
         setWithdrawals(data.withdrawals || []);
+        if (data.pagination) {
+          setTotalCount(data.pagination.total || 0);
+          setTotalPages(data.pagination.pages || 1);
+        }
       } else {
         setError('Failed to fetch withdrawal requests');
       }
@@ -82,6 +66,31 @@ export default function AdminWithdrawalsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchWithdrawals(page, limit, filters);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [page, limit, filters]);
+
+  const handleSearchChange = (e) => {
+    setFilters(prev => ({ ...prev, search: e.target.value }));
+    setPage(1);
+  };
+
+  const handleStatusChange = (e) => {
+    setFilters(prev => ({ ...prev, status: e.target.value }));
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      status: 'all'
+    });
+    setPage(1);
   };
 
   const handleViewWithdrawal = (withdrawal) => {
@@ -199,7 +208,7 @@ export default function AdminWithdrawalsPage() {
               type="text"
               placeholder="Search by reference, user name, or email..."
               value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              onChange={handleSearchChange}
               className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-gray-800"
             />
           </div>
@@ -209,7 +218,7 @@ export default function AdminWithdrawalsPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
             <select
               value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              onChange={handleStatusChange}
               className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
             >
               <option value="all">All Status</option>
@@ -231,9 +240,27 @@ export default function AdminWithdrawalsPage() {
           </div>
         </div>
 
-        {/* Results Count */}
-        <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredWithdrawals.length} of {withdrawals.length} withdrawal requests
+        {/* Results Count & Limit Selector */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 border-t border-gray-100 pt-3">
+          <div>
+            Showing <span className="font-semibold text-gray-900">{totalCount === 0 ? 0 : (page - 1) * limit + 1}</span> to <span className="font-semibold text-gray-900">{Math.min(page * limit, totalCount)}</span> of <span className="font-semibold text-gray-900">{totalCount}</span> total historical records
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 font-medium">Records per page:</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(parseInt(e.target.value, 10));
+                setPage(1);
+              }}
+              className="px-3 py-1 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -267,7 +294,7 @@ export default function AdminWithdrawalsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredWithdrawals.map((withdrawal) => (
+              {withdrawals.map((withdrawal) => (
                 <tr key={withdrawal.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -355,7 +382,7 @@ export default function AdminWithdrawalsPage() {
           </table>
         </div>
 
-        {filteredWithdrawals.length === 0 && (
+        {withdrawals.length === 0 && (
           <div className="text-center py-8">
             <div className="text-gray-500">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -366,6 +393,69 @@ export default function AdminWithdrawalsPage() {
             </div>
           </div>
         )}
+
+        {/* Pagination Controls */}
+        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-sm text-gray-600">
+            Page <span className="font-semibold text-gray-900">{page}</span> of <span className="font-semibold text-gray-900">{Math.max(1, totalPages)}</span> ({totalCount} total records)
+          </div>
+          
+          <div className="flex items-center space-x-1.5">
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title="First Page"
+            >
+              &laquo; First
+            </button>
+            <button
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2))
+              .map((p, index, array) => {
+                const prevVal = array[index - 1];
+                const hasGap = prevVal && p - prevVal > 1;
+                return (
+                  <span key={p} className="flex items-center">
+                    {hasGap && <span className="px-1 text-gray-400">...</span>}
+                    <button
+                      onClick={() => setPage(p)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        page === p
+                          ? 'bg-purple-600 text-white font-bold shadow-sm'
+                          : 'border border-gray-300 text-gray-700 bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </span>
+                );
+              })}
+
+            <button
+              onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title="Last Page"
+            >
+              Last &raquo;
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Withdrawal Details Modal */}

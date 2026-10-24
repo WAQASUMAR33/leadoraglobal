@@ -29,7 +29,8 @@ import {
   Tooltip,
   Alert,
   CircularProgress,
-  Divider
+  Divider,
+  TablePagination
 } from '@mui/material';
 import {
   Visibility,
@@ -47,7 +48,6 @@ import {
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -62,6 +62,11 @@ export default function AdminOrdersPage() {
   const [usernameFilter, setUsernameFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
+
+  // Pagination states (default 50 records per page)
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Order status options
   const statusOptions = [
@@ -80,20 +85,33 @@ export default function AdminOrdersPage() {
     { value: 'refunded', label: 'Refunded', color: 'info' }
   ];
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const fetchOrders = async () => {
+  const fetchOrders = async (targetPage = page, targetLimit = rowsPerPage, targetStatus = statusFilter, targetPayment = paymentStatusFilter, targetSearch = usernameFilter) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/orders', {
+      const params = new URLSearchParams({
+        page: (targetPage + 1).toString(),
+        limit: targetLimit.toString()
+      });
+      if (targetStatus && targetStatus !== 'all') {
+        params.append('status', targetStatus);
+      }
+      if (targetPayment && targetPayment !== 'all') {
+        params.append('paymentStatus', targetPayment);
+      }
+      if (targetSearch && targetSearch.trim()) {
+        params.append('search', targetSearch.trim());
+      }
+
+      const response = await fetch(`/api/admin/orders?${params.toString()}`, {
         credentials: 'include'
       });
 
       if (response.ok) {
         const data = await response.json();
         setOrders(data.orders || []);
+        if (data.pagination) {
+          setTotalCount(data.pagination.total || 0);
+        }
       } else {
         setError('Failed to fetch orders');
       }
@@ -105,34 +123,36 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...orders];
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchOrders(page, rowsPerPage, statusFilter, paymentStatusFilter, usernameFilter);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [page, rowsPerPage, statusFilter, paymentStatusFilter, usernameFilter]);
 
-    // Filter by username
-    if (usernameFilter.trim()) {
-      filtered = filtered.filter(order => 
-        order.user?.username?.toLowerCase().includes(usernameFilter.toLowerCase()) ||
-        order.user?.fullname?.toLowerCase().includes(usernameFilter.toLowerCase())
-      );
-    }
-
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    // Filter by payment status
-    if (paymentStatusFilter !== 'all') {
-      filtered = filtered.filter(order => order.paymentStatus === paymentStatusFilter);
-    }
-
-    setFilteredOrders(filtered);
+  const handleStatusChange = (e) => {
+    setStatusFilter(e.target.value);
+    setPage(0);
   };
 
-  useEffect(() => {
-    applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders, usernameFilter, statusFilter, paymentStatusFilter]);
+  const handlePaymentStatusChange = (e) => {
+    setPaymentStatusFilter(e.target.value);
+    setPage(0);
+  };
+
+  const handleSearchChange = (e) => {
+    setUsernameFilter(e.target.value);
+    setPage(0);
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
@@ -247,16 +267,24 @@ export default function AdminOrdersPage() {
       {/* Filters Section */}
       <Card sx={{ mb: 3, bgcolor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ color: '#333', mb: 2 }}>
-            Filters
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6" sx={{ color: '#333' }}>
+              Filters
+            </Typography>
+            <Chip 
+              label={`Total Historical Orders: ${totalCount}`} 
+              color="primary" 
+              variant="outlined" 
+              sx={{ fontWeight: 'bold' }} 
+            />
+          </Box>
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="Search by Username"
+                label="Search Order #, Tx ID, Customer"
                 value={usernameFilter}
-                onChange={(e) => setUsernameFilter(e.target.value)}
+                onChange={handleSearchChange}
                 variant="outlined"
                 size="small"
                 sx={{
@@ -280,7 +308,7 @@ export default function AdminOrdersPage() {
                 <InputLabel sx={{ color: '#666' }}>Order Status</InputLabel>
                 <Select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={handleStatusChange}
                   label="Order Status"
                   sx={{
                     bgcolor: '#ffffff',
@@ -312,7 +340,7 @@ export default function AdminOrdersPage() {
                 <InputLabel sx={{ color: '#666' }}>Payment Status</InputLabel>
                 <Select
                   value={paymentStatusFilter}
-                  onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                  onChange={handlePaymentStatusChange}
                   label="Payment Status"
                   sx={{
                     bgcolor: '#ffffff',
@@ -360,7 +388,7 @@ export default function AdminOrdersPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredOrders.map((order) => (
+                {orders.map((order) => (
                   <TableRow key={order.id} hover sx={{ '&:hover': { bgcolor: '#f8f9fa' } }}>
                     <TableCell sx={{ color: '#333' }}>
                       <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
@@ -475,16 +503,30 @@ export default function AdminOrdersPage() {
             </Table>
           </TableContainer>
 
-          {filteredOrders.length === 0 && (
+          <TablePagination
+            rowsPerPageOptions={[25, 50, 100, 200]}
+            component="div"
+            count={totalCount}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            showFirstButton
+            showLastButton
+            sx={{
+              borderTop: '1px solid #dee2e6',
+              bgcolor: '#f8f9fa'
+            }}
+          />
+
+          {orders.length === 0 && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="h6" sx={{ color: '#666' }}>
-                {orders.length === 0 ? 'No orders found' : 'No orders match your filters'}
+                No orders found
               </Typography>
-              {orders.length > 0 && (
-                <Typography variant="body2" sx={{ color: '#666', mt: 1 }}>
-                  Try adjusting your search criteria
-                </Typography>
-              )}
+              <Typography variant="body2" sx={{ color: '#666', mt: 1 }}>
+                Try adjusting your search or filter criteria
+              </Typography>
             </Box>
           )}
         </CardContent>
