@@ -57,8 +57,15 @@ export async function GET(request) {
       );
     }
 
-    // Packages do not expire in the system - status is active
-    const status = user.status || 'active';
+    // Determine package status based on expiry date
+    let status = 'active';
+    if (user.packageExpiryDate) {
+      const now = new Date();
+      const expiryDate = new Date(user.packageExpiryDate);
+      if (now > expiryDate) {
+        status = 'expired';
+      }
+    }
 
     // Create userPackage object
     const userPackage = {
@@ -66,7 +73,7 @@ export async function GET(request) {
       packageId: user.currentPackageId,
       status: status,
       startDate: user.createdAt,
-      expiryDate: null
+      expiryDate: user.packageExpiryDate
     };
 
     // Check if user paid from balance (shopping amount should be 0)

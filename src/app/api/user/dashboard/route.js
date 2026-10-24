@@ -215,8 +215,10 @@ export async function GET(request) {
       }))
     ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
 
-    // Calculate package status (packages do not expire)
-    const hasActivePackage = Boolean(user.currentPackageId);
+    // Calculate package status
+    const hasActivePackage = user.currentPackageId && 
+      user.packageExpiryDate && 
+      new Date(user.packageExpiryDate) > new Date();
 
     // Get current package details
     const currentPackage = user.currentPackageId ? await prisma.package.findUnique({
@@ -259,11 +261,19 @@ export async function GET(request) {
       }
     });
 
-    // Get inactive package members count and potential revenue (members without a package)
+    // Get inactive package members count and potential revenue
     const inactiveMembers = await prisma.user.findMany({
       where: {
         referredBy: user.username,
-        currentPackageId: null
+        OR: [
+          { currentPackageId: null },
+          { 
+            AND: [
+              { packageExpiryDate: { not: null } },
+              { packageExpiryDate: { lt: new Date() } }
+            ]
+          }
+        ]
       },
       select: {
         id: true,

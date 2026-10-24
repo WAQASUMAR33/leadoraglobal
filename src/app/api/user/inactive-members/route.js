@@ -41,13 +41,20 @@ async function getInactivePackageMembers(username, level = 1, maxLevel = 10) {
   const inactiveMembers = [];
 
   for (const referral of referrals) {
-    // Check if package is inactive (no package)
+    // Check if package is inactive
     let isPackageInactive = false;
     let packageStatus = 'No Package';
     
-    if (referral.currentPackageId) {
-      packageStatus = 'Active';
-    } else {
+    if (referral.currentPackageId && referral.packageExpiryDate) {
+      const now = new Date();
+      const expiryDate = new Date(referral.packageExpiryDate);
+      if (now > expiryDate) {
+        isPackageInactive = true;
+        packageStatus = 'Expired';
+      } else {
+        packageStatus = 'Active';
+      }
+    } else if (!referral.currentPackageId) {
       isPackageInactive = true;
       packageStatus = 'No Package';
     }

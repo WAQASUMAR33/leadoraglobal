@@ -49,12 +49,19 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Check if user already has this package
-    if (existingUser.currentPackageId && existingUser.currentPackageId === parseInt(packageId)) {
-      return NextResponse.json({ 
-        error: 'User already has this package',
-        currentPackage: existingUser.currentPackage?.package_name
-      }, { status: 400 });
+    // Check if user already has an active package
+    if (existingUser.currentPackageId && existingUser.currentPackage) {
+      // Check if current package is still active (not expired)
+      const now = new Date();
+      const expiryDate = new Date(existingUser.packageExpiryDate);
+      
+      if (now <= expiryDate) {
+        return NextResponse.json({ 
+          error: 'User already has an active package',
+          currentPackage: existingUser.currentPackage.package_name,
+          expiryDate: existingUser.packageExpiryDate
+        }, { status: 400 });
+      }
     }
 
     // Start transaction for package subscription

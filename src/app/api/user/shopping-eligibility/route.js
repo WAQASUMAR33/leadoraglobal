@@ -41,8 +41,10 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if user has an active package (packages do not expire)
-    const hasActivePackage = Boolean(user.currentPackageId);
+    // Check if user has an active package
+    const hasActivePackage = user.currentPackageId && 
+                            user.packageExpiryDate && 
+                            new Date(user.packageExpiryDate) > new Date();
 
     // Check if user paid from balance (shopping amount should be 0)
     let effectiveShoppingAmount = parseFloat(user.currentPackage?.shopping_amount || 0);

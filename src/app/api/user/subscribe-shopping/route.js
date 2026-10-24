@@ -44,12 +44,17 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Block if user already has this package
-    if (existingUser.currentPackageId && existingUser.currentPackageId === parseInt(packageId)) {
-      return NextResponse.json({
-        error: 'User already has this package',
-        currentPackage: existingUser.currentPackage?.package_name
-      }, { status: 400 });
+    // Block if user already has active package
+    if (existingUser.currentPackageId && existingUser.currentPackage) {
+      const now = new Date();
+      const expiryDate = new Date(existingUser.packageExpiryDate);
+      if (now <= expiryDate) {
+        return NextResponse.json({
+          error: 'User already has an active package',
+          currentPackage: existingUser.currentPackage.package_name,
+          expiryDate: existingUser.packageExpiryDate
+        }, { status: 400 });
+      }
     }
 
     // Create package request (do NOT deduct shopping amount yet - will be deducted on admin approval)

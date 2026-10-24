@@ -41,7 +41,7 @@ export async function POST(request) {
         packageId: parseInt(packageId),
         rankId: existingPackage.rankId,
         currentPackageId: parseInt(packageId),
-        packageExpiryDate: null,
+        packageExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         updatedAt: new Date()
       }
     });
