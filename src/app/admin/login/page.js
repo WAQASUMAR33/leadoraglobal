@@ -1,65 +1,36 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  Stack,
-  InputAdornment,
-  IconButton,
-  CircularProgress,
-  Collapse,
-} from "@mui/material";
-import {
-  AdminPanelSettings,
-  LockOutlined,
-  PersonOutline,
-  Visibility,
-  VisibilityOff,
-  ArrowForward,
-  Security,
-  Dns,
-  ManageAccounts,
-  CheckCircle,
-  ArrowBack,
-} from "@mui/icons-material";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function AdminLogin() {
   const [formData, setFormData] = useState({
-    username: "",
-    password: "",
+    username: '',
+    password: ''
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: e.target.value
     });
-    if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
-      const response = await fetch("/api/admin/login", {
-        method: "POST",
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
@@ -67,487 +38,164 @@ export default function AdminLogin() {
       const data = await response.json();
 
       if (data.success) {
-        localStorage.setItem("admin", JSON.stringify(data.admin));
-        localStorage.setItem("adminToken", data.token);
-        router.push("/admin/dashboard");
+        // Store admin data in localStorage
+        localStorage.setItem('admin', JSON.stringify(data.admin));
+        localStorage.setItem('adminToken', data.token);
+        
+        // Redirect to admin dashboard
+        router.push('/admin/dashboard');
       } else {
-        setError(data.message || "Invalid administrative credentials.");
+        setError(data.message || 'Login failed');
       }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("An error occurred during authentication. Please verify your connection.");
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An error occurred during login. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        background: "linear-gradient(135deg, #070a12 0%, #0d1322 50%, #131c30 100%)",
-        position: "relative",
-        overflowX: "hidden",
-      }}
-    >
-      {/* Left Half - Logo, Branding & Administrative Overview */}
-      <Box
-        sx={{
-          width: "50%",
-          display: { xs: "none", lg: "flex" },
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "white",
-          px: { lg: 6, xl: 8 },
-          py: 6,
-          position: "relative",
-        }}
-      >
-        {/* Ledora Global Image - Sharp Corners */}
-        <Box sx={{ mb: 4 }}>
-          <Image
-            src="/leadora_global.jpg"
-            alt="Ledora Global"
-            width={340}
-            height={220}
-            style={{
-              maxWidth: "340px",
-              height: "auto",
-              borderRadius: "0px",
-              boxShadow: "0 16px 40px rgba(0, 0, 0, 0.7)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-            }}
-            priority
-          />
-        </Box>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo and Header */}
+        <div className="text-center mb-8">
+          <div className="mx-auto w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-2xl mb-6">
+            <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">Admin Portal</h1>
+          <p className="text-gray-300 text-sm">Access your administrative dashboard</p>
+        </div>
 
-        {/* Tagline */}
-        <Typography
-          variant="h6"
-          sx={{
-            mb: 5,
-            opacity: 0.85,
-            lineHeight: 1.6,
-            textAlign: "center",
-            maxWidth: 480,
-            fontSize: "1.05rem",
-            color: "#94a3b8",
-          }}
-        >
-          Secure administrative control terminal. Manage member packages, process withdrawal requests,
-          monitor downline genealogy, and oversee platform finances.
-        </Typography>
+        {/* Login Form */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Username Field */}
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-200 mb-2">
+                Username
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-600 rounded-lg bg-white/5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Enter your username"
+                  value={formData.username}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
 
-        {/* 3 Admin Control Cards - Sharp Corners */}
-        <Stack spacing={2} sx={{ width: "100%", maxWidth: 440 }}>
-          <Box
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 0,
-              backgroundColor: "rgba(30, 41, 59, 0.5)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderLeft: "3px solid #8b5cf6",
-            }}
-          >
-            <Security sx={{ color: "#a78bfa", fontSize: 24 }} />
-            <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
-                Role-Based Permission Guard
-              </Typography>
-              <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                Protected with edge runtime JWT & session verification.
-              </Typography>
-            </Box>
-          </Box>
-
-          <Box
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 0,
-              backgroundColor: "rgba(30, 41, 59, 0.5)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderLeft: "3px solid #06b6d4",
-            }}
-          >
-            <ManageAccounts sx={{ color: "#22d3ee", fontSize: 24 }} />
-            <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
-                Approvals & Member Oversight
-              </Typography>
-              <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                One-click review of package activations & KYC profiles.
-              </Typography>
-            </Box>
-          </Box>
-
-          <Box
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              borderRadius: 0,
-              backgroundColor: "rgba(30, 41, 59, 0.5)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderLeft: "3px solid #10b981",
-            }}
-          >
-            <Dns sx={{ color: "#34d399", fontSize: 24 }} />
-            <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#f8fafc" }}>
-                Financial Clearing & Payouts
-              </Typography>
-              <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                Secure processing of JazzCash, EasyPaisa, & Bank transfers.
-              </Typography>
-            </Box>
-          </Box>
-        </Stack>
-      </Box>
-
-      {/* Right Half - Ultra-Beautiful Modern Admin Login Form */}
-      <Box
-        sx={{
-          width: { xs: "100%", lg: "50%" },
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          px: { xs: 2.5, sm: 5, md: 8 },
-          py: 6,
-          position: "relative",
-        }}
-      >
-        <Box sx={{ width: "100%", maxWidth: 460 }}>
-          {/* Mobile Header Branding */}
-          <Box
-            sx={{
-              display: { xs: "flex", lg: "none" },
-              flexDirection: "column",
-              alignItems: "center",
-              mb: 4,
-              textAlign: "center",
-            }}
-          >
-            <Image
-              src="/leadora_global.jpg"
-              alt="Ledora Global"
-              width={160}
-              height={100}
-              style={{
-                borderRadius: "0px",
-                border: "1px solid rgba(255, 255, 255, 0.12)",
-                marginBottom: "14px",
-              }}
-              priority
-            />
-            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-              Administrative Terminal Access
-            </Typography>
-          </Box>
-
-          {/* Admin Login Card - Sharp Corners & Rich Aesthetics */}
-          <Card
-            sx={{
-              width: "100%",
-              borderRadius: 0,
-              backgroundColor: "rgba(13, 19, 33, 0.85)",
-              backdropFilter: "blur(24px)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              position: "relative",
-              overflow: "hidden",
-              boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 45px -10px rgba(139, 92, 246, 0.18)",
-            }}
-          >
-            {/* Top Multi-Color Accent Gradient Bar */}
-            <Box
-              sx={{
-                height: 3,
-                width: "100%",
-                background: "linear-gradient(90deg, #8b5cf6 0%, #6366f1 50%, #06b6d4 100%)",
-              }}
-            />
-
-            <CardContent sx={{ p: { xs: 3, sm: 4.5 } }}>
-              {/* Card Header with Pill Badge */}
-              <Box sx={{ mb: 3.5 }}>
-                <Box
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 0.75,
-                    px: 1.25,
-                    py: 0.4,
-                    mb: 1.5,
-                    backgroundColor: "rgba(139, 92, 246, 0.12)",
-                    border: "1px solid rgba(139, 92, 246, 0.3)",
-                    borderRadius: 0,
-                  }}
+            {/* Password Field */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  className="block w-full pl-10 pr-12 py-3 border border-gray-600 rounded-lg bg-white/5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
                 >
-                  <Box
-                    sx={{
-                      width: 6,
-                      height: 6,
-                      backgroundColor: "#a78bfa",
-                      borderRadius: 0,
-                      boxShadow: "0 0 8px #a78bfa",
-                    }}
-                  />
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: "#a78bfa",
-                      fontWeight: 700,
-                      fontSize: "0.72rem",
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Administrative Portal
-                  </Typography>
-                </Box>
+                  {showPassword ? (
+                    <svg className="h-5 w-5 text-gray-400 hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-gray-400 hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
 
-                <Typography
-                  variant="h4"
-                  component="h1"
-                  sx={{
-                    fontWeight: 800,
-                    fontSize: { xs: "1.75rem", sm: "2rem" },
-                    letterSpacing: "-0.02em",
-                    background: "linear-gradient(135deg, #ffffff 0%, #e2e8f0 70%, #94a3b8 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    mb: 0.5,
-                  }}
-                >
-                  Admin Access
-                </Typography>
-                <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: "0.925rem" }}>
-                  Sign in with authorized administrator credentials.
-                </Typography>
-              </Box>
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                <div className="flex">
+                  <svg className="h-5 w-5 text-red-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-300">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
-              {/* Error Alert */}
-              <Collapse in={!!error}>
-                <Box sx={{ mb: 3 }}>
-                  <Alert
-                    severity="error"
-                    sx={{
-                      borderRadius: 0,
-                      backgroundColor: "rgba(239, 68, 68, 0.12)",
-                      color: "#f87171",
-                      border: "1px solid rgba(239, 68, 68, 0.3)",
-                      borderLeft: "4px solid #ef4444",
-                    }}
-                  >
-                    {error}
-                  </Alert>
-                </Box>
-              </Collapse>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02]"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Sign in to Admin Panel
+                </>
+              )}
+            </button>
+          </form>
 
-              {/* Form */}
-              <Box component="form" onSubmit={handleSubmit} noValidate>
-                <Stack spacing={2.5}>
-                  {/* Username Field */}
-                  <Box>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "block",
-                        mb: 0.75,
-                        fontWeight: 600,
-                        color: "#cbd5e1",
-                        fontSize: "0.8rem",
-                      }}
-                    >
-                      Admin Username
-                    </Typography>
-                    <TextField
-                      id="username"
-                      name="username"
-                      placeholder="Enter administrator username"
-                      value={formData.username}
-                      onChange={handleChange}
-                      required
-                      fullWidth
-                      disabled={loading}
-                      slotProps={{
-                        input: {
-                          sx: {
-                            borderRadius: 0,
-                            backgroundColor: "rgba(15, 23, 42, 0.65)",
-                            transition: "all 0.2s ease",
-                            "&:hover": {
-                              backgroundColor: "rgba(15, 23, 42, 0.9)",
-                            },
-                          },
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <PersonOutline sx={{ color: "#a78bfa", fontSize: 22 }} />
-                            </InputAdornment>
-                          ),
-                        },
-                      }}
-                    />
-                  </Box>
+          {/* Footer Links */}
+          <div className="mt-6 text-center">
+            <Link 
+              href="/login" 
+              className="text-sm text-gray-300 hover:text-white transition-colors duration-200 flex items-center justify-center"
+            >
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to User Login
+            </Link>
+          </div>
+        </div>
 
-                  {/* Password Field */}
-                  <Box>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "block",
-                        mb: 0.75,
-                        fontWeight: 600,
-                        color: "#cbd5e1",
-                        fontSize: "0.8rem",
-                      }}
-                    >
-                      Password
-                    </Typography>
-                    <TextField
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••••••"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                      fullWidth
-                      disabled={loading}
-                      slotProps={{
-                        input: {
-                          sx: {
-                            borderRadius: 0,
-                            backgroundColor: "rgba(15, 23, 42, 0.65)",
-                            transition: "all 0.2s ease",
-                            "&:hover": {
-                              backgroundColor: "rgba(15, 23, 42, 0.9)",
-                            },
-                          },
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <LockOutlined sx={{ color: "#a78bfa", fontSize: 22 }} />
-                            </InputAdornment>
-                          ),
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <IconButton
-                                onClick={() => setShowPassword(!showPassword)}
-                                edge="end"
-                                size="small"
-                                sx={{ color: "#94a3b8" }}
-                                aria-label={showPassword ? "Hide password" : "Show password"}
-                              >
-                                {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                              </IconButton>
-                            </InputAdornment>
-                          ),
-                        },
-                      }}
-                    />
-                  </Box>
-
-                  {/* Submit Button */}
-                  <Button
-                    type="submit"
-                    fullWidth
-                    variant="contained"
-                    size="large"
-                    disabled={loading}
-                    sx={{
-                      mt: 1,
-                      py: 1.6,
-                      fontSize: "1.025rem",
-                      fontWeight: 700,
-                      letterSpacing: "0.03em",
-                      borderRadius: 0,
-                      background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #4f46e5 100%)",
-                      boxShadow: "0 8px 25px -4px rgba(139, 92, 246, 0.5)",
-                      transition: "all 0.25s ease",
-                      "&:hover": {
-                        background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #4338ca 100%)",
-                        boxShadow: "0 12px 30px -4px rgba(139, 92, 246, 0.7)",
-                        transform: "translateY(-1px)",
-                      },
-                    }}
-                    endIcon={
-                      loading ? null : (
-                        <ArrowForward
-                          sx={{
-                            transition: "transform 0.2s ease-in-out",
-                            ".MuiButton-root:hover &": {
-                              transform: "translateX(5px)",
-                            },
-                          }}
-                        />
-                      )
-                    }
-                  >
-                    {loading ? (
-                      <Stack direction="row" spacing={1.5} alignItems="center">
-                        <CircularProgress size={20} color="inherit" />
-                        <span>Authenticating Administrator...</span>
-                      </Stack>
-                    ) : (
-                      "Authorize Access"
-                    )}
-                  </Button>
-                </Stack>
-              </Box>
-
-              {/* Back to User Login Link */}
-              <Box sx={{ textAlign: "center", mt: 3, pt: 2.5, borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                <Link
-                  href="/login"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    color: "#94a3b8",
-                    fontSize: "0.85rem",
-                    textDecoration: "none",
-                    fontWeight: 600,
-                    transition: "color 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#818cf8")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
-                >
-                  <ArrowBack sx={{ fontSize: 16 }} />
-                  <span>Return to Member Login</span>
-                </Link>
-              </Box>
-
-              {/* Powered By Footer */}
-              <Box sx={{ mt: 2.5, textAlign: "center" }}>
-                <Typography variant="caption" sx={{ color: "#64748b", fontSize: "0.8rem" }}>
-                  Powerd By :{" "}
-                  <a
-                    href="https://rapidtechpro.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: "#818cf8",
-                      textDecoration: "none",
-                      fontWeight: 700,
-                      letterSpacing: "0.02em",
-                    }}
-                  >
-                    RAPIDTECHPRO
-                  </a>
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
-      </Box>
-    </Box>
+        {/* Additional Info */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-gray-400">
+            Secure administrative access • Protected by JWT authentication
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

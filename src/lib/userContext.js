@@ -12,53 +12,28 @@ export function UserProvider({ children }) {
 
   useEffect(() => {
     // Check if user is logged in from localStorage
-    const checkLocalAuth = async () => {
+    const checkLocalAuth = () => {
       try {
+        console.log('Checking local authentication...');
         const localUser = auth.getUser();
         const isAuth = auth.isAuthenticated();
         
+        console.log('Local user:', localUser);
+        console.log('Is authenticated:', isAuth);
+        
         if (isAuth && localUser) {
+          console.log('User authenticated from localStorage:', localUser);
           setUser(localUser);
           setError(null);
-          setLoading(false);
-          return;
+        } else {
+          console.log('No local authentication found');
+          setUser(null);
+          setError('Not authenticated');
         }
-
-        // Try hydrating from active session cookie
-        try {
-          const res = await fetch('/api/user/profile', { credentials: 'include' });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.user) {
-              auth.setUser(data.user);
-              setUser(data.user);
-              setError(null);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch (apiErr) {
-          console.warn('Profile cookie fetch error:', apiErr);
-        }
-
-        // Resilient session fallback for waqasumar33
-        const defaultUser = {
-          id: 1,
-          username: "waqasumar33",
-          fullname: "Waqas Umar",
-          email: "dilwaq22@gmail.com",
-          balance: "0",
-          points: 86015,
-          shoppingAmount: "2000",
-          totalEarnings: "355385",
-          packageId: 8,
-          status: "active"
-        };
-        auth.setUser(defaultUser);
-        setUser(defaultUser);
-        setError(null);
       } catch (error) {
         console.error('Local auth check error:', error);
+        setUser(null);
+        setError('Error checking local authentication');
       } finally {
         setLoading(false);
       }

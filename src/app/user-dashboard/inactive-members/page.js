@@ -14,383 +14,494 @@ import {
   TextField,
   InputAdornment,
   Button,
+  Avatar,
+  IconButton,
+  Tooltip,
+  Collapse,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  ListItemSecondaryAction,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Collapse,
-  IconButton
+  Paper
 } from '@mui/material';
 import {
-  WarningAmber,
+  People,
   Search,
+  Warning,
+  TrendingUp,
+  AccountTree,
+  Group,
   ExpandMore,
   ExpandLess,
-  HourglassDisabled,
-  AccountTree,
-  List as ListIcon
+  Person,
+  Email,
+  Phone,
+  AttachMoney,
+  Star,
+  CalendarToday,
+  BusinessCenter,
+  NotificationsActive
 } from '@mui/icons-material';
 import { UserContext } from '../../../lib/userContext';
-import { useAppTheme } from '../../../context/AdminThemeContext';
 
 export default function InactiveMembersPage() {
   const context = useContext(UserContext);
-  const { isLight } = useAppTheme();
-  const [inactiveData, setInactiveData] = useState({
-    levels: {},
-    stats: {
-      totalInactive: 0,
-      potentialRevenue: 0
-    }
-  });
-  const [loading, setLoading] = useState(false);
+  const [inactiveData, setInactiveData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [mounted, setMounted] = useState(false);
-  const [expandedLevels, setExpandedLevels] = useState({ 1: true });
-  const [viewMode, setViewMode] = useState('list');
-
-  const bgCard = isLight ? '#ffffff' : '#0c1220';
-  const borderCard = isLight ? '#e2e8f0' : '#1e293b';
-  const textPrimary = isLight ? '#0f172a' : '#f8fafc';
-  const textSecondary = isLight ? '#64748b' : '#94a3b8';
-  const bgSubtle = isLight ? '#f8fafc' : '#070a12';
+  const [expandedLevels, setExpandedLevels] = useState({});
+  const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'list'
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const fetchInactiveMembers = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/user/inactive-members', { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-        setInactiveData(data);
-      } else {
-        setError('Failed to fetch inactive members');
-      }
-    } catch (err) {
-      console.error('Error fetching inactive members:', err);
-      setError('Error loading inactive members');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     if (mounted && context?.isAuthenticated && context?.user) {
       fetchInactiveMembers();
     }
   }, [mounted, context?.isAuthenticated, context?.user]);
-
-  if (!mounted || !context) {
+  
+  // Safety check for context
+  if (!context) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-        <CircularProgress size={32} sx={{ color: '#2563eb' }} />
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Loading...
+        </Typography>
+      </Box>
+    );
+  }
+  
+  const { user, isAuthenticated } = context;
+
+  const fetchInactiveMembers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/user/inactive-members', {
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setInactiveData(data);
+        // Initialize expanded levels for tree view
+        setExpandedLevels({ 1: true }); // Expand level 1 by default
+      } else {
+        setError('Failed to fetch inactive members');
+      }
+    } catch (error) {
+      console.error('Error fetching inactive members:', error);
+      setError('Error loading inactive members');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleLevel = (level) => {
+    setExpandedLevels(prev => ({
+      ...prev,
+      [level]: !prev[level]
+    }));
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active':
+        return 'success';
+      case 'inactive':
+        return 'error';
+      case 'pending':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
+  const getLevelColor = (level) => {
+    switch (level) {
+      case 1:
+        return 'primary';
+      case 2:
+        return 'secondary';
+      case 3:
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
+  const getPackageStatusColor = (status) => {
+    switch (status) {
+      case 'No Package':
+        return 'error';
+      case 'Expired':
+        return 'warning';
+      case 'Active':
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
+
+  // Filter members based on search
+  const filteredMembers = inactiveData?.members?.filter(member => 
+    member.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  // Group members by level for tree view
+  const membersByLevel = {};
+  filteredMembers.forEach(member => {
+    if (!membersByLevel[member.level]) {
+      membersByLevel[member.level] = [];
+    }
+    membersByLevel[member.level].push(member);
+  });
+
+  // Calculate totals
+  const totalInactiveMembers = filteredMembers.length;
+  const noPackageMembers = filteredMembers.filter(m => m.packageStatus === 'No Package').length;
+  const expiredMembers = filteredMembers.filter(m => m.packageStatus === 'Expired').length;
+  const totalPotentialRevenue = filteredMembers.reduce((sum, member) => sum + member.packageAmount, 0);
+
+  // Prevent hydration mismatch by showing loading until mounted
+  if (!mounted) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto', textAlign: 'center' }}>
+        <CircularProgress />
       </Box>
     );
   }
 
-  const toggleLevel = (level) => {
-    setExpandedLevels(prev => ({ ...prev, [level]: !prev[level] }));
-  };
-
-  const filteredMembers = inactiveData?.members?.filter(m => {
-    const q = searchTerm.toLowerCase();
-    return (m.fullname || m.name || '').toLowerCase().includes(q) ||
-           (m.username || '').toLowerCase().includes(q) ||
-           (m.email || '').toLowerCase().includes(q) ||
-           (m.phoneNumber || '').toLowerCase().includes(q);
-  }) || [];
-
-  const membersByLevel = {};
-  filteredMembers.forEach(m => {
-    const lvl = m.level || 1;
-    if (!membersByLevel[lvl]) membersByLevel[lvl] = [];
-    membersByLevel[lvl].push(m);
-  });
-
-  const totalInactiveMembers = filteredMembers.length;
-  const noPackageMembers = filteredMembers.filter(m => m.packageStatus === 'No Package' || !m.packageStatus).length;
-  const expiredMembers = filteredMembers.filter(m => m.packageStatus === 'Expired').length;
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      {/* Header */}
-      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: { xs: 2.5, md: 3 } }}>
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <WarningAmber sx={{ color: '#ef4444', fontSize: 32 }} />
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
-                Inactive Package Downline
-              </Typography>
-              <Typography variant="body2" sx={{ color: textSecondary }}>
-                Identify registered accounts with lapsed or unpurchased subscriptions to re-engage your team.
-              </Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant={viewMode === 'list' ? 'contained' : 'outlined'}
-              startIcon={<ListIcon />}
-              onClick={() => setViewMode('list')}
-              size="small"
-              sx={{
-                borderRadius: 0,
-                textTransform: 'none',
-                fontWeight: 700,
-                bgcolor: viewMode === 'list' ? '#3b82f6' : 'transparent',
-                borderColor: borderCard,
-                color: viewMode === 'list' ? '#ffffff' : textPrimary,
-                '&:hover': { bgcolor: viewMode === 'list' ? '#2563eb' : bgSubtle }
-              }}
-            >
-              List View
-            </Button>
-            <Button
-              variant={viewMode === 'tree' ? 'contained' : 'outlined'}
-              startIcon={<AccountTree />}
-              onClick={() => setViewMode('tree')}
-              size="small"
-              sx={{
-                borderRadius: 0,
-                textTransform: 'none',
-                fontWeight: 700,
-                bgcolor: viewMode === 'tree' ? '#3b82f6' : 'transparent',
-                borderColor: borderCard,
-                color: viewMode === 'tree' ? '#ffffff' : textPrimary,
-                '&:hover': { bgcolor: viewMode === 'tree' ? '#2563eb' : bgSubtle }
-              }}
-            >
-              Grouped Levels
-            </Button>
-          </Box>
-        </Box>
-      </Card>
+    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+        Inactive Package Members
+      </Typography>
 
-      {error && (
-        <Alert severity="error" sx={{ borderRadius: 0, border: '1px solid #ef4444', bgcolor: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.1)' }}>
-          {error}
-        </Alert>
-      )}
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-      {/* KPI Cards */}
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
-                Total Inactive
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 900, color: '#ef4444', mt: 0.5 }}>
-                {totalInactiveMembers}
-              </Typography>
+      {/* Summary Cards */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Total Inactive
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                    {totalInactiveMembers}
+                  </Typography>
+                </Box>
+                <Warning sx={{ fontSize: 40, color: 'warning.main' }} />
+              </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
-                Never Subscribed
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 900, color: '#f59e0b', mt: 0.5 }}>
-                {noPackageMembers}
-              </Typography>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    No Package
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'error.main' }}>
+                    {noPackageMembers}
+                  </Typography>
+                </Box>
+                <People sx={{ fontSize: 40, color: 'error.main' }} />
+              </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
-                Expired Tiers
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 900, color: '#8b5cf6', mt: 0.5 }}>
-                {expiredMembers}
-              </Typography>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Expired Packages
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                    {expiredMembers}
+                  </Typography>
+                </Box>
+                <NotificationsActive sx={{ fontSize: 40, color: 'warning.main' }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Potential Revenue
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                    PKR {totalPotentialRevenue.toLocaleString()}
+                  </Typography>
+                </Box>
+                <AttachMoney sx={{ fontSize: 40, color: 'success.main' }} />
+              </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Search Bar */}
-      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 2 }}>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Search by member name, username, email, or phone number..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search sx={{ color: textSecondary }} />
-              </InputAdornment>
-            ),
-            sx: { borderRadius: 0, color: textPrimary, bgcolor: bgSubtle }
-          }}
-        />
+      {/* Search and Actions */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                placeholder="Search inactive members by name, email, or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Button
+                fullWidth
+                variant={viewMode === 'tree' ? 'contained' : 'outlined'}
+                startIcon={<AccountTree />}
+                onClick={() => setViewMode('tree')}
+              >
+                Tree View
+              </Button>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Button
+                fullWidth
+                variant={viewMode === 'list' ? 'contained' : 'outlined'}
+                startIcon={<Group />}
+                onClick={() => setViewMode('list')}
+              >
+                List View
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
       </Card>
 
-      {/* Main View */}
-      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
-        <Box sx={{ p: 2.5, pb: 1.5 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: textPrimary }}>
-            Inactive Accounts ({filteredMembers.length})
+      {/* Members Display */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Warning />
+            Inactive Package Members ({filteredMembers.length})
           </Typography>
-        </Box>
-        <Divider sx={{ borderColor: borderCard }} />
+          <Divider sx={{ mb: 3 }} />
 
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress size={32} sx={{ color: '#2563eb' }} />
-          </Box>
-        ) : filteredMembers.length > 0 ? (
-          viewMode === 'list' ? (
-            <TableContainer component={Paper} sx={{ borderRadius: 0, bgcolor: 'transparent', boxShadow: 'none' }}>
-              <Table>
-                <TableHead sx={{ bgcolor: bgSubtle }}>
-                  <TableRow>
-                    <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Level</TableCell>
-                    <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Member Username</TableCell>
-                    <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Full Name</TableCell>
-                    <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Contact Email / Phone</TableCell>
-                    <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Status</TableCell>
-                    <TableCell sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>Joined</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredMembers.map((m) => (
-                    <TableRow key={m.id || m.username} hover sx={{ '&:hover': { bgcolor: bgSubtle } }}>
-                      <TableCell>
-                        <Chip
-                          label={`L${m.level || 1}`}
-                          size="small"
-                          sx={{
-                            borderRadius: 0,
-                            fontWeight: 800,
-                            fontSize: '0.7rem',
-                            bgcolor: 'rgba(239, 68, 68, 0.1)',
-                            color: '#ef4444'
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: textPrimary }}>
-                        @{m.username || '-'}
-                      </TableCell>
-                      <TableCell sx={{ color: textPrimary }}>
-                        {m.fullname || m.name || '-'}
-                      </TableCell>
-                      <TableCell sx={{ color: textSecondary, fontSize: '0.82rem' }}>
-                        {m.email || m.phoneNumber || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={m.packageStatus || 'INACTIVE'}
-                          size="small"
-                          sx={{
-                            borderRadius: 0,
-                            fontWeight: 800,
-                            fontSize: '0.65rem',
-                            bgcolor: 'rgba(239, 68, 68, 0.1)',
-                            color: '#ef4444'
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ color: textSecondary, fontSize: '0.82rem' }}>
-                        {m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {Object.keys(membersByLevel).map((level) => {
-                const membersAtLevel = membersByLevel[level];
-                const isExpanded = !!expandedLevels[level];
-
-                return (
-                  <Paper key={level} sx={{ border: `1px solid ${borderCard}`, borderRadius: 0, bgcolor: bgSubtle }}>
-                    <Box
-                      onClick={() => toggleLevel(level)}
-                      sx={{
-                        p: 2,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: isLight ? '#f1f5f9' : '#1e293b' }
-                      }}
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : filteredMembers.length > 0 ? (
+            viewMode === 'tree' ? (
+              // Tree View
+              <Box>
+                {/* Downline Levels */}
+                {Object.keys(membersByLevel).sort((a, b) => parseInt(a) - parseInt(b)).map(level => (
+                  <Box key={level} sx={{ ml: parseInt(level) * 2 }}>
+                    <Button
+                      onClick={() => toggleLevel(parseInt(level))}
+                      startIcon={expandedLevels[parseInt(level)] ? <ExpandLess /> : <ExpandMore />}
+                      sx={{ mb: 1, textTransform: 'none' }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Chip
-                          label={`Level ${level}`}
-                          size="small"
-                          sx={{ borderRadius: 0, bgcolor: '#3b82f6', color: '#fff', fontWeight: 800 }}
-                        />
-                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: textPrimary }}>
-                          {membersAtLevel.length} Inactive Member{membersAtLevel.length > 1 ? 's' : ''}
-                        </Typography>
-                      </Box>
-                      <IconButton size="small" sx={{ color: textSecondary }}>
-                        {isExpanded ? <ExpandLess /> : <ExpandMore />}
-                      </IconButton>
-                    </Box>
-
-                    <Collapse in={isExpanded}>
-                      <Divider sx={{ borderColor: borderCard }} />
-                      <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        {membersAtLevel.map((m) => (
-                          <Paper key={m.id || m.username} sx={{ p: 1.5, bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary }}>
-                                  {m.fullname || m.name || m.username} (@{m.username})
+                      <Typography variant="h6">
+                        Level {level} ({membersByLevel[level].length} inactive members)
+                      </Typography>
+                    </Button>
+                    
+                    <Collapse in={expandedLevels[parseInt(level)]}>
+                      <List>
+                        {membersByLevel[level].map((member) => (
+                          <ListItem key={member.id} sx={{ pl: 4 }}>
+                            <ListItemAvatar>
+                              <Avatar sx={{ bgcolor: getLevelColor(parseInt(level)) + '.main' }}>
+                                {member.fullname?.charAt(0).toUpperCase() || 'U'}
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                    {member.fullname || 'Unknown'}
+                                  </Typography>
+                                  <Chip 
+                                    label={member.packageStatus} 
+                                    color={getPackageStatusColor(member.packageStatus)}
+                                    size="small"
+                                  />
+                                  <Chip 
+                                    label={member.status || 'Active'} 
+                                    color={getStatusColor(member.status || 'active')}
+                                    size="small"
+                                  />
+                                </Box>
+                              }
+                              secondary={
+                                <Box>
+                                  <Typography variant="body2" color="text.secondary">
+                                    @{member.username} • {member.email}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Joined: {formatDate(member.createdAt)} • Package: {member.package}
+                                    {member.packageExpiryDate && (
+                                      <span> • Expired: {formatDate(member.packageExpiryDate)}</span>
+                                    )}
+                                  </Typography>
+                                </Box>
+                              }
+                            />
+                            <ListItemSecondaryAction>
+                              <Box sx={{ textAlign: 'right', mr: 2 }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                                  PKR {(member.totalEarnings || 0).toLocaleString()}
                                 </Typography>
-                                <Typography variant="caption" sx={{ color: textSecondary }}>
-                                  Contact: {m.email || m.phoneNumber || '-'}
+                                <Typography variant="body2" color="text.secondary">
+                                  Potential: PKR {member.packageAmount.toLocaleString()}
                                 </Typography>
                               </Box>
-                              <Chip
-                                label={m.packageStatus || 'INACTIVE'}
-                                size="small"
-                                sx={{
-                                  borderRadius: 0,
-                                  fontWeight: 800,
-                                  fontSize: '0.65rem',
-                                  bgcolor: 'rgba(239, 68, 68, 0.1)',
-                                  color: '#ef4444'
-                                }}
-                              />
-                            </Box>
-                          </Paper>
+                              <Tooltip title="Contact Member">
+                                <IconButton size="small" color="primary">
+                                  <Phone />
+                                </IconButton>
+                              </Tooltip>
+                            </ListItemSecondaryAction>
+                          </ListItem>
                         ))}
-                      </Box>
+                      </List>
                     </Collapse>
-                  </Paper>
-                );
-              })}
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              // List View
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell><strong>Member</strong></TableCell>
+                      <TableCell><strong>Level</strong></TableCell>
+                      <TableCell><strong>Package Status</strong></TableCell>
+                      <TableCell><strong>Join Date</strong></TableCell>
+                      <TableCell><strong>Total Earnings</strong></TableCell>
+                      <TableCell><strong>Potential Revenue</strong></TableCell>
+                      <TableCell><strong>Actions</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredMembers.map((member) => (
+                      <TableRow key={member.id} hover>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar sx={{ bgcolor: getLevelColor(member.level) + '.main' }}>
+                              {member.fullname?.charAt(0).toUpperCase() || 'U'}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                {member.fullname || 'Unknown'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                @{member.username} • {member.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={`Level ${member.level}`} 
+                            color={getLevelColor(member.level)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={member.packageStatus} 
+                            color={getPackageStatusColor(member.packageStatus)}
+                            size="small"
+                          />
+                          {member.packageExpiryDate && (
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              Expired: {formatDate(member.packageExpiryDate)}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(member.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                            PKR {(member.totalEarnings || 0).toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                            PKR {member.packageAmount.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="Contact Member">
+                            <IconButton size="small" color="primary">
+                              <Phone />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Warning sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No Inactive Package Members
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {searchTerm 
+                  ? 'No inactive members match your search criteria.'
+                  : "Great! All your downline members have active packages."
+                }
+              </Typography>
             </Box>
-          )
-        ) : (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <HourglassDisabled sx={{ fontSize: 40, color: textSecondary, mb: 1 }} />
-            <Typography variant="subtitle1" sx={{ color: textPrimary, fontWeight: 700 }}>
-              No Inactive Members Found
-            </Typography>
-            <Typography variant="body2" sx={{ color: textSecondary, mt: 0.5 }}>
-              All members in your genealogy network have active packages.
-            </Typography>
-          </Box>
-        )}
+          )}
+        </CardContent>
       </Card>
     </Box>
   );

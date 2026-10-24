@@ -3,84 +3,76 @@ import prisma from '../../../../lib/prisma';
 import { verifyAdminToken } from '../../../../lib/adminAuth';
 import bcrypt from 'bcryptjs';
 
-// GET - Fetch users with high-speed server pagination and search
+// GET - Fetch all users for admin
 export async function GET(request) {
   try {
+    // Verify admin authentication
     const admin = verifyAdminToken(request);
     if (!admin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get('page')) || 1);
-    const limitParam = searchParams.get('limit');
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = searchParams.get('limit');
     const status = searchParams.get('status');
-    const search = searchParams.get('search')?.trim();
 
-    // Build optimized WHERE query
+    // Build where clause
     const where = {};
-
     if (status && status !== 'all') {
       where.status = status;
     }
 
-    if (search) {
-      where.OR = [
-        { fullname: { contains: search } },
-        { username: { contains: search } },
-        { email: { contains: search } },
-        { phoneNumber: { contains: search } }
-      ];
-    }
+    // Calculate pagination
+    const skip = limit && limit !== 'all' ? (page - 1) * parseInt(limit) : 0;
+    const take = limit && limit !== 'all' ? parseInt(limit) : undefined;
 
-    // Determine pagination bounds
-    const isAll = limitParam === 'all';
-    const limit = isAll ? undefined : Math.min(100, Math.max(5, parseInt(limitParam) || 20));
-    const skip = isAll ? 0 : (page - 1) * limit;
+    // Get total count first
+    const totalCount = await prisma.user.count({ where });
 
-    // Run count and query in parallel for speed
-    const [totalCount, users] = await Promise.all([
-      prisma.user.count({ where }),
-      prisma.user.findMany({
-        where,
-        select: {
-          id: true,
-          fullname: true,
-          username: true,
-          email: true,
-          phoneNumber: true,
-          status: true,
-          balance: true,
-          points: true,
-          rankId: true,
-          rank: {
-            select: {
-              id: true,
-              title: true
-            }
-          },
-          referredBy: true,
-          referralCount: true,
-          totalEarnings: true,
-          createdAt: true
+    // Fetch users with pagination
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        fullname: true,
+        username: true,
+        email: true,
+        phoneNumber: true,
+        status: true,
+        balance: true,
+        points: true,
+        rankId: true,
+        rank: {
+          select: {
+            id: true,
+            title: true,
+            required_points: true
+          }
         },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        skip,
-        take: limit
-      })
-    ]);
+        referredBy: true,
+        referralCount: true,
+        totalEarnings: true,
+        createdAt: true,
+        updatedAt: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      skip,
+      take
+    });
 
-    // Fast numerical serialization
+    // Convert Decimal fields to numbers for proper JSON serialization
     const usersWithNumbers = users.map(user => ({
       ...user,
       balance: parseFloat(user.balance || 0),
       totalEarnings: parseFloat(user.totalEarnings || 0)
     }));
 
-    const pageSize = isAll ? totalCount : limit;
-    const totalPages = isAll ? 1 : Math.max(1, Math.ceil(totalCount / limit));
+    // Calculate pagination info
+    const pageSize = limit && limit !== 'all' ? parseInt(limit) : totalCount;
+    const totalPages = limit && limit !== 'all' ? Math.ceil(totalCount / parseInt(limit)) : 1;
 
     return NextResponse.json({
       success: true,
@@ -107,34 +99,30 @@ export async function GET(request) {
 // POST - Create new user
 export async function POST(request) {
   try {
+    // Verify admin authentication
     const admin = verifyAdminToken(request);
     if (!admin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { fullname, username, email, phoneNumber, password, role = 'user', balance = 0, points = 0 } = body;
+    const { fullname, username, password, status } = body;
 
+    // Validate required fields
     if (!fullname || !username || !password) {
       return NextResponse.json(
-        { error: 'Full name, username, and password are required' },
+        { error: 'Missing required fields: fullname, username, password' },
         { status: 400 }
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username: username },
-          ...(email ? [{ email: email }] : [])
-        ]
-      }
+    // Check if username already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { username }
     });
-
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User with this username or email already exists' },
+        { error: 'Username already exists' },
         { status: 400 }
       );
     }
@@ -143,16 +131,12 @@ export async function POST(request) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
-    const newUser = await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         fullname,
         username,
-        email,
-        phoneNumber,
         password: hashedPassword,
-        balance: parseFloat(balance) || 0,
-        points: parseInt(points) || 0,
-        status: 'active'
+        status: status || 'active'
       },
       select: {
         id: true,
@@ -163,18 +147,16 @@ export async function POST(request) {
         status: true,
         balance: true,
         points: true,
-        createdAt: true
+        createdAt: true,
+        updatedAt: true
       }
     });
 
     return NextResponse.json({
       success: true,
       message: 'User created successfully',
-      user: {
-        ...newUser,
-        balance: parseFloat(newUser.balance)
-      }
-    });
+      user
+    }, { status: 201 });
 
   } catch (error) {
     console.error('Error creating user:', error);

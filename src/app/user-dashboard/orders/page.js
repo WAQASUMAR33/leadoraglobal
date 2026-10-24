@@ -2,51 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useUser } from "../../../lib/userContext";
-import { useAppTheme } from "@/context/AdminThemeContext";
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  Chip,
-  Stack,
-  Divider,
-  CircularProgress,
-  Paper
-} from "@mui/material";
-import {
-  ReceiptLong as ReceiptLongIcon,
-  Storefront as StorefrontIcon,
-  LocalShipping as LocalShippingIcon,
-  CheckCircle as CheckCircleIcon,
-  PendingActions as PendingActionsIcon,
-  Cancel as CancelIcon
-} from "@mui/icons-material";
 
-export default function OrdersPage() {
+export default function Orders() {
   const { user, loading: authLoading, error: authError, isAuthenticated } = useUser();
-  const { isLight } = useAppTheme();
-  const [orders, setOrders] = useState([
-    {
-      id: 1042,
-      totalAmount: 9500,
-      status: "delivered",
-      createdAt: "2026-10-14T10:00:00.000Z",
-      orderItems: [
-        {
-          quantity: 1,
-          price: 9500,
-          product: {
-            title: "Leadora Creed Perfume for Men's",
-            image: "https://steelblue-cod-355377.hostingersite.com/uploads/6ab77cc79c029.jpeg"
-          }
-        }
-      ]
-    }
-  ]);
-  const [loading, setLoading] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -64,7 +26,7 @@ export default function OrdersPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          setOrders(data.orders || []);
+          setOrders(data.orders);
         }
       }
     } catch (error) {
@@ -80,186 +42,198 @@ export default function OrdersPage() {
     }
   }, [mounted, fetchOrders]);
 
-  const getStatusChip = (status) => {
-    const s = (status || 'pending').toLowerCase();
-    let color = '#f59e0b';
-    let bg = 'rgba(245, 158, 11, 0.12)';
-    let border = '1px solid rgba(245, 158, 11, 0.3)';
-
-    if (s === 'delivered' || s === 'completed') {
-      color = '#10b981';
-      bg = 'rgba(16, 185, 129, 0.12)';
-      border = '1px solid rgba(16, 185, 129, 0.3)';
-    } else if (s === 'shipped' || s === 'processing') {
-      color = '#38bdf8';
-      bg = 'rgba(56, 189, 248, 0.12)';
-      border = '1px solid rgba(56, 189, 248, 0.3)';
-    } else if (s === 'cancelled' || s === 'rejected') {
-      color = '#ef4444';
-      bg = 'rgba(239, 68, 68, 0.12)';
-      border = '1px solid rgba(239, 68, 68, 0.3)';
+  const getStatusColor = (status) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'bg-yellow-500';
+      case 'processing':
+        return 'bg-blue-500';
+      case 'shipped':
+        return 'bg-purple-500';
+      case 'delivered':
+        return 'bg-green-500';
+      case 'cancelled':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
     }
-
-    return (
-      <Chip
-        label={s.toUpperCase()}
-        size="small"
-        sx={{
-          borderRadius: 0,
-          fontWeight: 800,
-          fontSize: '0.68rem',
-          letterSpacing: '0.04em',
-          color: color,
-          backgroundColor: bg,
-          border: border
-        }}
-      />
-    );
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
-  const cardBg = isLight ? "#ffffff" : "#0c1220";
-  const cardBorder = isLight ? "1px solid #e2e8f0" : "1px solid #1e293b";
-  const textPrimary = isLight ? "#0f172a" : "#f8fafc";
-  const textSecondary = isLight ? "#475569" : "#94a3b8";
-
-  if (!mounted || authLoading || loading) {
+  // Prevent hydration mismatch by showing loading until mounted
+  if (!mounted) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 350, gap: 2 }}>
-        <CircularProgress size={40} sx={{ color: '#6366f1' }} />
-        <Typography sx={{ color: textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>
-          LOADING ORDERS ARCHIVE...
-        </Typography>
-      </Box>
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="text-gray-400 mt-4">Loading orders...</p>
+      </div>
+    );
+  }
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="text-gray-400 mt-4">Checking authentication...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="space-y-2 p-1">
+        <div className="bg-gray-800 rounded-xl p-6 md:p-12 border border-gray-700 text-center">
+          <svg className="w-12 h-12 md:w-16 md:h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <h3 className="text-lg md:text-xl font-semibold text-white mb-2">Authentication Required</h3>
+          <p className="text-gray-400 mb-4 md:mb-6 text-sm md:text-base">
+            {authError || 'You need to be logged in to view your orders'}
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+            <Link
+              href="/login"
+              className="px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
+            >
+              Log In
+            </Link>
+            <Link
+              href="/signup"
+              className="px-4 md:px-6 py-2 md:py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 text-sm md:text-base"
+            >
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="text-gray-400 mt-4">Loading orders...</p>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3.5 }}>
+    <div className="space-y-2 p-1">
       {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
-        <Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-            <ReceiptLongIcon sx={{ color: "#6366f1", fontSize: 26 }} />
-            <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: "-0.02em" }}>
-              My Order Tracking
-            </Typography>
-          </Box>
-          <Typography variant="body2" sx={{ color: textSecondary }}>
-            Review your historical merchandise acquisitions, fulfillment milestones, and delivery tracking.
-          </Typography>
-        </Box>
-
-        <Button
-          component={Link}
-          href="/user-dashboard/shop"
-          variant="contained"
-          size="small"
-          startIcon={<StorefrontIcon sx={{ fontSize: 16 }} />}
-          sx={{
-            borderRadius: 0,
-            backgroundColor: "#6366f1",
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: "0.82rem",
-            px: 2.5,
-            py: 1,
-            "&:hover": { backgroundColor: "#4f46e5" }
-          }}
-        >
-          Browse Catalog
-        </Button>
-      </Box>
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-white">My Orders</h1>
+            <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base">Track your order history and status</p>
+          </div>
+          <Link
+            href="/user-dashboard/shop"
+            className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base text-center"
+          >
+            Shop Now
+          </Link>
+        </div>
+      </div>
 
       {orders.length === 0 ? (
-        <Card sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder, p: 6, textAlign: "center" }}>
-          <ReceiptLongIcon sx={{ fontSize: 48, color: textSecondary, mb: 1.5 }} />
-          <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary, mb: 0.5 }}>
-            No Orders Placed Yet
-          </Typography>
-          <Typography variant="body2" sx={{ color: textSecondary, mb: 3 }}>
-            You haven&apos;t completed any merchandise orders. Browse our corporate catalog to get started.
-          </Typography>
-          <Button
-            component={Link}
+        /* Empty State */
+        <div className="bg-gray-800 rounded-xl p-6 md:p-12 border border-gray-700 text-center">
+          <svg className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          <h3 className="text-lg md:text-xl font-semibold text-white mb-2">No orders yet</h3>
+          <p className="text-gray-400 mb-4 md:mb-6 text-sm md:text-base">Start shopping to see your orders here</p>
+          <Link
             href="/user-dashboard/shop"
-            variant="contained"
-            sx={{
-              borderRadius: 0,
-              backgroundColor: "#6366f1",
-              color: "#fff",
-              fontWeight: 700,
-              "&:hover": { backgroundColor: "#4f46e5" }
-            }}
+            className="px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
           >
-            Explore Catalog
-          </Button>
-        </Card>
+            Browse Products
+          </Link>
+        </div>
       ) : (
-        <Stack spacing={2.5}>
+        /* Orders List */
+        <div className="space-y-3 md:space-y-4">
           {orders.map((order) => (
-            <Card key={order.id} sx={{ borderRadius: 0, backgroundColor: cardBg, border: cardBorder }}>
+            <div key={order.id} className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
               {/* Order Header */}
-              <Box sx={{ p: 2, px: 2.5, backgroundColor: isLight ? "#f8fafc" : "#0f172a", borderBottom: cardBorder, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1.5 }}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: textPrimary }}>
-                    Order #{order.orderNumber}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: textSecondary }}>
-                    Placed on {formatDate(order.createdAt)}
-                  </Typography>
-                </Box>
-
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  {getStatusChip(order.status)}
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#10b981" }}>
-                    ${parseFloat(order.totalAmount).toFixed(2)}
-                  </Typography>
-                </Box>
-              </Box>
+              <div className="p-3 md:p-6 border-b border-gray-700">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 md:mb-4">
+                  <div>
+                    <h3 className="text-base md:text-lg font-semibold text-white">Order #{order.orderNumber}</h3>
+                    <p className="text-gray-400 text-xs md:text-sm">Placed on {formatDate(order.createdAt)}</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    <span className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(order.status)}`}>
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </span>
+                    <span className="text-base md:text-lg font-bold text-white">
+                      PKR {parseFloat(order.totalAmount).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               {/* Order Items */}
-              <CardContent sx={{ p: 2.5 }}>
-                <Stack spacing={2}>
-                  {order.orderItems?.map((item) => (
-                    <Box key={item.id} sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                      <Box sx={{ width: 56, height: 56, backgroundColor: isLight ? "#f1f5f9" : "#080d19", border: cardBorder, flexShrink: 0 }}>
-                        <img
-                          src={item.product?.image || '/placeholder-product.jpg'}
-                          alt={item.product?.title || 'Product'}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          onError={(e) => { e.target.src = '/placeholder-product.jpg'; }}
+              <div className="p-3 md:p-6">
+                <div className="space-y-3 md:space-y-4">
+                  {order.orderItems.map((item) => (
+                    <div key={item.id} className="flex items-center">
+                      <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-700 rounded-lg overflow-hidden mr-3 md:mr-4 flex-shrink-0">
+                        <Image
+                          src={item.product.image}
+                          alt={item.product.title}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = '/placeholder-product.jpg';
+                          }}
                         />
-                      </Box>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: textPrimary, noWrap: true }}>
-                          {item.product?.title || 'Merchandise Item'}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: textSecondary }}>
-                          Quantity: {item.quantity} × ${parseFloat(item.price).toFixed(2)}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 800, color: textPrimary }}>
-                        ${(parseFloat(item.price) * item.quantity).toFixed(2)}
-                      </Typography>
-                    </Box>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-white font-medium text-sm md:text-base truncate">{item.product.title}</h4>
+                        <p className="text-gray-400 text-xs md:text-sm">Qty: {item.quantity}</p>
+                      </div>
+                      <div className="text-right ml-2">
+                        <span className="text-white font-medium text-sm md:text-base">
+                          PKR {parseFloat(item.price).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   ))}
-                </Stack>
-              </CardContent>
-            </Card>
+                </div>
+
+                {/* Order Actions */}
+                <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-700">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="text-xs md:text-sm text-gray-400">
+                      Total: <span className="text-white font-medium">PKR {parseFloat(order.totalAmount).toFixed(2)}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                      <button className="px-3 md:px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 text-sm md:text-base">
+                        Track Order
+                      </button>
+                      <button className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base">
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           ))}
-        </Stack>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

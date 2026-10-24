@@ -1,45 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  IconButton,
-  Chip,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  CircularProgress,
-  Alert,
-  Tooltip,
-  Divider
-} from '@mui/material';
-import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
-import SearchIcon from '@mui/icons-material/Search';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
-import CloseIcon from '@mui/icons-material/Close';
-import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import SyncIcon from '@mui/icons-material/Sync';
 
 export default function AdminWithdrawalsPage() {
   const [withdrawals, setWithdrawals] = useState([]);
@@ -58,11 +19,12 @@ export default function AdminWithdrawalsPage() {
   });
   const [filteredWithdrawals, setFilteredWithdrawals] = useState([]);
 
+  // Withdrawal status options
   const statusOptions = [
-    { value: 'pending', label: 'Pending', color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.15)' },
-    { value: 'approved', label: 'Approved', color: '#34d399', bg: 'rgba(16, 185, 129, 0.15)' },
-    { value: 'rejected', label: 'Rejected', color: '#f87171', bg: 'rgba(239, 68, 68, 0.15)' },
-    { value: 'processing', label: 'Processing', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)' }
+    { value: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'approved', label: 'Approved', color: 'bg-green-100 text-green-800' },
+    { value: 'rejected', label: 'Rejected', color: 'bg-red-100 text-red-800' },
+    { value: 'processing', label: 'Processing', color: 'bg-blue-100 text-blue-800' }
   ];
 
   useEffect(() => {
@@ -72,18 +34,19 @@ export default function AdminWithdrawalsPage() {
   const applyFilters = useCallback(() => {
     let filtered = [...withdrawals];
 
+    // Search filter
     if (filters.search) {
-      const q = filters.search.toLowerCase();
-      filtered = filtered.filter(w => 
-        (w.withdrawalRef || '').toLowerCase().includes(q) ||
-        (w.user?.fullname || '').toLowerCase().includes(q) ||
-        (w.user?.username || '').toLowerCase().includes(q) ||
-        (w.user?.email || '').toLowerCase().includes(q)
+      filtered = filtered.filter(withdrawal => 
+        withdrawal.withdrawalRef.toLowerCase().includes(filters.search.toLowerCase()) ||
+        (withdrawal.user?.fullname || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+        (withdrawal.user?.username || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+        (withdrawal.user?.email || '').toLowerCase().includes(filters.search.toLowerCase())
       );
     }
 
+    // Status filter
     if (filters.status !== 'all') {
-      filtered = filtered.filter(w => w.status === filters.status);
+      filtered = filtered.filter(withdrawal => withdrawal.status === filters.status);
     }
 
     setFilteredWithdrawals(filtered);
@@ -92,6 +55,13 @@ export default function AdminWithdrawalsPage() {
   useEffect(() => {
     applyFilters();
   }, [withdrawals, filters, applyFilters]);
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      status: 'all'
+    });
+  };
 
   const fetchWithdrawals = async () => {
     try {
@@ -106,8 +76,8 @@ export default function AdminWithdrawalsPage() {
       } else {
         setError('Failed to fetch withdrawal requests');
       }
-    } catch (err) {
-      console.error('Error fetching withdrawals:', err);
+    } catch (error) {
+      console.error('Error fetching withdrawals:', error);
       setError('Network error while fetching withdrawal requests');
     } finally {
       setLoading(false);
@@ -138,7 +108,9 @@ export default function AdminWithdrawalsPage() {
       setUpdating(true);
       const response = await fetch(`/api/admin/withdrawals/${selectedWithdrawal.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         credentials: 'include',
         body: JSON.stringify({
           status: newStatus,
@@ -147,10 +119,11 @@ export default function AdminWithdrawalsPage() {
       });
 
       if (response.ok) {
-        setWithdrawals(withdrawals.map(w => 
-          w.id === selectedWithdrawal.id 
-            ? { ...w, status: newStatus, adminNotes: adminNotes }
-            : w
+        // Update the withdrawal in the local state
+        setWithdrawals(withdrawals.map(withdrawal => 
+          withdrawal.id === selectedWithdrawal.id 
+            ? { ...withdrawal, status: newStatus, adminNotes: adminNotes }
+            : withdrawal
         ));
         setShowStatusModal(false);
         setSelectedWithdrawal(null);
@@ -158,34 +131,20 @@ export default function AdminWithdrawalsPage() {
       } else {
         setError('Failed to update withdrawal status');
       }
-    } catch (err) {
-      console.error('Error updating withdrawal status:', err);
+    } catch (error) {
+      console.error('Error updating withdrawal status:', error);
       setError('Network error while updating withdrawal status');
     } finally {
       setUpdating(false);
     }
   };
 
-  const getStatusBadge = (status) => {
-    const opt = statusOptions.find(o => o.value === status);
-    return (
-      <Chip
-        label={opt ? opt.label.toUpperCase() : (status || 'UNKNOWN').toUpperCase()}
-        size="small"
-        sx={{
-          borderRadius: 0,
-          fontWeight: 700,
-          fontSize: '0.68rem',
-          backgroundColor: opt ? opt.bg : 'rgba(255,255,255,0.08)',
-          color: opt ? opt.color : 'rgba(255,255,255,0.8)',
-          border: `1px solid ${opt ? opt.color + '44' : 'rgba(255,255,255,0.15)'}`
-        }}
-      />
-    );
+  const getStatusColor = (status) => {
+    const statusOption = statusOptions.find(option => option.value === status);
+    return statusOption ? statusOption.color : 'bg-gray-100 text-gray-800';
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '—';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -196,622 +155,636 @@ export default function AdminWithdrawalsPage() {
   };
 
   const formatCurrency = (amount) => {
-    return `PKR ${parseFloat(amount || 0).toLocaleString()}`;
+    return `PKR ${parseFloat(amount).toLocaleString()}`;
   };
 
-  if (loading && withdrawals.length === 0) {
+  if (loading) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 350, gap: 2 }}>
-        <CircularProgress size={40} sx={{ color: '#6366f1' }} />
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          Loading Withdrawal Ledger...
-        </Typography>
-      </Box>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
     );
   }
 
-  // Summary counts
-  const totalVolume = withdrawals.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
-  const pendingCount = withdrawals.filter(w => w.status === 'pending').length;
-  const approvedCount = withdrawals.filter(w => w.status === 'approved').length;
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
+    <div className="space-y-6">
       {/* Header */}
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-            <PaymentsOutlinedIcon sx={{ color: '#f87171', fontSize: 26 }} />
-            <Typography variant="h5" sx={{ fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
-              Withdrawal Management
-            </Typography>
-          </Box>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-            Process member payout requests, verify recipient bank details, and enforce audit compliance.
-          </Typography>
-        </Box>
-
-        <Button
-          onClick={fetchWithdrawals}
-          variant="outlined"
-          size="small"
-          startIcon={<SyncIcon sx={{ fontSize: 16 }} />}
-          sx={{
-            borderRadius: 0,
-            borderColor: 'rgba(255,255,255,0.15)',
-            color: '#ffffff',
-            fontSize: '0.78rem',
-            fontWeight: 600,
-            '&:hover': { borderColor: '#818cf8', backgroundColor: 'rgba(99, 102, 241, 0.1)' }
-          }}
-        >
-          Refresh Ledger
-        </Button>
-      </Box>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Withdrawal Management</h1>
+          <p className="text-gray-600 mt-2">Manage and process withdrawal requests</p>
+        </div>
+      </div>
 
       {error && (
-        <Alert severity="error" sx={{ borderRadius: 0, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <div className="flex justify-between items-center">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* KPI Cards */}
-      <Grid container spacing={2.5}>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(245, 158, 11, 0.25)', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.01) 100%)' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: '0.08em' }}>
-                  PENDING REQUESTS
-                </Typography>
-                <HourglassEmptyIcon sx={{ color: '#fbbf24', fontSize: 22 }} />
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#fbbf24' }}>
-                {pendingCount}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(16, 185, 129, 0.25)', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.01) 100%)' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: '0.08em' }}>
-                  SETTLED / APPROVED
-                </Typography>
-                <CheckCircleIcon sx={{ color: '#34d399', fontSize: 22 }} />
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#34d399' }}>
-                {approvedCount}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(99, 102, 241, 0.25)', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.01) 100%)' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: '0.08em' }}>
-                  TOTAL REQUESTED VOLUME
-                </Typography>
-                <PaymentsOutlinedIcon sx={{ color: '#818cf8', fontSize: 22 }} />
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#818cf8' }}>
-                {formatCurrency(totalVolume)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Filters */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+        <div className="flex flex-col lg:flex-row gap-4 items-end">
+          {/* Search */}
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Search Withdrawals</label>
+            <input
+              type="text"
+              placeholder="Search by reference, user name, or email..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-gray-800"
+            />
+          </div>
 
-      {/* Filter Toolbar */}
-      <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <CardContent sx={{ p: 2.5 }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={8}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search by reference, user name, or email..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.4)', mr: 1, fontSize: 20 }} />
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 0,
-                    backgroundColor: 'rgba(255,255,255,0.02)',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    color: '#ffffff',
-                    fontSize: '0.85rem'
-                  }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth size="small">
-                <Select
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  sx={{
-                    borderRadius: 0,
-                    backgroundColor: 'rgba(255,255,255,0.02)',
-                    color: '#ffffff',
-                    fontSize: '0.85rem',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.6)' }
-                  }}
-                >
-                  <MenuItem value="all" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>All Statuses</MenuItem>
-                  <MenuItem value="pending" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Pending</MenuItem>
-                  <MenuItem value="approved" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Approved</MenuItem>
-                  <MenuItem value="processing" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Processing</MenuItem>
-                  <MenuItem value="rejected" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Rejected</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+          {/* Status Filter */}
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="processing">Processing</option>
+            </select>
+          </div>
 
-      {/* Main Table */}
-      <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <Box sx={{ p: 2.5, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#ffffff', fontSize: '0.95rem' }}>
-            Withdrawal Request Ledger
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-            {filteredWithdrawals.length} Entries
-          </Typography>
-        </Box>
+          {/* Clear Filters */}
+          <div>
+            <button
+              onClick={clearFilters}
+              className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-300 font-semibold"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
 
-        {filteredWithdrawals.length === 0 ? (
-          <Box sx={{ p: 6, textAlign: 'center' }}>
-            <PaymentsOutlinedIcon sx={{ fontSize: 44, color: 'rgba(255,255,255,0.2)', mb: 1.5 }} />
-            <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 600 }}>
-              No Withdrawal Requests Found
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.5, display: 'block' }}>
-              No withdrawal records match the active criteria.
-            </Typography>
-          </Box>
-        ) : (
-          <TableContainer>
-            <Table sx={{ minWidth: 800 }}>
-              <TableHead sx={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                <TableRow>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    REFERENCE & MEMBER
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    AMOUNTS (FEE / NET)
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    PAYMENT CHANNEL
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    STATUS
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    TIMESTAMP
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    ACTIONS
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredWithdrawals.map((withdrawal) => (
-                  <TableRow
-                    key={withdrawal.id}
-                    sx={{
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.02)' },
-                      borderColor: 'rgba(255,255,255,0.04)'
-                    }}
-                  >
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#818cf8', fontWeight: 700, fontSize: '0.82rem' }}>
-                        {withdrawal.withdrawalRef}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 600, mt: 0.3 }}>
-                        {withdrawal.user?.fullname || 'Anonymous'}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', display: 'block' }}>
-                        @{withdrawal.user?.username} • {withdrawal.user?.email}
-                      </Typography>
-                    </TableCell>
+        {/* Results Count */}
+        <div className="mt-4 text-sm text-gray-600">
+          Showing {filteredWithdrawals.length} of {withdrawals.length} withdrawal requests
+        </div>
+      </div>
 
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 700 }}>
+      {/* Withdrawals Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800">Withdrawal Requests</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Amount Details
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Method
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredWithdrawals.map((withdrawal) => (
+                <tr key={withdrawal.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">
+                            {(withdrawal.user?.fullname || 'U').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-800">
+                          {withdrawal.user?.fullname || 'Unknown User'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          @{withdrawal.user?.username || 'N/A'}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          ID: {withdrawal.userId}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm">
+                      <div className="font-medium text-gray-800">
                         {formatCurrency(withdrawal.amount)}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#f87171', display: 'block' }}>
-                        Fee: -{formatCurrency(withdrawal.feeAmount || 0)}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#34d399', fontWeight: 700, display: 'block' }}>
+                      </div>
+                      <div className="text-gray-500">
+                        Fee: {formatCurrency(withdrawal.feeAmount || 0)}
+                      </div>
+                      <div className="text-green-600 font-medium">
                         Net: {formatCurrency(withdrawal.netAmount || 0)}
-                      </Typography>
-                    </TableCell>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-800">
+                      {withdrawal.paymentMethod}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(withdrawal.status)}`}>
+                      {withdrawal.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(withdrawal.createdAt)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end space-x-2">
+                      <button
+                        onClick={() => handleViewWithdrawal(withdrawal)}
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                        title="View Details"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleViewPaymentGateway(withdrawal)}
+                        className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
+                        title="View Payment Gateway"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleUpdateStatus(withdrawal)}
+                        className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
+                        title="Update Status"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
-                        {withdrawal.paymentMethod}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      {getStatusBadge(withdrawal.status)}
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2, color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem' }}>
-                      {formatDate(withdrawal.createdAt)}
-                    </TableCell>
-
-                    <TableCell align="right" sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.8 }}>
-                        <Tooltip title="View Details">
-                          <IconButton
-                            onClick={() => handleViewWithdrawal(withdrawal)}
-                            size="small"
-                            sx={{
-                              color: '#38bdf8',
-                              border: '1px solid rgba(56, 189, 248, 0.25)',
-                              borderRadius: 0,
-                              p: 0.8,
-                              '&:hover': { backgroundColor: 'rgba(56, 189, 248, 0.1)' }
-                            }}
-                          >
-                            <VisibilityOutlinedIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Gateway Account Information">
-                          <IconButton
-                            onClick={() => handleViewPaymentGateway(withdrawal)}
-                            size="small"
-                            sx={{
-                              color: '#34d399',
-                              border: '1px solid rgba(52, 211, 153, 0.25)',
-                              borderRadius: 0,
-                              p: 0.8,
-                              '&:hover': { backgroundColor: 'rgba(52, 211, 153, 0.1)' }
-                            }}
-                          >
-                            <AccountBalanceOutlinedIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Update Status">
-                          <IconButton
-                            onClick={() => handleUpdateStatus(withdrawal)}
-                            size="small"
-                            sx={{
-                              color: '#818cf8',
-                              border: '1px solid rgba(129, 140, 248, 0.25)',
-                              borderRadius: 0,
-                              p: 0.8,
-                              '&:hover': { backgroundColor: 'rgba(129, 140, 248, 0.1)' }
-                            }}
-                          >
-                            <EditOutlinedIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+        {filteredWithdrawals.length === 0 && (
+          <div className="text-center py-8">
+            <div className="text-gray-500">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No withdrawal requests found</h3>
+              <p className="mt-1 text-sm text-gray-500">Get started by processing withdrawal requests.</p>
+            </div>
+          </div>
         )}
-      </Card>
+      </div>
 
-      {/* Details Dialog */}
-      <Dialog
-        open={showDetailsModal}
-        onClose={() => setShowDetailsModal(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 0,
-            backgroundColor: '#0d131f',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: '#ffffff'
-          }
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.06)', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#ffffff' }}>
-              Withdrawal Order Details
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#818cf8', fontFamily: 'monospace' }}>
-              REF: {selectedWithdrawal?.withdrawalRef}
-            </Typography>
-          </Box>
-          <IconButton onClick={() => setShowDetailsModal(false)} sx={{ color: 'rgba(255,255,255,0.6)', borderRadius: 0 }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          {selectedWithdrawal && (
-            <Grid container spacing={3} sx={{ mt: 0.5 }}>
-              <Grid item xs={12} sm={6}>
-                <Card sx={{ borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#818cf8', mb: 1.5 }}>
-                      MEMBER INFORMATION
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Full Name:</Typography>
-                        <Typography variant="caption" sx={{ color: '#ffffff', fontWeight: 600 }}>{selectedWithdrawal.user?.fullname || 'N/A'}</Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Username:</Typography>
-                        <Typography variant="caption" sx={{ color: '#818cf8', fontWeight: 600 }}>@{selectedWithdrawal.user?.username}</Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Email:</Typography>
-                        <Typography variant="caption" sx={{ color: '#ffffff' }}>{selectedWithdrawal.user?.email}</Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>User ID:</Typography>
-                        <Typography variant="caption" sx={{ color: '#ffffff', fontFamily: 'monospace' }}>{selectedWithdrawal.userId}</Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
+      {/* Withdrawal Details Modal */}
+      {showDetailsModal && selectedWithdrawal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  Withdrawal Details
+                </h3>
+                <p className="text-gray-600">Reference: {selectedWithdrawal.withdrawalRef}</p>
+              </div>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
-              <Grid item xs={12} sm={6}>
-                <Card sx={{ borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#34d399', mb: 1.5 }}>
-                      FINANCIAL SETTLEMENT
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Gross Amount:</Typography>
-                        <Typography variant="caption" sx={{ color: '#ffffff', fontWeight: 700 }}>{formatCurrency(selectedWithdrawal.amount)}</Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="caption" sx={{ color: '#f87171' }}>Platform Fee (10%):</Typography>
-                        <Typography variant="caption" sx={{ color: '#f87171', fontWeight: 700 }}>-{formatCurrency(selectedWithdrawal.feeAmount || 0)}</Typography>
-                      </Box>
-                      <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="caption" sx={{ color: '#34d399', fontWeight: 700 }}>Net Disbursed:</Typography>
-                        <Typography variant="caption" sx={{ color: '#34d399', fontWeight: 800, fontSize: '0.85rem' }}>{formatCurrency(selectedWithdrawal.netAmount || 0)}</Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Status:</Typography>
-                        {getStatusBadge(selectedWithdrawal.status)}
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* User Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    User Information
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Name:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.user?.fullname || 'Unknown'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Username:</span>
+                      <span className="text-sm font-medium">@{selectedWithdrawal.user?.username || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">User ID:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.userId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Email:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.user?.email || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
 
-              <Grid item xs={12}>
-                <Card sx={{ borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#fbbf24', mb: 1 }}>
-                      ACCOUNT DETAILS / INSTRUCTIONS
-                    </Typography>
-                    <Box sx={{ p: 1.5, backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 0 }}>
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', whiteSpace: 'pre-line', fontSize: '0.82rem', fontFamily: 'monospace' }}>
-                        {selectedWithdrawal.accountDetails || 'No specific account string provided.'}
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <Button
-            onClick={() => setShowDetailsModal(false)}
-            variant="outlined"
-            size="small"
-            sx={{ borderRadius: 0, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+                {/* Withdrawal Details */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    Withdrawal Details
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Requested Amount:</span>
+                      <span className="text-sm font-medium">{formatCurrency(selectedWithdrawal.amount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-red-600">Withdrawal Fee (10%):</span>
+                      <span className="text-sm font-medium text-red-600">-{formatCurrency(selectedWithdrawal.feeAmount || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-green-600 font-semibold">Net Amount:</span>
+                      <span className="text-sm font-bold text-green-600">{formatCurrency(selectedWithdrawal.netAmount || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Payment Method:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.paymentMethod}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Status:</span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedWithdrawal.status)}`}>
+                        {selectedWithdrawal.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-      {/* Status Update Dialog */}
-      <Dialog
-        open={showStatusModal}
-        onClose={() => setShowStatusModal(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 0,
-            backgroundColor: '#0d131f',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: '#ffffff'
-          }
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.06)', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#ffffff' }}>
-            Update Withdrawal Status
-          </Typography>
-          <IconButton onClick={() => setShowStatusModal(false)} sx={{ color: 'rgba(255,255,255,0.6)', borderRadius: 0 }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          {selectedWithdrawal && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
-              <Box sx={{ p: 1.5, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
-                  Target Request Reference:
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#818cf8', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {selectedWithdrawal.withdrawalRef} ({formatCurrency(selectedWithdrawal.amount)})
-                </Typography>
-              </Box>
+              {/* Account Details */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Account Details
+                </h4>
+                <div className="bg-white rounded-lg p-3">
+                  <p className="text-sm text-gray-800 whitespace-pre-line">{selectedWithdrawal.accountDetails}</p>
+                </div>
+              </div>
 
-              <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>Select Next State</InputLabel>
-                <Select
+              {/* User Notes */}
+              {selectedWithdrawal.notes && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    User Notes
+                  </h4>
+                  <div className="bg-white rounded-lg p-3">
+                    <p className="text-sm text-gray-800">{selectedWithdrawal.notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Admin Notes */}
+              {selectedWithdrawal.adminNotes && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Admin Notes
+                  </h4>
+                  <div className="bg-white rounded-lg p-3">
+                    <p className="text-sm text-gray-800">{selectedWithdrawal.adminNotes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Status Modal */}
+      {showStatusModal && selectedWithdrawal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md mx-4">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800">Update Withdrawal Status</h3>
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-1">
+                  <strong>Reference:</strong> {selectedWithdrawal.withdrawalRef}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Amount:</strong> {formatCurrency(selectedWithdrawal.amount)}
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select
                   value={newStatus}
-                  label="Select Next State"
                   onChange={(e) => setNewStatus(e.target.value)}
-                  sx={{
-                    borderRadius: 0,
-                    backgroundColor: 'rgba(255,255,255,0.02)',
-                    color: '#ffffff',
-                    fontSize: '0.85rem',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.6)' }
-                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
                 >
-                  {statusOptions.map((opt) => (
-                    <MenuItem key={opt.value} value={opt.value} sx={{ borderRadius: 0, fontSize: '0.82rem' }}>
-                      {opt.label}
-                    </MenuItem>
+                  {statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
                   ))}
-                </Select>
-              </FormControl>
+                </select>
+              </div>
 
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Administrative Audit Notes"
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Include internal references, bank transaction IDs, or reason for rejection..."
-                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
-                InputProps={{
-                  sx: {
-                    borderRadius: 0,
-                    backgroundColor: 'rgba(255,255,255,0.02)',
-                    borderColor: 'rgba(255,255,255,0.15)',
-                    color: '#ffffff',
-                    fontSize: '0.85rem'
-                  }
-                }}
-              />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <Button
-            onClick={() => setShowStatusModal(false)}
-            variant="outlined"
-            size="small"
-            sx={{ borderRadius: 0, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={updateWithdrawalStatus}
-            disabled={updating}
-            variant="contained"
-            size="small"
-            sx={{
-              borderRadius: 0,
-              backgroundColor: '#6366f1',
-              color: '#ffffff',
-              fontWeight: 700,
-              '&:hover': { backgroundColor: '#4f46e5' }
-            }}
-          >
-            {updating ? 'Updating...' : 'Commit Status'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Admin Notes</label>
+                <textarea
+                  rows={3}
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Add any notes or comments about this withdrawal request"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
+                />
+              </div>
+            </div>
 
-      {/* Payment Gateway Dialog */}
-      <Dialog
-        open={showPaymentGatewayModal}
-        onClose={() => setShowPaymentGatewayModal(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 0,
-            backgroundColor: '#0d131f',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: '#ffffff'
-          }
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.06)', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#ffffff' }}>
-            Payment Gateway Details
-          </Typography>
-          <IconButton onClick={() => setShowPaymentGatewayModal(false)} sx={{ color: 'rgba(255,255,255,0.6)', borderRadius: 0 }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          {selectedWithdrawal && (
-            <Box sx={{ mt: 1 }}>
-              {(() => {
-                try {
-                  const details = JSON.parse(selectedWithdrawal.accountDetails);
-                  return (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      <Box sx={{ p: 1.5, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Account Title / Name:</Typography>
-                        <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 700 }}>{details.accountName || 'N/A'}</Typography>
-                      </Box>
-                      {details.bankName && (
-                        <Box sx={{ p: 1.5, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Bank Organization:</Typography>
-                          <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 600 }}>{details.bankName}</Typography>
-                        </Box>
-                      )}
-                      {details.accountNumber && (
-                        <Box sx={{ p: 1.5, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Account / IBAN Number:</Typography>
-                          <Typography variant="body2" sx={{ color: '#38bdf8', fontWeight: 700, fontFamily: 'monospace' }}>{details.accountNumber}</Typography>
-                        </Box>
-                      )}
-                      {details.mobileNumber && (
-                        <Box sx={{ p: 1.5, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Mobile Wallet Phone:</Typography>
-                          <Typography variant="body2" sx={{ color: '#34d399', fontWeight: 700, fontFamily: 'monospace' }}>{details.mobileNumber}</Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  );
-                } catch {
-                  return (
-                    <Box sx={{ p: 2, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <Typography variant="body2" sx={{ color: '#ffffff', whiteSpace: 'pre-line', fontFamily: 'monospace' }}>
-                        {selectedWithdrawal.accountDetails}
-                      </Typography>
-                    </Box>
-                  );
-                }
-              })()}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <Button
-            onClick={() => setShowPaymentGatewayModal(false)}
-            variant="outlined"
-            size="small"
-            sx={{ borderRadius: 0, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+            <div className="flex space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updateWithdrawalStatus}
+                disabled={updating}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed"
+              >
+                {updating ? 'Updating...' : 'Update Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Gateway Details Modal */}
+      {showPaymentGatewayModal && selectedWithdrawal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  Payment Gateway Details
+                </h3>
+                <p className="text-gray-600">Reference: {selectedWithdrawal.withdrawalRef}</p>
+              </div>
+              <button
+                onClick={() => setShowPaymentGatewayModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* User Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    User Information
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Name:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.user?.fullname || 'Unknown'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">User ID:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.userId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Email:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.user?.email || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Withdrawal Summary */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    Withdrawal Summary
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Amount:</span>
+                      <span className="text-sm font-medium">{formatCurrency(selectedWithdrawal.amount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Payment Method:</span>
+                      <span className="text-sm font-medium">{selectedWithdrawal.paymentMethod}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Status:</span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedWithdrawal.status)}`}>
+                        {selectedWithdrawal.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Gateway Details */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Payment Gateway Information
+                </h4>
+                <div className="bg-white rounded-lg p-4">
+                  {(() => {
+                    try {
+                      const accountDetails = JSON.parse(selectedWithdrawal.accountDetails);
+                      return (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+                                {accountDetails.type || 'N/A'}
+                              </p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+                                {accountDetails.accountName || 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {accountDetails.bankName && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+                                {accountDetails.bankName}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {accountDetails.accountNumber && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border font-mono">
+                                {accountDetails.accountNumber}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {accountDetails.ibanNumber && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">IBAN Number</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border font-mono">
+                                {accountDetails.ibanNumber}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {accountDetails.mobileNumber && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border font-mono">
+                                {accountDetails.mobileNumber}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {accountDetails.email && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+                                {accountDetails.email}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    } catch (error) {
+                      // Fallback for old format or invalid JSON
+                      return (
+                        <div className="bg-white rounded-lg p-3">
+                          <p className="text-sm text-gray-800 whitespace-pre-line">{selectedWithdrawal.accountDetails}</p>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+
+              {/* User Notes */}
+              {selectedWithdrawal.notes && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    User Notes
+                  </h4>
+                  <div className="bg-white rounded-lg p-3">
+                    <p className="text-sm text-gray-800">{selectedWithdrawal.notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Admin Notes */}
+              {selectedWithdrawal.adminNotes && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Admin Notes
+                  </h4>
+                  <div className="bg-white rounded-lg p-3">
+                    <p className="text-sm text-gray-800">{selectedWithdrawal.adminNotes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowPaymentGatewayModal(false)}
+                className="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

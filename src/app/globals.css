@@ -5,16 +5,6 @@
   --foreground: #171717;
 }
 
-[data-theme="dark"] {
-  --background: #070a12;
-  --foreground: #f8fafc;
-}
-
-[data-theme="light"] {
-  --background: #f1f5f9;
-  --foreground: #0f172a;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -61,11 +51,6 @@ body {
 
 .animation-delay-4000 {
   animation-delay: 4s;
-}
-
-/* Enforce zero rounded corners globally as requested */
-*, *::before, *::after {
-  border-radius: 0 !important;
 }
 
 /* Smooth transitions for form elements */
@@ -149,9 +134,9 @@ input, button, select, textarea {
   background: #9ca3af;
 }
 
-/* Focus styles for keyboard accessibility only */
-*:focus-visible {
-  outline: 2px solid #6366f1;
+/* Focus styles for better accessibility */
+*:focus {
+  outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
 

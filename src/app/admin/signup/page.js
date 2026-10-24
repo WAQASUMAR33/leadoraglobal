@@ -3,30 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  TextField,
-  Button,
-  Alert,
-  CircularProgress,
-  Stack,
-  InputAdornment,
-  IconButton
-} from '@mui/material';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
-import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
-import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
-import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 
 export default function AdminSignup() {
-  const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -34,8 +12,6 @@ export default function AdminSignup() {
     password: '',
     confirmPassword: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -82,329 +58,162 @@ export default function AdminSignup() {
 
       const data = await response.json();
 
-      if (response.ok) {
-        setSuccess('Admin account created successfully! You can now log in.');
-        setTimeout(() => {
-          router.push('/admin/login');
-        }, 2000);
+      if (data.success) {
+        setSuccess('Admin account created successfully! You can now login.');
+        setFormData({
+          username: '',
+          email: '',
+          fullName: '',
+          password: '',
+          confirmPassword: ''
+        });
       } else {
-        setError(data.error || 'Failed to create admin account');
+        setError(data.message || 'Signup failed');
       }
-    } catch (err) {
-      console.error('Signup error:', err);
-      setError('Network or server error during registration');
+    } catch (error) {
+      console.error('Signup error:', error);
+      setError('An error occurred during signup');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        bgcolor: '#070a12',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        px: 2,
-        py: 6,
-        backgroundImage: 'radial-gradient(circle at 50% 10%, rgba(99, 102, 241, 0.12), transparent 50%)'
-      }}
-    >
-      <Box sx={{ width: '100%', maxWidth: 480 }}>
-        {/* Top Logo / Icon */}
-        <Box sx={{ textAlign: 'center', mb: 3 }}>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              p: 1.5,
-              bgcolor: '#0c1220',
-              border: '1px solid #1e293b',
-              color: '#818cf8',
-              mb: 1.5
-            }}
-          >
-            <AdminPanelSettingsOutlinedIcon sx={{ fontSize: 36 }} />
-          </Box>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em' }}>
-            Initialize Administrative Access
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
-            Establish supreme administrative credentials & privileges
-          </Typography>
-        </Box>
-
-        {/* Signup Form Card */}
-        <Card
-          sx={{
-            borderRadius: 0,
-            bgcolor: '#0c1220',
-            border: '1px solid #1e293b',
-            boxShadow: '0 20px 40px -15px rgba(0,0,0,0.7)'
-          }}
-        >
-          <Box sx={{ p: 2, bgcolor: '#0f172a', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ShieldOutlinedIcon sx={{ color: '#818cf8', fontSize: 18 }} />
-            <Typography sx={{ color: '#cbd5e1', fontSize: '0.82rem', fontWeight: 700, letterSpacing: '0.05em' }}>
-              SECURE REGISTRATION CONSOLE
-            </Typography>
-          </Box>
-
-          <CardContent sx={{ p: 3 }}>
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <div className="mx-auto h-12 w-12 bg-white rounded-full flex items-center justify-center">
+            <svg className="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
+            Create Admin Account
+          </h2>
+          <p className="mt-2 text-center text-sm text-purple-100">
+            Set up your admin account to access the admin panel
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="bg-white rounded-lg shadow-xl p-8 space-y-6">
             {error && (
-              <Alert severity="error" sx={{ borderRadius: 0, mb: 2.5, bgcolor: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                 {error}
-              </Alert>
+              </div>
             )}
-
+            
             {success && (
-              <Alert severity="success" sx={{ borderRadius: 0, mb: 2.5, bgcolor: 'rgba(52, 211, 153, 0.1)', color: '#34d399', border: '1px solid rgba(52, 211, 153, 0.3)' }}>
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
                 {success}
-              </Alert>
+                <div className="mt-2">
+                  <Link href="/admin/login" className="text-green-600 hover:text-green-800 underline">
+                    Go to Login Page
+                  </Link>
+                </div>
+              </div>
             )}
 
-            <form onSubmit={handleSubmit}>
-              <Stack spacing={2.2}>
-                <Box>
-                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, mb: 0.5, letterSpacing: '0.04em' }}>
-                    FULL LEGAL NAME
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    required
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    placeholder="e.g. Master Administrator"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <BadgeOutlinedIcon sx={{ color: '#64748b', fontSize: 20 }} />
-                        </InputAdornment>
-                      )
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 0,
-                        bgcolor: '#080d19',
-                        color: '#f8fafc',
-                        fontSize: '0.9rem',
-                        '& fieldset': { borderColor: '#1e293b' },
-                        '&:hover fieldset': { borderColor: '#475569' },
-                        '&.Mui-focused fieldset': { borderColor: '#6366f1' }
-                      }
-                    }}
-                  />
-                </Box>
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+                Full Name
+              </label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                required
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Enter your full name"
+                value={formData.fullName}
+                onChange={handleChange}
+              />
+            </div>
 
-                <Box>
-                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, mb: 0.5, letterSpacing: '0.04em' }}>
-                    ADMIN USERNAME
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    required
-                    name="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    placeholder="e.g. superadmin"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <PersonOutlineIcon sx={{ color: '#64748b', fontSize: 20 }} />
-                        </InputAdornment>
-                      )
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 0,
-                        bgcolor: '#080d19',
-                        color: '#f8fafc',
-                        fontSize: '0.9rem',
-                        '& fieldset': { borderColor: '#1e293b' },
-                        '&:hover fieldset': { borderColor: '#475569' },
-                        '&.Mui-focused fieldset': { borderColor: '#6366f1' }
-                      }
-                    }}
-                  />
-                </Box>
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Username
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Enter username"
+                value={formData.username}
+                onChange={handleChange}
+              />
+            </div>
 
-                <Box>
-                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, mb: 0.5, letterSpacing: '0.04em' }}>
-                    OFFICIAL EMAIL ADDRESS
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    required
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="e.g. admin@domain.com"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <EmailOutlinedIcon sx={{ color: '#64748b', fontSize: 20 }} />
-                        </InputAdornment>
-                      )
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 0,
-                        bgcolor: '#080d19',
-                        color: '#f8fafc',
-                        fontSize: '0.9rem',
-                        '& fieldset': { borderColor: '#1e293b' },
-                        '&:hover fieldset': { borderColor: '#475569' },
-                        '&.Mui-focused fieldset': { borderColor: '#6366f1' }
-                      }
-                    }}
-                  />
-                </Box>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Enter email address"
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </div>
 
-                <Box>
-                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, mb: 0.5, letterSpacing: '0.04em' }}>
-                    PASSWORD (MIN 6 CHARS)
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    required
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Enter robust password"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <LockOutlinedIcon sx={{ color: '#64748b', fontSize: 20 }} />
-                        </InputAdornment>
-                      ),
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowPassword(!showPassword)}
-                            edge="end"
-                            size="small"
-                            sx={{ color: '#64748b' }}
-                          >
-                            {showPassword ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
-                          </IconButton>
-                        </InputAdornment>
-                      )
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 0,
-                        bgcolor: '#080d19',
-                        color: '#f8fafc',
-                        fontSize: '0.9rem',
-                        '& fieldset': { borderColor: '#1e293b' },
-                        '&:hover fieldset': { borderColor: '#475569' },
-                        '&.Mui-focused fieldset': { borderColor: '#6366f1' }
-                      }
-                    }}
-                  />
-                </Box>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                minLength={6}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Enter password (min 6 characters)"
+                value={formData.password}
+                onChange={handleChange}
+              />
+            </div>
 
-                <Box>
-                  <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, mb: 0.5, letterSpacing: '0.04em' }}>
-                    CONFIRM PASSWORD
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    required
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Re-type password"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <LockOutlinedIcon sx={{ color: '#64748b', fontSize: 20 }} />
-                        </InputAdornment>
-                      ),
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            edge="end"
-                            size="small"
-                            sx={{ color: '#64748b' }}
-                          >
-                            {showConfirmPassword ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
-                          </IconButton>
-                        </InputAdornment>
-                      )
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 0,
-                        bgcolor: '#080d19',
-                        color: '#f8fafc',
-                        fontSize: '0.9rem',
-                        '& fieldset': { borderColor: '#1e293b' },
-                        '&:hover fieldset': { borderColor: '#475569' },
-                        '&.Mui-focused fieldset': { borderColor: '#6366f1' }
-                      }
-                    }}
-                  />
-                </Box>
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                minLength={6}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Confirm password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+              />
+            </div>
 
-                <Button
-                  fullWidth
-                  type="submit"
-                  variant="contained"
-                  disabled={loading}
-                  sx={{
-                    borderRadius: 0,
-                    bgcolor: '#4338ca',
-                    color: '#fff',
-                    py: 1.4,
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    fontSize: '0.9rem',
-                    mt: 1,
-                    '&:hover': { bgcolor: '#3730a3' },
-                    '&.Mui-disabled': { bgcolor: '#1e293b', color: '#475569' }
-                  }}
-                >
-                  {loading ? <CircularProgress size={22} sx={{ color: '#fff' }} /> : 'REGISTER ADMIN ACCOUNT'}
-                </Button>
-              </Stack>
-            </form>
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:bg-purple-400 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Creating Account...' : 'Create Admin Account'}
+              </button>
+            </div>
 
-            <Box sx={{ mt: 3, pt: 2.5, borderTop: '1px solid #1e293b', textAlign: 'center' }}>
-              <Link href="/admin/login" style={{ textDecoration: 'none' }}>
-                <Typography sx={{ color: '#818cf8', fontSize: '0.84rem', fontWeight: 600, '&:hover': { color: '#a5b4fc', textDecoration: 'underline' } }}>
-                  Already possess credentials? Access Login Portal →
-                </Typography>
+            <div className="text-center">
+              <Link href="/admin/login" className="text-purple-600 hover:text-purple-800 text-sm">
+                Already have an account? Login here
               </Link>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Mandatory Footer */}
-        <Box sx={{ mt: 3, textAlign: 'center' }}>
-          <Typography sx={{ color: '#64748b', fontSize: '0.78rem', letterSpacing: '0.04em' }}>
-            Powerd By :{' '}
-            <a
-              href="https://rapidtechpro.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: '#818cf8',
-                fontWeight: 700,
-                textDecoration: 'none'
-              }}
-            >
-              RAPIDTECHPRO
-            </a>
-          </Typography>
-        </Box>
-      </Box>
-    </Box>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

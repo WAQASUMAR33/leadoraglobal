@@ -1,73 +1,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Divider,
-  Button,
-  TextField,
-  Alert,
-  Paper,
-  CircularProgress,
-  Chip
-} from '@mui/material';
-import {
-  Person,
-  LockReset,
-  AccountCircle,
-  TrendingUp,
-  Group,
-  WorkspacePremium,
-  CheckCircle,
-  Save,
-  Edit
-} from '@mui/icons-material';
 import { auth } from "../../../lib/auth";
-import { useAppTheme } from "../../../context/AdminThemeContext";
 
 export default function UserProfile() {
-  const { isLight } = useAppTheme();
-  const [user, setUser] = useState({
-    fullname: "Waqas Umar",
-    username: "waqasumar33",
-    email: "dilwaq22@gmail.com",
-    phoneNumber: "03001234567",
-    createdAt: "2025-09-05",
-    currentPackage: { package_name: "Diamond Elite" },
-    rank: { title: "Director Executive" }
-  });
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   
+  // Form state
   const [formData, setFormData] = useState({
-    fullname: 'Waqas Umar',
-    username: 'waqasumar33',
-    email: 'dilwaq22@gmail.com',
-    phoneNumber: '03001234567'
+    fullname: '',
+    username: '',
+    email: '',
+    phoneNumber: ''
   });
 
+  // Password change state
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
 
-  const bgCard = isLight ? '#ffffff' : '#0c1220';
-  const borderCard = isLight ? '#e2e8f0' : '#1e293b';
-  const textPrimary = isLight ? '#0f172a' : '#f8fafc';
-  const textSecondary = isLight ? '#64748b' : '#94a3b8';
-  const bgSubtle = isLight ? '#f8fafc' : '#070a12';
-
   useEffect(() => {
+    // Get user from auth utility
     const currentUser = auth.getUser();
+    console.log('Profile page - Current user data:', currentUser);
     if (currentUser) {
       setUser(currentUser);
       setFormData({
+        fullname: currentUser.fullname || currentUser.firstname || '',
+        username: currentUser.username || '',
+        email: currentUser.email || '',
+        phoneNumber: currentUser.phoneNumber || ''
+      });
+      console.log('Profile page - Form data set:', {
         fullname: currentUser.fullname || currentUser.firstname || '',
         username: currentUser.username || '',
         email: currentUser.email || '',
@@ -79,12 +48,18 @@ export default function UserProfile() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    setPasswordData(prev => ({ ...prev, [name]: value }));
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleProfileUpdate = async (e) => {
@@ -94,7 +69,9 @@ export default function UserProfile() {
     try {
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           userId: user.id,
           fullName: formData.fullname,
@@ -108,14 +85,16 @@ export default function UserProfile() {
         const updatedUser = await response.json();
         setUser(updatedUser);
         setEditing(false);
-        setMessage({ type: 'success', text: 'Profile information updated successfully!' });
+        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+        
+        // Update local storage with new user data
         localStorage.setItem('user', JSON.stringify(updatedUser));
       } else {
-        const err = await response.json();
-        setMessage({ type: 'error', text: err.message || 'Failed to update profile' });
+        const error = await response.json();
+        setMessage({ type: 'error', text: error.message || 'Failed to update profile' });
       }
-    } catch (err) {
-      console.error('Error updating profile:', err);
+    } catch (error) {
+      console.error('Error updating profile:', error);
       setMessage({ type: 'error', text: 'Error updating profile' });
     }
   };
@@ -137,7 +116,9 @@ export default function UserProfile() {
     try {
       const response = await fetch('/api/user/change-password', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           userId: user.id,
           currentPassword: passwordData.currentPassword,
@@ -147,317 +128,266 @@ export default function UserProfile() {
 
       if (response.ok) {
         setMessage({ type: 'success', text: 'Password changed successfully!' });
-        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
       } else {
-        const err = await response.json();
-        setMessage({ type: 'error', text: err.message || 'Failed to change password' });
+        const error = await response.json();
+        setMessage({ type: 'error', text: error.message || 'Failed to change password' });
       }
-    } catch (err) {
-      console.error('Error changing password:', err);
+    } catch (error) {
+      console.error('Error changing password:', error);
       setMessage({ type: 'error', text: 'Error changing password' });
     }
   };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-        <CircularProgress size={32} sx={{ color: '#2563eb' }} />
-      </Box>
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
     );
   }
 
   if (!user) {
     return (
-      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: 6, textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ color: textPrimary, mb: 1, fontWeight: 700 }}>Session Expired</Typography>
-        <Typography variant="body2" sx={{ color: textSecondary, mb: 3 }}>Please log in to manage your profile.</Typography>
-        <Button
-          onClick={() => window.location.href = '/login'}
-          variant="contained"
-          sx={{ borderRadius: 0, bgcolor: '#3b82f6', textTransform: 'none', fontWeight: 700 }}
+      <div className="text-center py-8 md:py-12 p-1">
+        <p className="text-gray-400 text-base md:text-lg">Please log in to view your profile.</p>
+        <button 
+          onClick={() => window.location.href = '/login'} 
+          className="mt-4 px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
         >
           Go to Login
-        </Button>
-      </Card>
+        </button>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <div className="space-y-2 p-1">
       {/* Header */}
-      <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, p: { xs: 2.5, md: 3 } }}>
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <AccountCircle sx={{ color: '#3b82f6', fontSize: 36 }} />
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: textPrimary, letterSpacing: '-0.02em' }}>
-                Account & Security Settings
-              </Typography>
-              <Typography variant="body2" sx={{ color: textSecondary }}>
-                Manage your personal contact credentials and update your portal password.
-              </Typography>
-            </Box>
-          </Box>
-          <Button
-            variant={editing ? 'outlined' : 'contained'}
-            startIcon={editing ? null : <Edit />}
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-white">My Profile</h1>
+            <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base">Manage your account information and settings</p>
+          </div>
+          <button
             onClick={() => setEditing(!editing)}
-            sx={{
-              borderRadius: 0,
-              bgcolor: editing ? 'transparent' : '#3b82f6',
-              borderColor: borderCard,
-              color: editing ? textPrimary : '#ffffff',
-              fontWeight: 800,
-              textTransform: 'none',
-              px: 2.5,
-              '&:hover': { bgcolor: editing ? bgSubtle : '#2563eb' }
-            }}
+            className={`px-3 md:px-4 py-2 rounded-lg font-medium transition-colors duration-200 text-sm md:text-base ${
+              editing
+                ? 'bg-gray-600 text-white hover:bg-gray-700'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
           >
-            {editing ? 'Cancel Editing' : 'Edit Profile'}
-          </Button>
-        </Box>
-      </Card>
+            {editing ? 'Cancel' : 'Edit Profile'}
+          </button>
+        </div>
+      </div>
 
+      {/* Message Display */}
       {message.text && (
-        <Alert
-          severity={message.type === 'success' ? 'success' : 'error'}
-          sx={{
-            borderRadius: 0,
-            border: `1px solid ${message.type === 'success' ? '#10b981' : '#ef4444'}`,
-            bgcolor: message.type === 'success' ? (isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.1)') : (isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.1)')
-          }}
-        >
+        <div className={`rounded-lg p-3 md:p-4 text-sm md:text-base ${
+          message.type === 'success' 
+            ? 'bg-green-900 border border-green-700 text-green-100' 
+            : 'bg-red-900 border border-red-700 text-red-100'
+        }`}>
           {message.text}
-        </Alert>
+        </div>
       )}
 
-      {/* Account Overview Cards */}
-      <Grid container spacing={2}>
-        <Grid item xs={6} md={3}>
-          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
-            <CardContent sx={{ p: 2.5, textAlign: 'center' }}>
-              <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
+             {/* Profile Information */}
+       <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+         <h2 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">Personal Information</h2>
+        
+        <form onSubmit={handleProfileUpdate} className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div>
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                name="fullname"
+                value={formData.fullname}
+                onChange={handleInputChange}
+                disabled={!editing}
+                className={`w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border text-sm md:text-base ${
+                  editing
+                    ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                    : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                }`}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
                 Username
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 900, color: '#3b82f6', mt: 0.5, wordBreak: 'break-all' }}>
-                @{user.username || 'N/A'}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
-            <CardContent sx={{ p: 2.5, textAlign: 'center' }}>
-              <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
-                Total Referrals
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 900, color: '#10b981', mt: 0.5 }}>
-                {user.referralCount || 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
-            <CardContent sx={{ p: 2.5, textAlign: 'center' }}>
-              <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
-                Total Earnings
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 900, color: '#f59e0b', mt: 0.5 }}>
-                PKR {parseFloat(user.totalEarnings || 0).toLocaleString()}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} md={3}>
-          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0 }}>
-            <CardContent sx={{ p: 2.5, textAlign: 'center' }}>
-              <Typography variant="caption" sx={{ color: textSecondary, fontWeight: 700, textTransform: 'uppercase' }}>
-                Package Tier
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 900, color: '#8b5cf6', mt: 0.5 }}>
-                {user.packageId ? 'Active Tier' : 'Unsubscribed'}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+              </label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                disabled={true}
+                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed text-sm md:text-base"
+                placeholder="Username cannot be changed"
+              />
+            </div>
 
-      <Grid container spacing={3}>
-        {/* Personal Info Form */}
-        <Grid item xs={12} md={7}>
-          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, height: '100%' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <Person sx={{ color: '#3b82f6' }} />
-                <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary }}>
-                  Personal Information
-                </Typography>
-              </Box>
-              <Divider sx={{ mb: 3, borderColor: borderCard }} />
+            <div>
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                disabled={!editing}
+                className={`w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border text-sm md:text-base ${
+                  editing
+                    ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                    : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                }`}
+              />
+            </div>
 
-              <form onSubmit={handleProfileUpdate}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                  <TextField
-                    label="Full Legal Name"
-                    name="fullname"
-                    value={formData.fullname}
-                    onChange={handleInputChange}
-                    disabled={!editing}
-                    size="small"
-                    fullWidth
-                    required
-                    InputLabelProps={{ sx: { color: textSecondary } }}
-                    InputProps={{ sx: { borderRadius: 0, color: textPrimary, bgcolor: !editing ? bgSubtle : 'transparent' } }}
-                  />
+            <div>
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                disabled={!editing}
+                className={`w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border text-sm md:text-base ${
+                  editing
+                    ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                    : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                }`}
+                placeholder="Enter your phone number"
+              />
+            </div>
+          </div>
 
-                  <TextField
-                    label="Permanent Username"
-                    name="username"
-                    value={formData.username}
-                    disabled
-                    size="small"
-                    fullWidth
-                    helperText="Username cannot be modified after registration"
-                    InputLabelProps={{ sx: { color: textSecondary } }}
-                    InputProps={{ sx: { borderRadius: 0, color: textSecondary, bgcolor: bgSubtle } }}
-                  />
+          {editing && (
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4">
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="px-4 md:px-6 py-2 md:py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors duration-200 text-sm md:text-base"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
+              >
+                Save Changes
+              </button>
+            </div>
+          )}
+        </form>
+      </div>
 
-                  <TextField
-                    label="Email Address"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    disabled={!editing}
-                    size="small"
-                    fullWidth
-                    InputLabelProps={{ sx: { color: textSecondary } }}
-                    InputProps={{ sx: { borderRadius: 0, color: textPrimary, bgcolor: !editing ? bgSubtle : 'transparent' } }}
-                  />
+      {/* Change Password */}
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+        <h2 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">Change Password</h2>
+        
+        <form onSubmit={handlePasswordUpdate} className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div>
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                Current Password
+              </label>
+              <input
+                type="password"
+                name="currentPassword"
+                value={passwordData.currentPassword}
+                onChange={handlePasswordChange}
+                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm md:text-base"
+                required
+              />
+            </div>
 
-                  <TextField
-                    label="Contact Phone Number"
-                    name="phoneNumber"
-                    type="tel"
-                    value={formData.phoneNumber}
-                    onChange={handleInputChange}
-                    disabled={!editing}
-                    size="small"
-                    fullWidth
-                    InputLabelProps={{ sx: { color: textSecondary } }}
-                    InputProps={{ sx: { borderRadius: 0, color: textPrimary, bgcolor: !editing ? bgSubtle : 'transparent' } }}
-                  />
+            <div>
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                name="newPassword"
+                value={passwordData.newPassword}
+                onChange={handlePasswordChange}
+                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm md:text-base"
+                required
+                minLength={6}
+              />
+            </div>
 
-                  {editing && (
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 1 }}>
-                      <Button
-                        type="button"
-                        onClick={() => setEditing(false)}
-                        sx={{ borderRadius: 0, color: textSecondary, textTransform: 'none', fontWeight: 600 }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        startIcon={<Save />}
-                        sx={{
-                          borderRadius: 0,
-                          bgcolor: '#10b981',
-                          color: '#ffffff',
-                          fontWeight: 800,
-                          textTransform: 'none',
-                          '&:hover': { bgcolor: '#059669' }
-                        }}
-                      >
-                        Save Profile Changes
-                      </Button>
-                    </Box>
-                  )}
-                </Box>
-              </form>
-            </CardContent>
-          </Card>
-        </Grid>
+            <div>
+              <label className="block text-xs md:text-sm font-medium text-gray-300 mb-1 md:mb-2">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={passwordData.confirmPassword}
+                onChange={handlePasswordChange}
+                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm md:text-base"
+                required
+                minLength={6}
+              />
+            </div>
+          </div>
 
-        {/* Change Password Form */}
-        <Grid item xs={12} md={5}>
-          <Card sx={{ bgcolor: bgCard, border: `1px solid ${borderCard}`, borderRadius: 0, height: '100%' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <LockReset sx={{ color: '#f59e0b' }} />
-                <Typography variant="h6" sx={{ fontWeight: 800, color: textPrimary }}>
-                  Change Password
-                </Typography>
-              </Box>
-              <Divider sx={{ mb: 3, borderColor: borderCard }} />
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="px-4 md:px-6 py-2 md:py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors duration-200 text-sm md:text-base"
+            >
+              Change Password
+            </button>
+          </div>
+        </form>
+      </div>
 
-              <form onSubmit={handlePasswordUpdate}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                  <TextField
-                    label="Current Password *"
-                    name="currentPassword"
-                    type="password"
-                    required
-                    size="small"
-                    fullWidth
-                    value={passwordData.currentPassword}
-                    onChange={handlePasswordChange}
-                    InputLabelProps={{ sx: { color: textSecondary } }}
-                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
-                  />
-
-                  <TextField
-                    label="New Password *"
-                    name="newPassword"
-                    type="password"
-                    required
-                    size="small"
-                    fullWidth
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    helperText="Minimum 6 characters"
-                    InputLabelProps={{ sx: { color: textSecondary } }}
-                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
-                  />
-
-                  <TextField
-                    label="Confirm New Password *"
-                    name="confirmPassword"
-                    type="password"
-                    required
-                    size="small"
-                    fullWidth
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                    InputLabelProps={{ sx: { color: textSecondary } }}
-                    InputProps={{ sx: { borderRadius: 0, color: textPrimary } }}
-                  />
-
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    fullWidth
-                    sx={{
-                      borderRadius: 0,
-                      bgcolor: '#3b82f6',
-                      color: '#ffffff',
-                      fontWeight: 800,
-                      py: 1.2,
-                      textTransform: 'none',
-                      mt: 1,
-                      '&:hover': { bgcolor: '#2563eb' }
-                    }}
-                  >
-                    Update Password
-                  </Button>
-                </Box>
-              </form>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
+      {/* Account Stats */}
+      <div className="bg-gray-800 rounded-xl p-3 md:p-6 border border-gray-700">
+        <h2 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">Account Information</h2>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="text-center">
+            <div className="text-lg md:text-2xl font-bold text-blue-400 truncate">{user.username || 'N/A'}</div>
+            <p className="text-gray-400 text-xs md:text-sm">Username</p>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-lg md:text-2xl font-bold text-green-400">{user.referralCount || 0}</div>
+            <p className="text-gray-400 text-xs md:text-sm">Total Referrals</p>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-lg md:text-2xl font-bold text-purple-400">
+              ${parseFloat(user.totalEarnings || 0).toFixed(2)}
+            </div>
+            <p className="text-gray-400 text-xs md:text-sm">Total Earnings</p>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-lg md:text-2xl font-bold text-yellow-400">
+              {user.packageId ? 'Active' : 'None'}
+            </div>
+            <p className="text-gray-400 text-xs md:text-sm">Package Status</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

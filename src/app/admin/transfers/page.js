@@ -15,6 +15,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Paper,
   Chip,
   IconButton,
   InputAdornment,
@@ -27,20 +28,19 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Divider,
-  CircularProgress,
-  Tooltip
+  Divider
 } from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
-import SearchIcon from '@mui/icons-material/Search';
-import PersonIcon from '@mui/icons-material/Person';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import HistoryIcon from '@mui/icons-material/History';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import CloseIcon from '@mui/icons-material/Close';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import {
+  Send,
+  Search,
+  FilterList,
+  Person,
+  AccountBalance,
+  History,
+  CheckCircle,
+  Cancel,
+  Refresh
+} from '@mui/icons-material';
 
 export default function AdminTransfersPage() {
   const [transfers, setTransfers] = useState([]);
@@ -54,6 +54,7 @@ export default function AdminTransfersPage() {
     description: ''
   });
 
+  // Filters and pagination
   const [filters, setFilters] = useState({
     type: 'all',
     status: 'all',
@@ -66,6 +67,7 @@ export default function AdminTransfersPage() {
     totalPages: 0
   });
 
+  // Fetch transfers
   const fetchTransfers = useCallback(async () => {
     setLoading(true);
     try {
@@ -82,13 +84,13 @@ export default function AdminTransfersPage() {
 
       if (response.ok) {
         const result = await response.json();
-        setTransfers(result.data.transfers || []);
-        setPagination(result.data.pagination || { page: 1, limit: 10, totalCount: 0, totalPages: 0 });
+        setTransfers(result.data.transfers);
+        setPagination(result.data.pagination);
       } else {
         setError('Failed to fetch transfer history');
       }
-    } catch (err) {
-      console.error('Error fetching transfers:', err);
+    } catch (error) {
+      console.error('Error fetching transfers:', error);
       setError('Error loading transfer history');
     } finally {
       setLoading(false);
@@ -99,6 +101,7 @@ export default function AdminTransfersPage() {
     fetchTransfers();
   }, [fetchTransfers]);
 
+  // Handle transfer form submission
   const handleTransferSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -107,7 +110,9 @@ export default function AdminTransfersPage() {
     try {
       const response = await fetch('/api/admin/transfers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         credentials: 'include',
         body: JSON.stringify(transferForm)
       });
@@ -118,345 +123,323 @@ export default function AdminTransfersPage() {
         setMessage(result.message);
         setTransferDialog(false);
         setTransferForm({ username: '', amount: '', description: '' });
-        fetchTransfers();
+        fetchTransfers(); // Refresh the list
       } else {
         setError(result.error || 'Transfer failed');
       }
-    } catch (err) {
-      console.error('Transfer error:', err);
+    } catch (error) {
+      console.error('Transfer error:', error);
       setError('Error processing transfer');
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle filter changes
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
-    setPagination(prev => ({ ...prev, page: 1 }));
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
 
+  // Handle page change
+  const handlePageChange = (event, value) => {
+    setPagination(prev => ({ ...prev, page: value }));
+  };
+
+  // Format date
   const formatDate = (dateString) => {
-    if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return new Date(dateString).toLocaleString();
+  };
+
+  // Get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'success';
+      case 'pending': return 'warning';
+      case 'failed': return 'error';
+      default: return 'default';
+    }
+  };
+
+  // Get transfer type color
+  const getTypeColor = (type) => {
+    switch (type) {
+      case 'admin_to_user': return 'primary';
+      case 'user_to_user': return 'secondary';
+      default: return 'default';
+    }
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
+    <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-            <SwapHorizIcon sx={{ color: '#818cf8', fontSize: 26 }} />
-            <Typography variant="h5" sx={{ fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
-              Direct Wallet Transfers
-            </Typography>
-          </Box>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-            Disburse funds directly into recipient user wallets and monitor peer-to-peer ledger activity.
+          <Typography variant="h4" component="h1" gutterBottom>
+            Direct Transfers
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Transfer funds directly to user accounts and view transfer history
           </Typography>
         </Box>
-
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button
-            onClick={fetchTransfers}
-            variant="outlined"
-            size="small"
-            startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
-            sx={{
-              borderRadius: 0,
-              borderColor: 'rgba(255,255,255,0.15)',
-              color: '#ffffff',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              '&:hover': { borderColor: '#818cf8', backgroundColor: 'rgba(99, 102, 241, 0.1)' }
-            }}
-          >
-            Refresh
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<SendIcon sx={{ fontSize: 16 }} />}
-            onClick={() => setTransferDialog(true)}
-            sx={{
-              borderRadius: 0,
-              backgroundColor: '#6366f1',
-              color: '#ffffff',
-              fontWeight: 700,
-              px: 2,
-              '&:hover': { backgroundColor: '#4f46e5' }
-            }}
-          >
-            New Transfer
-          </Button>
-        </Box>
+        <Button
+          variant="contained"
+          startIcon={<Send />}
+          onClick={() => setTransferDialog(true)}
+          sx={{ minWidth: 150 }}
+        >
+          New Transfer
+        </Button>
       </Box>
 
+      {/* Messages */}
       {message && (
-        <Alert severity="success" sx={{ borderRadius: 0, backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }} onClose={() => setMessage(null)}>
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMessage(null)}>
           {message}
         </Alert>
       )}
       {error && (
-        <Alert severity="error" sx={{ borderRadius: 0, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {/* Filter Card */}
-      <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <CardContent sx={{ p: 2.5 }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search by username..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.4)', mr: 1, fontSize: 18 }} />
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 0,
-                    backgroundColor: 'rgba(255,255,255,0.02)',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    color: '#ffffff',
-                    fontSize: '0.85rem'
-                  }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <FormControl fullWidth size="small">
-                <Select
-                  value={filters.type}
-                  onChange={(e) => handleFilterChange('type', e.target.value)}
-                  sx={{
-                    borderRadius: 0,
-                    backgroundColor: 'rgba(255,255,255,0.02)',
-                    color: '#ffffff',
-                    fontSize: '0.85rem',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.6)' }
-                  }}
-                >
-                  <MenuItem value="all" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>All Transfer Types</MenuItem>
-                  <MenuItem value="admin_to_user" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Admin Disbursal</MenuItem>
-                  <MenuItem value="user_to_user" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Peer to Peer</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <FormControl fullWidth size="small">
-                <Select
-                  value={filters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
-                  sx={{
-                    borderRadius: 0,
-                    backgroundColor: 'rgba(255,255,255,0.02)',
-                    color: '#ffffff',
-                    fontSize: '0.85rem',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.6)' }
-                  }}
-                >
-                  <MenuItem value="all" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>All Statuses</MenuItem>
-                  <MenuItem value="completed" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Completed</MenuItem>
-                  <MenuItem value="pending" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Pending</MenuItem>
-                  <MenuItem value="failed" sx={{ borderRadius: 0, fontSize: '0.82rem' }}>Failed</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+      {/* Filters */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={filters.type}
+                label="Type"
+                onChange={(e) => handleFilterChange('type', e.target.value)}
+              >
+                <MenuItem value="all">All Types</MenuItem>
+                <MenuItem value="admin_to_user">Admin to User</MenuItem>
+                <MenuItem value="user_to_user">User to User</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={filters.status}
+                label="Status"
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+              >
+                <MenuItem value="all">All Status</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="failed">Failed</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              size="small"
+              placeholder="Search by username..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ minWidth: 200 }}
+            />
+
+            <Button
+              variant="outlined"
+              startIcon={<Refresh />}
+              onClick={fetchTransfers}
+              disabled={loading}
+            >
+              Refresh
+            </Button>
+          </Box>
         </CardContent>
       </Card>
 
-      {/* Main Table Card */}
-      <Card sx={{ borderRadius: 0, backgroundColor: '#0c1220', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <Box sx={{ p: 2.5, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#ffffff', fontSize: '0.95rem' }}>
-            Transfer Ledger History
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-            {transfers.length} Transactions Listed
-          </Typography>
-        </Box>
+      {/* Transfer History Table */}
+      <Card>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <History sx={{ mr: 1 }} />
+            <Typography variant="h6">Transfer History</Typography>
+          </Box>
 
-        {loading && transfers.length === 0 ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 280, gap: 2 }}>
-            <CircularProgress size={36} sx={{ color: '#6366f1' }} />
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>Loading Transfers...</Typography>
-          </Box>
-        ) : transfers.length === 0 ? (
-          <Box sx={{ p: 6, textAlign: 'center' }}>
-            <SwapHorizIcon sx={{ fontSize: 44, color: 'rgba(255,255,255,0.2)', mb: 1.5 }} />
-            <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 600 }}>No Transfer Records Found</Typography>
-          </Box>
-        ) : (
-          <TableContainer>
-            <Table sx={{ minWidth: 800 }}>
-              <TableHead sx={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+          <TableContainer component={Paper} variant="outlined">
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    ID & TYPE
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    SENDER (FROM)
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    RECIPIENT (TO)
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    AMOUNT
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    NOTE / DESCRIPTION
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    STATUS
-                  </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.72rem', borderColor: 'rgba(255,255,255,0.06)', py: 1.5 }}>
-                    DATE
-                  </TableCell>
+                  <TableCell>ID</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>From</TableCell>
+                  <TableCell>To</TableCell>
+                  <TableCell>Amount</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Date</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {transfers.map((t) => (
-                  <TableRow key={t.id} sx={{ '&:hover': { backgroundColor: 'rgba(255,255,255,0.02)' }, borderColor: 'rgba(255,255,255,0.04)' }}>
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      <Typography variant="body2" sx={{ color: '#818cf8', fontWeight: 700, fontFamily: 'monospace' }}>#{t.id}</Typography>
-                      <Chip
-                        label={t.transferType === 'admin_to_user' ? 'ADMIN DISBURSE' : 'P2P'}
-                        size="small"
-                        sx={{
-                          borderRadius: 0,
-                          fontSize: '0.6rem',
-                          fontWeight: 700,
-                          height: 18,
-                          backgroundColor: t.transferType === 'admin_to_user' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.05)',
-                          color: t.transferType === 'admin_to_user' ? '#818cf8' : 'rgba(255,255,255,0.7)',
-                          border: '1px solid rgba(99, 102, 241, 0.3)'
-                        }}
-                      />
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      {t.fromUser ? (
-                        <Box>
-                          <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 600 }}>{t.fromUser.fullname}</Typography>
-                          <Typography variant="caption" sx={{ color: '#818cf8' }}>@{t.fromUser.username}</Typography>
-                        </Box>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: '#34d399', fontWeight: 700 }}>System Vault</Typography>
-                      )}
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 600 }}>{t.toUser?.fullname}</Typography>
-                      <Typography variant="caption" sx={{ color: '#38bdf8' }}>@{t.toUser?.username}</Typography>
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      <Typography variant="body2" sx={{ color: '#34d399', fontWeight: 800 }}>
-                        PKR {parseFloat(t.amount || 0).toLocaleString()}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2, color: 'rgba(255,255,255,0.65)', fontSize: '0.8rem' }}>
-                      {t.description || 'No comment'}
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2 }}>
-                      <Chip
-                        label={(t.status || 'completed').toUpperCase()}
-                        size="small"
-                        sx={{
-                          borderRadius: 0,
-                          fontWeight: 700,
-                          fontSize: '0.65rem',
-                          backgroundColor: t.status === 'completed' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                          color: t.status === 'completed' ? '#34d399' : '#f87171',
-                          border: `1px solid ${t.status === 'completed' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
-                        }}
-                      />
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: 'rgba(255,255,255,0.06)', py: 2, color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem' }}>
-                      {formatDate(t.createdAt)}
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      Loading...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : transfers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      No transfers found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transfers.map((transfer) => (
+                    <TableRow key={transfer.id}>
+                      <TableCell>#{transfer.id}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={transfer.transferType === 'admin_to_user' ? 'Admin to User' : 'User to User'}
+                          color={getTypeColor(transfer.transferType)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {transfer.fromUser ? (
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {transfer.fromUser.fullname}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              @{transfer.fromUser.username}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            System
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {transfer.toUser.fullname}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            @{transfer.toUser.username}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium" color="success.main">
+                          PKR {parseFloat(transfer.amount).toFixed(2)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {transfer.description || 'No description'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={transfer.status}
+                          color={getStatusColor(transfer.status)}
+                          size="small"
+                          icon={transfer.status === 'completed' ? <CheckCircle /> : <Cancel />}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {formatDate(transfer.createdAt)}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
-        )}
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <Pagination
+                count={pagination.totalPages}
+                page={pagination.page}
+                onChange={handlePageChange}
+                color="primary"
+              />
+            </Box>
+          )}
+        </CardContent>
       </Card>
 
       {/* Transfer Dialog */}
-      <Dialog
-        open={transferDialog}
-        onClose={() => setTransferDialog(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 0, backgroundColor: '#0d131f', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff' }
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.06)', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#ffffff' }}>Direct Transfer to User</Typography>
-          <IconButton onClick={() => setTransferDialog(false)} sx={{ color: 'rgba(255,255,255,0.6)', borderRadius: 0 }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
+      <Dialog open={transferDialog} onClose={() => setTransferDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Send sx={{ mr: 1 }} />
+            Direct Transfer to User
+          </Box>
         </DialogTitle>
         <form onSubmit={handleTransferSubmit}>
-          <DialogContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              required
-              fullWidth
-              size="small"
-              label="Recipient Username"
-              value={transferForm.username}
-              onChange={(e) => setTransferForm({ ...transferForm, username: e.target.value })}
-              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
-              InputProps={{ sx: { borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.15)', color: '#ffffff' } }}
-            />
-            <TextField
-              required
-              fullWidth
-              size="small"
-              type="number"
-              label="Amount (PKR)"
-              value={transferForm.amount}
-              onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })}
-              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
-              InputProps={{ sx: { borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.15)', color: '#ffffff' } }}
-            />
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              size="small"
-              label="Transfer Description / Reason"
-              value={transferForm.description}
-              onChange={(e) => setTransferForm({ ...transferForm, description: e.target.value })}
-              InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' } }}
-              InputProps={{ sx: { borderRadius: 0, backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.15)', color: '#ffffff' } }}
-            />
+          <DialogContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Username"
+                value={transferForm.username}
+                onChange={(e) => setTransferForm(prev => ({ ...prev, username: e.target.value }))}
+                required
+                fullWidth
+                placeholder="Enter username of the recipient"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Person />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <TextField
+                label="Amount (PKR)"
+                type="number"
+                value={transferForm.amount}
+                onChange={(e) => setTransferForm(prev => ({ ...prev, amount: e.target.value }))}
+                required
+                fullWidth
+                placeholder="Enter amount to transfer"
+                inputProps={{ min: 0, step: 0.01 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <AccountBalance />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <TextField
+                label="Description (Optional)"
+                value={transferForm.description}
+                onChange={(e) => setTransferForm(prev => ({ ...prev, description: e.target.value }))}
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="Enter description for this transfer"
+              />
+            </Box>
           </DialogContent>
-          <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <Button onClick={() => setTransferDialog(false)} variant="outlined" size="small" sx={{ borderRadius: 0, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}>Cancel</Button>
-            <Button type="submit" disabled={loading} variant="contained" size="small" sx={{ borderRadius: 0, backgroundColor: '#6366f1', color: '#ffffff', fontWeight: 700 }}>
-              {loading ? 'Processing...' : 'Transfer Funds'}
+          <DialogActions>
+            <Button onClick={() => setTransferDialog(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained" disabled={loading}>
+              {loading ? 'Processing...' : 'Transfer'}
             </Button>
           </DialogActions>
         </form>
@@ -464,3 +447,27 @@ export default function AdminTransfersPage() {
     </Box>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

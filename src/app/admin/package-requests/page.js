@@ -3,59 +3,21 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  IconButton,
-  Chip,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  CircularProgress,
-  LinearProgress,
-  Tooltip
-} from "@mui/material";
-import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
-import SearchIcon from "@mui/icons-material/Search";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
-import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
-import CloseIcon from "@mui/icons-material/Close";
-import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
-import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 
 export default function PackageRequests() {
   const router = useRouter();
   const [packageRequests, setPackageRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [approvalLoading, setApprovalLoading] = useState(false);
   const [rejectionLoading, setRejectionLoading] = useState(false);
-  const [adminNoteInput, setAdminNoteInput] = useState("");
   const [searchFilters, setSearchFilters] = useState({
-    username: "",
-    requestNumber: "",
-    userName: ""
+    username: '',
+    requestNumber: '',
+    userName: ''
   });
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -67,16 +29,18 @@ export default function PackageRequests() {
   });
 
   useEffect(() => {
-    fetchPackageRequests(1);
+    fetchPackageRequests();
   }, [selectedStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPackageRequests = async (page = 1) => {
     try {
       setLoading(true);
       let url = `/api/admin/package-requests?page=${page}&limit=20`;
-      if (selectedStatus !== "all") {
+      if (selectedStatus !== 'all') {
         url += `&status=${selectedStatus}`;
       }
+      
+      // Add search parameters
       if (searchFilters.username) {
         url += `&username=${encodeURIComponent(searchFilters.username)}`;
       }
@@ -86,26 +50,26 @@ export default function PackageRequests() {
       if (searchFilters.userName) {
         url += `&userName=${encodeURIComponent(searchFilters.userName)}`;
       }
-
+      
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setPackageRequests(data.packageRequests || []);
-        setPagination(
-          data.pagination || {
-            currentPage: 1,
-            totalPages: 1,
-            totalCount: 0,
-            limit: 20,
-            hasNextPage: false,
-            hasPrevPage: false
-          }
-        );
+        setPagination(data.pagination || {
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: 0,
+          limit: 20,
+          hasNextPage: false,
+          hasPrevPage: false
+        });
       } else if (response.status === 401) {
-        router.push("/admin/login");
+        // Handle authentication error
+        alert('Session expired. Please login again.');
+        router.push('/admin/login');
       }
     } catch (error) {
-      console.error("Error fetching package requests:", error);
+      console.error('Error fetching package requests:', error);
     } finally {
       setLoading(false);
     }
@@ -113,716 +77,664 @@ export default function PackageRequests() {
 
   const fetchRequestDetails = async (requestId) => {
     setDetailLoading(true);
-    setShowDetailModal(true);
     try {
       const response = await fetch(`/api/admin/package-requests/${requestId}`);
       if (response.ok) {
         const data = await response.json();
         setSelectedRequest(data.packageRequest);
+        setShowDetailModal(true);
       } else if (response.status === 401) {
-        router.push("/admin/login");
+        // Handle authentication error
+        alert('Session expired. Please login again.');
+        router.push('/admin/login');
+      } else {
+        alert('Failed to fetch request details');
       }
     } catch (error) {
-      console.error("Error fetching request details:", error);
+      console.error('Error fetching request details:', error);
+      alert('Error fetching request details');
     } finally {
       setDetailLoading(false);
     }
   };
 
-  const handleStatusUpdate = async (requestId, newStatus, customNotes = "") => {
-    if (newStatus === "approved") {
+  const handleStatusUpdate = async (requestId, newStatus, adminNotes = '') => {
+    // Set loading state based on action
+    if (newStatus === 'approved') {
       setApprovalLoading(true);
-    } else if (newStatus === "rejected") {
+    } else if (newStatus === 'rejected') {
       setRejectionLoading(true);
     }
 
     try {
       const response = await fetch(`/api/admin/package-requests/${requestId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           status: newStatus,
-          adminNotes: customNotes || adminNoteInput
+          adminNotes
         })
       });
 
       if (response.ok) {
-        fetchPackageRequests(pagination.currentPage);
-        setShowDetailModal(false);
-        setAdminNoteInput("");
+        const result = await response.json();
+        if (newStatus === 'approved') {
+          alert(`Package request approved successfully! ${result.approvalResult?.message || ''}`);
+        } else {
+          alert(`Package request ${newStatus} successfully!`);
+        }
+        fetchPackageRequests(); // Refresh the list
+        setShowDetailModal(false); // Close modal after update
       } else if (response.status === 401) {
-        router.push("/admin/login");
+        // Handle authentication error
+        alert('Session expired. Please login again.');
+        router.push('/admin/login');
       } else {
-        const err = await response.json();
-        alert(`Error: ${err.error || "Update failed"}`);
+        const errorData = await response.json();
+        alert(`Failed to update package request status: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error("Error updating status:", error);
-      alert(`Error updating package status: ${error.message}`);
+      console.error('Error updating status:', error);
+      alert(`Error updating package request status: ${error.message}`);
     } finally {
+      // Clear loading states
       setApprovalLoading(false);
       setRejectionLoading(false);
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "approved":
-        return (
-          <Chip
-            label="APPROVED"
-            size="small"
-            sx={{
-              borderRadius: 0,
-              fontWeight: 700,
-              fontSize: "0.68rem",
-              backgroundColor: "rgba(16, 185, 129, 0.15)",
-              color: "#34d399",
-              border: "1px solid rgba(16, 185, 129, 0.3)"
-            }}
-          />
-        );
-      case "rejected":
-        return (
-          <Chip
-            label="REJECTED"
-            size="small"
-            sx={{
-              borderRadius: 0,
-              fontWeight: 700,
-              fontSize: "0.68rem",
-              backgroundColor: "rgba(239, 68, 68, 0.15)",
-              color: "#f87171",
-              border: "1px solid rgba(239, 68, 68, 0.3)"
-            }}
-          />
-        );
-      case "pending":
+  const handleSearch = () => {
+    fetchPackageRequests(1); // Reset to first page when searching
+  };
+
+  const clearFilters = () => {
+    setSearchFilters({
+      username: '',
+      requestNumber: '',
+      userName: ''
+    });
+    fetchPackageRequests(1);
+  };
+
+  const handleSearchInputChange = (field, value) => {
+    setSearchFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'bg-yellow-500';
+      case 'approved':
+        return 'bg-green-500';
+      case 'rejected':
+        return 'bg-red-500';
       default:
-        return (
-          <Chip
-            label="PENDING REVIEW"
-            size="small"
-            sx={{
-              borderRadius: 0,
-              fontWeight: 700,
-              fontSize: "0.68rem",
-              backgroundColor: "rgba(245, 158, 11, 0.15)",
-              color: "#fbbf24",
-              border: "1px solid rgba(245, 158, 11, 0.3)"
-            }}
-          />
-        );
+        return 'bg-gray-500';
     }
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
+  const SkeletonCard = () => (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden animate-pulse">
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="h-5 bg-gray-200 rounded w-48 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-32"></div>
+          </div>
+          <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+        </div>
+      </div>
+      <div className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <div className="h-4 bg-gray-200 rounded w-24 mb-3"></div>
+            <div className="space-y-2">
+              <div className="h-3 bg-gray-200 rounded w-32"></div>
+              <div className="h-3 bg-gray-200 rounded w-28"></div>
+            </div>
+          </div>
+          <div>
+            <div className="h-4 bg-gray-200 rounded w-32 mb-3"></div>
+            <div className="space-y-2">
+              <div className="h-3 bg-gray-200 rounded w-36"></div>
+              <div className="h-3 bg-gray-200 rounded w-24"></div>
+            </div>
+          </div>
+        </div>
+        <div className="h-4 bg-gray-200 rounded w-40 mb-3"></div>
+        <div className="space-y-2">
+          <div className="h-3 bg-gray-200 rounded w-48"></div>
+          <div className="h-3 bg-gray-200 rounded w-32"></div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading && packageRequests.length === 0) {
+    return (
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-lg animate-pulse">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-8 bg-gray-200 rounded w-48 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-64"></div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="h-10 bg-gray-200 rounded w-32"></div>
+              <div className="h-10 bg-gray-200 rounded w-20"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Skeleton Cards */}
+        <div className="space-y-4">
+          {Array.from({ length: 5 }, (_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3.5 }}>
+    <div className="space-y-6">
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "flex-start", sm: "center" },
-          gap: 2
-        }}
-      >
-        <Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-            <AssignmentTurnedInIcon sx={{ color: "#818cf8", fontSize: 26 }} />
-            <Typography
-              variant="h5"
-              sx={{ fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em" }}
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Package Requests</h1>
+            <p className="text-gray-600 mt-2">Manage user package subscription requests</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:border-blue-500"
             >
-              Package Purchase Requests
-            </Typography>
-          </Box>
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)" }}>
-            Review proof of bank deposit slips, verify funds receipt, and trigger multi-tier MLM distribution.
-          </Typography>
-        </Box>
+              <option value="all">All Requests</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <button
+              onClick={() => fetchPackageRequests(pagination.currentPage)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
 
-        <FormControl size="small" sx={{ minWidth: 170 }}>
-          <Select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            sx={{
-              borderRadius: 0,
-              backgroundColor: "#0c1220",
-              color: "#ffffff",
-              fontSize: "0.82rem",
-              border: "1px solid rgba(255,255,255,0.1)",
-              "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-              "& .MuiSvgIcon-root": { color: "rgba(255,255,255,0.6)" }
-            }}
+      {/* Search and Filters */}
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          {/* Username Search */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Search by Username</label>
+            <input
+              type="text"
+              placeholder="Enter username..."
+              value={searchFilters.username}
+              onChange={(e) => handleSearchInputChange('username', e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-800"
+            />
+          </div>
+
+          {/* Request Number Search */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Search by Request Number</label>
+            <input
+              type="text"
+              placeholder="Enter request number..."
+              value={searchFilters.requestNumber}
+              onChange={(e) => handleSearchInputChange('requestNumber', e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-800"
+            />
+          </div>
+
+          {/* User Name Search */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Search by User Name</label>
+            <input
+              type="text"
+              placeholder="Enter user full name..."
+              value={searchFilters.userName}
+              onChange={(e) => handleSearchInputChange('userName', e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-800"
+            />
+          </div>
+        </div>
+
+        {/* Search Actions */}
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleSearch}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
           >
-            <MenuItem value="all" sx={{ borderRadius: 0, fontSize: "0.82rem" }}>All Requests</MenuItem>
-            <MenuItem value="pending" sx={{ borderRadius: 0, fontSize: "0.82rem" }}>Pending Verification</MenuItem>
-            <MenuItem value="approved" sx={{ borderRadius: 0, fontSize: "0.82rem" }}>Approved Packages</MenuItem>
-            <MenuItem value="rejected" sx={{ borderRadius: 0, fontSize: "0.82rem" }}>Rejected</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span>Search</span>
+          </button>
+          <button
+            onClick={clearFilters}
+            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 flex items-center space-x-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <span>Clear Filters</span>
+          </button>
+        </div>
 
-      {/* Filter Card */}
-      <Card sx={{ borderRadius: 0, backgroundColor: "#0c1220", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <CardContent sx={{ p: 2.5 }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search by username..."
-                value={searchFilters.username}
-                onChange={(e) => setSearchFilters({ ...searchFilters, username: e.target.value })}
-                onKeyDown={(e) => e.key === "Enter" && fetchPackageRequests(1)}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ color: "rgba(255,255,255,0.4)", mr: 1, fontSize: 18 }} />
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 0,
-                    backgroundColor: "rgba(255,255,255,0.02)",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    color: "#ffffff",
-                    fontSize: "0.85rem"
-                  }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search by request number..."
-                value={searchFilters.requestNumber}
-                onChange={(e) => setSearchFilters({ ...searchFilters, requestNumber: e.target.value })}
-                onKeyDown={(e) => e.key === "Enter" && fetchPackageRequests(1)}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 0,
-                    backgroundColor: "rgba(255,255,255,0.02)",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    color: "#ffffff",
-                    fontSize: "0.85rem"
-                  }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Box sx={{ display: "flex", gap: 1 }}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  size="small"
-                  onClick={() => fetchPackageRequests(1)}
-                  sx={{
-                    borderRadius: 0,
-                    backgroundColor: "#6366f1",
-                    color: "#ffffff",
-                    fontWeight: 700,
-                    py: 1,
-                    "&:hover": { backgroundColor: "#4f46e5" }
-                  }}
-                >
-                  Search
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => {
-                    setSearchFilters({ username: "", requestNumber: "", userName: "" });
-                    fetchPackageRequests(1);
-                  }}
-                  sx={{
-                    borderRadius: 0,
-                    borderColor: "rgba(255,255,255,0.15)",
-                    color: "rgba(255,255,255,0.7)",
-                    py: 1
-                  }}
-                >
-                  Clear
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Main Requests Table */}
-      <Card sx={{ borderRadius: 0, backgroundColor: "#0c1220", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <Box sx={{ p: 2.5, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#ffffff", fontSize: "0.95rem" }}>
-            Deposit Submissions Log
-          </Typography>
-          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>
-            Showing {packageRequests.length} of {pagination.totalCount || 0} Total
-          </Typography>
-        </Box>
-
-        {loading && packageRequests.length === 0 ? (
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 280, gap: 2 }}>
-            <CircularProgress size={36} sx={{ color: "#6366f1" }} />
-            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)" }}>
-              Fetching Package Requests...
-            </Typography>
-          </Box>
-        ) : packageRequests.length === 0 ? (
-          <Box sx={{ p: 6, textAlign: "center" }}>
-            <ReceiptLongIcon sx={{ fontSize: 44, color: "rgba(255,255,255,0.2)", mb: 1.5 }} />
-            <Typography variant="body1" sx={{ color: "#ffffff", fontWeight: 600 }}>
-              No Package Requests Found
-            </Typography>
-            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.45)", mt: 0.5, display: "block" }}>
-              No incoming deposit proofs match the specified query parameters.
-            </Typography>
-          </Box>
-        ) : (
-          <TableContainer>
-            <Table sx={{ minWidth: 800 }}>
-              <TableHead sx={{ backgroundColor: "rgba(255,255,255,0.02)" }}>
-                <TableRow>
-                  <TableCell sx={{ color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: "0.72rem", borderColor: "rgba(255,255,255,0.06)", py: 1.5 }}>
-                    REQ # / USER
-                  </TableCell>
-                  <TableCell sx={{ color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: "0.72rem", borderColor: "rgba(255,255,255,0.06)", py: 1.5 }}>
-                    PACKAGE DETAILS
-                  </TableCell>
-                  <TableCell sx={{ color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: "0.72rem", borderColor: "rgba(255,255,255,0.06)", py: 1.5 }}>
-                    TRANSACTION ID
-                  </TableCell>
-                  <TableCell sx={{ color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: "0.72rem", borderColor: "rgba(255,255,255,0.06)", py: 1.5 }}>
-                    STATUS
-                  </TableCell>
-                  <TableCell sx={{ color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: "0.72rem", borderColor: "rgba(255,255,255,0.06)", py: 1.5 }}>
-                    SUBMITTED AT
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: "rgba(255,255,255,0.6)", fontWeight: 700, fontSize: "0.72rem", borderColor: "rgba(255,255,255,0.06)", py: 1.5 }}>
-                    ACTIONS
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {packageRequests.map((req) => (
-                  <TableRow
-                    key={req.id}
-                    sx={{
-                      "&:hover": { backgroundColor: "rgba(255,255,255,0.02)" },
-                      borderColor: "rgba(255,255,255,0.04)"
-                    }}
-                  >
-                    <TableCell sx={{ borderColor: "rgba(255,255,255,0.06)", py: 2 }}>
-                      <Typography variant="body2" sx={{ color: "#818cf8", fontWeight: 700, fontFamily: "monospace" }}>
-                        #{req.id}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "#ffffff", fontWeight: 600 }}>
-                        {req.user?.fullname || "Anonymous"}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.45)" }}>
-                        @{req.user?.username}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: "rgba(255,255,255,0.06)", py: 2 }}>
-                      <Typography variant="body2" sx={{ color: "#ffffff", fontWeight: 700 }}>
-                        {req.package?.package_name || "Custom Tier"}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: "#34d399", fontWeight: 700, display: "block" }}>
-                        PKR {parseFloat(req.package?.package_amount || 0).toLocaleString()}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: "#38bdf8", fontWeight: 600 }}>
-                        Points: {req.package?.package_points || 0}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: "rgba(255,255,255,0.06)", py: 2 }}>
-                      <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)", fontFamily: "monospace", fontSize: "0.82rem" }}>
-                        {req.transactionId || "N/A"}
-                      </Typography>
-                      {req.transactionReceipt && (
-                        <Typography variant="caption" sx={{ color: "#818cf8", fontWeight: 600, display: "block" }}>
-                          Receipt Attached
-                        </Typography>
-                      )}
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: "rgba(255,255,255,0.06)", py: 2 }}>
-                      {getStatusBadge(req.status)}
-                    </TableCell>
-
-                    <TableCell sx={{ borderColor: "rgba(255,255,255,0.06)", py: 2, color: "rgba(255,255,255,0.5)", fontSize: "0.78rem" }}>
-                      {formatDate(req.createdAt)}
-                    </TableCell>
-
-                    <TableCell align="right" sx={{ borderColor: "rgba(255,255,255,0.06)", py: 2 }}>
-                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1 }}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<VisibilityOutlinedIcon sx={{ fontSize: 14 }} />}
-                          onClick={() => fetchRequestDetails(req.id)}
-                          sx={{
-                            borderRadius: 0,
-                            borderColor: "rgba(99, 102, 241, 0.4)",
-                            color: "#818cf8",
-                            fontSize: "0.74rem",
-                            fontWeight: 600,
-                            py: 0.5,
-                            "&:hover": {
-                              borderColor: "#818cf8",
-                              backgroundColor: "rgba(99, 102, 241, 0.1)"
-                            }
-                          }}
-                        >
-                          Review Slip
-                        </Button>
-
-                        {req.status === "pending" && (
-                          <>
-                            <Button
-                              variant="contained"
-                              size="small"
-                              onClick={() => {
-                                if (confirm(`Approve package request #${req.id}?`)) {
-                                  handleStatusUpdate(req.id, "approved");
-                                }
-                              }}
-                              sx={{
-                                borderRadius: 0,
-                                backgroundColor: "#10b981",
-                                color: "#ffffff",
-                                fontSize: "0.74rem",
-                                fontWeight: 700,
-                                py: 0.5,
-                                "&:hover": { backgroundColor: "#059669" }
-                              }}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => {
-                                const note = prompt("Reason for rejection:");
-                                if (note !== null) {
-                                  handleStatusUpdate(req.id, "rejected", note);
-                                }
-                              }}
-                              sx={{
-                                borderRadius: 0,
-                                borderColor: "rgba(239, 68, 68, 0.4)",
-                                color: "#f87171",
-                                fontSize: "0.74rem",
-                                fontWeight: 700,
-                                py: 0.5,
-                                "&:hover": {
-                                  borderColor: "#ef4444",
-                                  backgroundColor: "rgba(239, 68, 68, 0.1)"
-                                }
-                              }}
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+        {/* Active Filters Display */}
+        {(searchFilters.username || searchFilters.requestNumber || searchFilters.userName) && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800 font-medium mb-2">Active Filters:</p>
+            <div className="flex flex-wrap gap-2">
+              {searchFilters.username && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Username: {searchFilters.username}
+                </span>
+              )}
+              {searchFilters.requestNumber && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Request #: {searchFilters.requestNumber}
+                </span>
+              )}
+              {searchFilters.userName && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Name: {searchFilters.userName}
+                </span>
+              )}
+            </div>
+          </div>
         )}
+      </div>
 
-        {/* Pagination Controls */}
-        {pagination.totalPages > 1 && (
-          <Box
-            sx={{
-              p: 2,
-              borderTop: "1px solid rgba(255,255,255,0.06)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              backgroundColor: "rgba(255,255,255,0.01)"
-            }}
-          >
-            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>
-              Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalCount} records)
-            </Typography>
+      {/* Package Requests List */}
+      <div className="space-y-4">
+        {loading && packageRequests.length > 0 && (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            <span className="ml-2 text-gray-600">Loading...</span>
+          </div>
+        )}
+        
+        {packageRequests.length === 0 && !loading ? (
+          <div className="bg-white rounded-xl p-12 border border-gray-200 shadow-lg text-center">
+            <p className="text-gray-600 text-lg">No package requests found.</p>
+          </div>
+        ) : (
+          packageRequests.map((request) => (
+            <div key={request.id} className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-200 cursor-pointer" onClick={() => fetchRequestDetails(request.id)}>
+              {/* Request Header */}
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Request #{request.id} - {request.user.fullname}
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      Submitted on {formatDate(request.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(request.status)}`}>
+                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                    </span>
+                    <span className="text-blue-600 text-sm font-medium">Click to view details</span>
+                  </div>
+                </div>
+              </div>
 
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                disabled={!pagination.hasPrevPage}
+              {/* Request Details */}
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  {/* User Information */}
+                  <div>
+                    <h4 className="text-gray-900 font-medium mb-3">User Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Username:</span>
+                        <span className="text-gray-900">{request.user.username}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Name:</span>
+                        <span className="text-gray-900">{request.user.fullname}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Package Information */}
+                  <div>
+                    <h4 className="text-gray-900 font-medium mb-3">Package Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Package:</span>
+                        <span className="text-gray-900">{request.package.package_name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Amount:</span>
+                        <span className="text-gray-900">PKR {parseFloat(request.package.package_amount).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transaction Details */}
+                <div className="mb-6">
+                  <h4 className="text-gray-900 font-medium mb-3">Transaction Details</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Transaction ID:</span>
+                      <span className="text-gray-900 font-mono">{request.transactionId}</span>
+                    </div>
+                    {request.notes && (
+                      <div>
+                        <span className="text-gray-600">User Notes:</span>
+                        <p className="text-gray-900 mt-1">{request.notes}</p>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Receipt:</span>
+                      <span className="text-blue-600 text-sm">Available in details view</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Status Info */}
+                {request.status === 'pending' && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="text-sm text-yellow-600 font-medium">
+                      ⚠️ Action required: Click to view details and take action
+                    </div>
+                  </div>
+                )}
+
+                {request.adminNotes && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="text-sm text-gray-600">
+                      <strong>Admin Notes:</strong> {request.adminNotes}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Pagination Controls */}
+      {pagination.totalPages > 1 && (
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Showing {((pagination.currentPage - 1) * pagination.limit) + 1} to {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} requests
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
                 onClick={() => fetchPackageRequests(pagination.currentPage - 1)}
-                size="small"
-                variant="outlined"
-                startIcon={<NavigateBeforeIcon sx={{ fontSize: 16 }} />}
-                sx={{
-                  borderRadius: 0,
-                  borderColor: "rgba(255,255,255,0.1)",
-                  color: "#ffffff",
-                  fontSize: "0.74rem",
-                  "&.Mui-disabled": { borderColor: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)" }
-                }}
+                disabled={!pagination.hasPrevPage}
+                className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 Previous
-              </Button>
-              <Button
-                disabled={!pagination.hasNextPage}
+              </button>
+              
+              {/* Page Numbers */}
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  const pageNum = Math.max(1, pagination.currentPage - 2) + i;
+                  if (pageNum > pagination.totalPages) return null;
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => fetchPackageRequests(pageNum)}
+                      className={`px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${
+                        pageNum === pagination.currentPage
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
                 onClick={() => fetchPackageRequests(pagination.currentPage + 1)}
-                size="small"
-                variant="outlined"
-                endIcon={<NavigateNextIcon sx={{ fontSize: 16 }} />}
-                sx={{
-                  borderRadius: 0,
-                  borderColor: "rgba(255,255,255,0.1)",
-                  color: "#ffffff",
-                  fontSize: "0.74rem",
-                  "&.Mui-disabled": { borderColor: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)" }
-                }}
+                disabled={!pagination.hasNextPage}
+                className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 Next
-              </Button>
-            </Box>
-          </Box>
-        )}
-      </Card>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Slip / Detail Review Dialog */}
-      <Dialog
-        open={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 0,
-            backgroundColor: "#0d131f",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "#ffffff"
-          }
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: "1px solid rgba(255,255,255,0.06)", p: 2.5, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: "#ffffff" }}>
-              Package Request Verification #{selectedRequest?.id}
-            </Typography>
-            <Typography variant="caption" sx={{ color: "#818cf8", fontFamily: "monospace" }}>
-              TRANSACTION ID: {selectedRequest?.transactionId || "NONE"}
-            </Typography>
-          </Box>
-          <IconButton onClick={() => setShowDetailModal(false)} sx={{ color: "rgba(255,255,255,0.6)", borderRadius: 0 }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
+      {/* Detail Modal */}
+      {showDetailModal && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Package Request Details - #{selectedRequest.id}
+                </h2>
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
 
-        <DialogContent sx={{ p: 3 }}>
-          {detailLoading ? (
-            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", py: 6, gap: 2 }}>
-              <CircularProgress size={36} sx={{ color: "#6366f1" }} />
-              <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)" }}>Loading details and receipt...</Typography>
-            </Box>
-          ) : selectedRequest ? (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {(approvalLoading || rejectionLoading) && (
-                <Box sx={{ p: 2, backgroundColor: "rgba(99, 102, 241, 0.1)", border: "1px solid rgba(99, 102, 241, 0.3)" }}>
-                  <Typography variant="body2" sx={{ color: "#818cf8", fontWeight: 600, mb: 1 }}>
-                    {approvalLoading ? "Processing Multi-Level Commission Distribution..." : "Processing Request Rejection..."}
-                  </Typography>
-                  <LinearProgress sx={{ borderRadius: 0, height: 4, backgroundColor: "rgba(99, 102, 241, 0.2)", "& .MuiLinearProgress-bar": { backgroundColor: "#6366f1" } }} />
-                </Box>
-              )}
+            <div className="p-6">
+              {detailLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <span className="ml-2 text-gray-600">Loading details...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    {/* User Information */}
+                    <div>
+                      <h4 className="text-gray-900 font-medium mb-3">User Information</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Username:</span>
+                          <span className="text-gray-900">{selectedRequest.user.username}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Name:</span>
+                          <span className="text-gray-900">{selectedRequest.user.fullname}</span>
+                        </div>
+                      </div>
+                    </div>
 
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} sm={6}>
-                  <Card sx={{ borderRadius: 0, backgroundColor: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <CardContent sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#818cf8", mb: 1.5 }}>
-                        INVESTOR PROFILE
-                      </Typography>
-                      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.8 }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>Full Name:</Typography>
-                          <Typography variant="caption" sx={{ color: "#ffffff", fontWeight: 600 }}>{selectedRequest.user?.fullname}</Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>Username:</Typography>
-                          <Typography variant="caption" sx={{ color: "#818cf8", fontWeight: 600 }}>@{selectedRequest.user?.username}</Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>Email:</Typography>
-                          <Typography variant="caption" sx={{ color: "#ffffff" }}>{selectedRequest.user?.email}</Typography>
-                        </Box>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                    {/* Package Information */}
+                    <div>
+                      <h4 className="text-gray-900 font-medium mb-3">Package Information</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Package:</span>
+                          <span className="text-gray-900">{selectedRequest.package.package_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Amount:</span>
+                          <span className="text-gray-900">PKR {parseFloat(selectedRequest.package.package_amount).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                <Grid item xs={12} sm={6}>
-                  <Card sx={{ borderRadius: 0, backgroundColor: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <CardContent sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#34d399", mb: 1.5 }}>
-                        INVESTMENT DETAILS
-                      </Typography>
-                      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.8 }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>Selected Package:</Typography>
-                          <Typography variant="caption" sx={{ color: "#ffffff", fontWeight: 700 }}>{selectedRequest.package?.package_name}</Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>Price Amount:</Typography>
-                          <Typography variant="caption" sx={{ color: "#34d399", fontWeight: 800 }}>PKR {parseFloat(selectedRequest.package?.package_amount || 0).toLocaleString()}</Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>Points Awarded:</Typography>
-                          <Typography variant="caption" sx={{ color: "#38bdf8", fontWeight: 700 }}>{selectedRequest.package?.package_points || 0}</Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>Verification Status:</Typography>
-                          {getStatusBadge(selectedRequest.status)}
-                        </Box>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-
-                {/* Receipt Preview */}
-                <Grid item xs={12}>
-                  <Card sx={{ borderRadius: 0, backgroundColor: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <CardContent sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#fbbf24", mb: 1.5 }}>
-                        OFFICIAL PAYMENT RECEIPT / DEPOSIT SLIP
-                      </Typography>
-                      {selectedRequest.transactionReceipt ? (
-                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1.5 }}>
-                          <Box
-                            sx={{
-                              width: "100%",
-                              maxWidth: 520,
-                              height: 380,
-                              position: "relative",
-                              backgroundColor: "#000000",
-                              border: "1px solid rgba(255,255,255,0.1)",
-                              borderRadius: 0,
-                              overflow: "hidden"
-                            }}
-                          >
-                            <Image
-                              src={selectedRequest.transactionReceipt}
-                              alt="Payment Proof"
-                              fill
-                              style={{ objectFit: "contain" }}
-                            />
-                          </Box>
-                          <Button
-                            component="a"
-                            href={selectedRequest.transactionReceipt}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            variant="outlined"
-                            size="small"
-                            sx={{ borderRadius: 0, borderColor: "rgba(255,255,255,0.2)", color: "#ffffff", fontSize: "0.75rem" }}
-                          >
-                            Open Full-Resolution Image In New Tab
-                          </Button>
-                        </Box>
-                      ) : (
-                        <Box sx={{ p: 3, textAlign: "center", backgroundColor: "rgba(0,0,0,0.2)" }}>
-                          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.45)" }}>
-                            No digital receipt was attached by member. Verified solely via Transaction ID.
-                          </Typography>
-                        </Box>
+                  {/* Transaction Details */}
+                  <div className="mb-6">
+                    <h4 className="text-gray-900 font-medium mb-3">Transaction Details</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Transaction ID:</span>
+                        <span className="text-gray-900 font-mono">{selectedRequest.transactionId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Status:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(selectedRequest.status)}`}>
+                          {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Submitted:</span>
+                        <span className="text-gray-900">{formatDate(selectedRequest.createdAt)}</span>
+                      </div>
+                      {selectedRequest.notes && (
+                        <div>
+                          <span className="text-gray-600">User Notes:</span>
+                          <p className="text-gray-900 mt-1 p-3 bg-gray-50 rounded-lg">{selectedRequest.notes}</p>
+                        </div>
                       )}
-                    </CardContent>
-                  </Card>
-                </Grid>
+                    </div>
+                  </div>
 
-                {/* Notes Input for Decision */}
-                {selectedRequest.status === "pending" && (
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label="Administrative Note (Optional)"
-                      value={adminNoteInput}
-                      onChange={(e) => setAdminNoteInput(e.target.value)}
-                      placeholder="e.g. Bank slip verified on Meezan portal. Transaction reference: 994821"
-                      InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)", fontSize: "0.85rem" } }}
-                      InputProps={{
-                        sx: {
-                          borderRadius: 0,
-                          backgroundColor: "rgba(255,255,255,0.02)",
-                          borderColor: "rgba(255,255,255,0.15)",
-                          color: "#ffffff"
-                        }
-                      }}
-                    />
-                  </Grid>
+                  {/* Receipt Image */}
+                  {selectedRequest.transactionReceipt && (
+                   <div className="mb-6">
+                     <h4 className="text-gray-900 font-medium mb-3">Transaction Receipt</h4>
+                      <div className="max-w-md">
+                        <Image
+                          src={selectedRequest.transactionReceipt}
+                         alt="Transaction Receipt"
+                          width={400}
+                          height={300}
+                         className="w-full h-auto rounded-lg border border-gray-300"
+                         onError={(e) => {
+                           e.target.style.display = 'none';
+                           e.target.nextSibling.style.display = 'block';
+                         }}
+                       />
+                       <div className="p-4 bg-gray-100 rounded-lg border border-gray-300 hidden">
+                         <p className="text-gray-600 text-center">Image not available</p>
+                         <a
+                            href={selectedRequest.transactionReceipt}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className="text-blue-600 hover:text-blue-700 text-sm text-center block mt-2"
+                         >
+                           View Receipt
+                         </a>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+
+                  {/* Admin Notes */}
+                  {selectedRequest.adminNotes && (
+                    <div className="mb-6 p-4 bg-gray-100 rounded-lg">
+                      <h4 className="text-gray-900 font-medium mb-2">Admin Notes</h4>
+                      <p className="text-gray-700 text-sm">{selectedRequest.adminNotes}</p>
+                   </div>
+                 )}
+
+                {/* Admin Actions */}
+                  {selectedRequest.status === 'pending' && (
+                  <div className="pt-6 border-t border-gray-200">
+                    {(approvalLoading || rejectionLoading) && (
+                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">
+                              {approvalLoading ? 'Processing Package Approval...' : 'Processing Rejection...'}
+                            </p>
+                            <p className="text-xs text-blue-600 mt-1">
+                              This may take up to 2 minutes for complex MLM calculations. Please wait...
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 w-full bg-blue-200 rounded-full h-2">
+                          <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-gray-600">
+                        Action required: Approve or reject this request
+                      </div>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => {
+                          const notes = prompt('Add admin notes (optional):');
+                            handleStatusUpdate(selectedRequest.id, 'rejected', notes);
+                        }}
+                        disabled={rejectionLoading || approvalLoading}
+                        className={`px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
+                          rejectionLoading || approvalLoading
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700'
+                        }`}
+                      >
+                        {rejectionLoading && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        )}
+                        <span>{rejectionLoading ? 'Rejecting...' : 'Reject'}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const notes = prompt('Add admin notes (optional):');
+                            handleStatusUpdate(selectedRequest.id, 'approved', notes);
+                        }}
+                        disabled={approvalLoading || rejectionLoading}
+                        className={`px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 ${
+                          approvalLoading || rejectionLoading
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700'
+                        }`}
+                      >
+                        {approvalLoading && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        )}
+                        <span>{approvalLoading ? 'Approving...' : 'Approve'}</span>
+                      </button>
+                    </div>
+                    </div>
+                  </div>
                 )}
-              </Grid>
-            </Box>
-          ) : null}
-        </DialogContent>
-
-        <DialogActions sx={{ p: 2.5, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between" }}>
-          <Button
-            onClick={() => setShowDetailModal(false)}
-            variant="outlined"
-            size="small"
-            sx={{ borderRadius: 0, borderColor: "rgba(255,255,255,0.2)", color: "#ffffff" }}
-          >
-            Close
-          </Button>
-
-          {selectedRequest?.status === "pending" && (
-            <Box sx={{ display: "flex", gap: 1.5 }}>
-              <Button
-                onClick={() => handleStatusUpdate(selectedRequest.id, "rejected")}
-                disabled={rejectionLoading || approvalLoading}
-                variant="outlined"
-                size="small"
-                sx={{
-                  borderRadius: 0,
-                  borderColor: "rgba(239, 68, 68, 0.4)",
-                  color: "#f87171",
-                  fontWeight: 700,
-                  "&:hover": { borderColor: "#ef4444", backgroundColor: "rgba(239, 68, 68, 0.1)" }
-                }}
-              >
-                {rejectionLoading ? "Rejecting..." : "Reject Request"}
-              </Button>
-              <Button
-                onClick={() => handleStatusUpdate(selectedRequest.id, "approved")}
-                disabled={approvalLoading || rejectionLoading}
-                variant="contained"
-                size="small"
-                sx={{
-                  borderRadius: 0,
-                  backgroundColor: "#10b981",
-                  color: "#ffffff",
-                  fontWeight: 700,
-                  "&:hover": { backgroundColor: "#059669" }
-                }}
-              >
-                {approvalLoading ? "Approving MLM..." : "Approve Package"}
-              </Button>
-            </Box>
-          )}
-        </DialogActions>
-      </Dialog>
-    </Box>
+                </>
+                )}
+              </div>
+            </div>
+        </div>
+        )}
+    </div>
   );
 }
