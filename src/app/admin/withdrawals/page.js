@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 
 export default function AdminWithdrawalsPage() {
   const [withdrawals, setWithdrawals] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -17,6 +18,7 @@ export default function AdminWithdrawalsPage() {
     search: '',
     status: 'all'
   });
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Pagination states (default 50 records per page)
   const [page, setPage] = useState(1);
@@ -32,18 +34,18 @@ export default function AdminWithdrawalsPage() {
     { value: 'processing', label: 'Processing', color: 'bg-blue-100 text-blue-800' }
   ];
 
-  const fetchWithdrawals = async (targetPage = page, targetLimit = limit, targetFilters = filters) => {
+  const fetchWithdrawals = async (targetPage = page, targetLimit = limit, targetStatus = filters.status, targetSearch = debouncedSearch) => {
     try {
-      setLoading(true);
+      setTableLoading(true);
       const params = new URLSearchParams({
         page: targetPage.toString(),
         limit: targetLimit.toString()
       });
-      if (targetFilters.status && targetFilters.status !== 'all') {
-        params.append('status', targetFilters.status);
+      if (targetStatus && targetStatus !== 'all') {
+        params.append('status', targetStatus);
       }
-      if (targetFilters.search && targetFilters.search.trim()) {
-        params.append('search', targetFilters.search.trim());
+      if (targetSearch && targetSearch.trim()) {
+        params.append('search', targetSearch.trim());
       }
 
       const response = await fetch(`/api/admin/withdrawals?${params.toString()}`, {
@@ -64,20 +66,28 @@ export default function AdminWithdrawalsPage() {
       console.error('Error fetching withdrawals:', error);
       setError('Network error while fetching withdrawal requests');
     } finally {
-      setLoading(false);
+      setTableLoading(false);
+      setInitialLoading(false);
     }
   };
 
+  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchWithdrawals(page, limit, filters);
-    }, 300);
+      setDebouncedSearch(filters.search);
+      setPage(1);
+    }, 400);
     return () => clearTimeout(timer);
-  }, [page, limit, filters]);
+  }, [filters.search]);
+
+  // Fetch when page, limit, status, or debounced search changes
+  useEffect(() => {
+    fetchWithdrawals(page, limit, filters.status, debouncedSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, limit, filters.status, debouncedSearch]);
 
   const handleSearchChange = (e) => {
     setFilters(prev => ({ ...prev, search: e.target.value }));
-    setPage(1);
   };
 
   const handleStatusChange = (e) => {
@@ -90,6 +100,7 @@ export default function AdminWithdrawalsPage() {
       search: '',
       status: 'all'
     });
+    setDebouncedSearch('');
     setPage(1);
   };
 
@@ -167,7 +178,7 @@ export default function AdminWithdrawalsPage() {
     return `PKR ${parseFloat(amount).toLocaleString()}`;
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -265,11 +276,16 @@ export default function AdminWithdrawalsPage() {
       </div>
 
       {/* Withdrawals Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+        {tableLoading && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-purple-100 overflow-hidden z-10">
+            <div className="h-full bg-purple-600 animate-pulse w-full"></div>
+          </div>
+        )}
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">Withdrawal Requests</h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className={`overflow-x-auto transition-opacity duration-200 ${tableLoading ? 'opacity-60' : 'opacity-100'}`}>
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>

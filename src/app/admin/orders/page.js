@@ -30,7 +30,9 @@ import {
   Alert,
   CircularProgress,
   Divider,
-  TablePagination
+  TablePagination,
+  LinearProgress,
+  InputAdornment
 } from '@mui/material';
 import {
   Visibility,
@@ -43,12 +45,15 @@ import {
   Receipt,
   OpenInNew,
   Close,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Search,
+  Clear
 } from '@mui/icons-material';
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
@@ -60,6 +65,7 @@ export default function AdminOrdersPage() {
   
   // Filter states
   const [usernameFilter, setUsernameFilter] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
 
@@ -85,9 +91,9 @@ export default function AdminOrdersPage() {
     { value: 'refunded', label: 'Refunded', color: 'info' }
   ];
 
-  const fetchOrders = async (targetPage = page, targetLimit = rowsPerPage, targetStatus = statusFilter, targetPayment = paymentStatusFilter, targetSearch = usernameFilter) => {
+  const fetchOrders = async (targetPage = page, targetLimit = rowsPerPage, targetStatus = statusFilter, targetPayment = paymentStatusFilter, targetSearch = debouncedSearch) => {
     try {
-      setLoading(true);
+      setTableLoading(true);
       const params = new URLSearchParams({
         page: (targetPage + 1).toString(),
         limit: targetLimit.toString()
@@ -119,16 +125,25 @@ export default function AdminOrdersPage() {
       console.error('Error fetching orders:', error);
       setError('Network error while fetching orders');
     } finally {
-      setLoading(false);
+      setTableLoading(false);
+      setInitialLoading(false);
     }
   };
 
+  // Debounce search input so typing is completely smooth and does not trigger reloads on every stroke
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchOrders(page, rowsPerPage, statusFilter, paymentStatusFilter, usernameFilter);
-    }, 300);
+      setDebouncedSearch(usernameFilter);
+      setPage(0);
+    }, 400);
     return () => clearTimeout(timer);
-  }, [page, rowsPerPage, statusFilter, paymentStatusFilter, usernameFilter]);
+  }, [usernameFilter]);
+
+  // Fetch when page, limits, filters, or debounced search change
+  useEffect(() => {
+    fetchOrders(page, rowsPerPage, statusFilter, paymentStatusFilter, debouncedSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, statusFilter, paymentStatusFilter, debouncedSearch]);
 
   const handleStatusChange = (e) => {
     setStatusFilter(e.target.value);
@@ -142,6 +157,11 @@ export default function AdminOrdersPage() {
 
   const handleSearchChange = (e) => {
     setUsernameFilter(e.target.value);
+  };
+
+  const handleClearSearch = () => {
+    setUsernameFilter('');
+    setDebouncedSearch('');
     setPage(0);
   };
 
@@ -235,7 +255,7 @@ export default function AdminOrdersPage() {
     return `PKR ${parseFloat(amount).toLocaleString()}`;
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
         <CircularProgress />
@@ -283,10 +303,31 @@ export default function AdminOrdersPage() {
               <TextField
                 fullWidth
                 label="Search Order #, Tx ID, Customer"
+                placeholder="Type name, email, or order #..."
                 value={usernameFilter}
                 onChange={handleSearchChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setDebouncedSearch(usernameFilter);
+                    setPage(0);
+                  }
+                }}
                 variant="outlined"
                 size="small"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search sx={{ color: '#888', fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: usernameFilter ? (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={handleClearSearch} edge="end">
+                        <Clear sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null
+                }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     bgcolor: '#ffffff',
@@ -371,9 +412,12 @@ export default function AdminOrdersPage() {
         </CardContent>
       </Card>
 
-      <Card sx={{ bgcolor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <CardContent>
-          <TableContainer sx={{ maxHeight: '70vh', bgcolor: '#ffffff' }}>
+      <Card sx={{ bgcolor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', position: 'relative', overflow: 'hidden' }}>
+        <Box sx={{ height: 4 }}>
+          {tableLoading && <LinearProgress sx={{ bgcolor: '#e3f2fd' }} />}
+        </Box>
+        <CardContent sx={{ pt: 1 }}>
+          <TableContainer sx={{ maxHeight: '70vh', bgcolor: '#ffffff', opacity: tableLoading ? 0.6 : 1, transition: 'opacity 0.2s ease' }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
